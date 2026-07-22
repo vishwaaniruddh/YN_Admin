@@ -187,7 +187,8 @@ if ($action === 'apply') {
 
                 foreach ($external['images'] as $img_url) {
                     if (empty($img_url)) continue;
-                    $download_gal = download_remote_image($img_url, "uploads/products/{$sku}", "gallery");
+                    $custom_name = "gallery_" . $sort_order . "_" . time();
+                    $download_gal = download_remote_image($img_url, "uploads/products/{$sku}", $custom_name);
                     if ($download_gal && isset($download_gal['filepath'])) {
                         $ins_gal->execute([
                             $product_id,
