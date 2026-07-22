@@ -67,7 +67,7 @@ $current_script = basename($_SERVER['PHP_SELF']);
 
         <!-- Tools Group -->
         <?php 
-        $tools_active = in_array($current_script, ['import-link.php', 'export-products.php', 'desc-corrector.php']);
+        $tools_active = in_array($current_script, ['export-products.php', 'desc-corrector.php', 'cache-manager.php']);
         ?>
         <li class="menu-item has-submenu <?php echo $tools_active ? 'open active-parent' : ''; ?>">
             <a href="javascript:void(0);" class="submenu-toggle">
@@ -76,11 +76,6 @@ $current_script = basename($_SERVER['PHP_SELF']);
                 <i class="fa-solid fa-chevron-right submenu-arrow"></i>
             </a>
             <ul class="submenu">
-                <li class="<?php echo ($current_script == 'import-link.php') ? 'active' : ''; ?>">
-                    <a href="import-link.php">
-                        <i class="fa-solid fa-cloud-arrow-down"></i> Import Link
-                    </a>
-                </li>
                 <li class="<?php echo ($current_script == 'export-products.php') ? 'active' : ''; ?>">
                     <a href="export-products.php">
                         <i class="fa-solid fa-file-excel"></i> Export Products
@@ -89,6 +84,11 @@ $current_script = basename($_SERVER['PHP_SELF']);
                 <li class="<?php echo ($current_script == 'desc-corrector.php') ? 'active' : ''; ?>">
                     <a href="desc-corrector.php">
                         <i class="fa-solid fa-wand-magic-sparkles"></i> Description Corrector
+                    </a>
+                </li>
+                <li class="<?php echo ($current_script == 'cache-manager.php') ? 'active' : ''; ?>">
+                    <a href="cache-manager.php">
+                        <i class="fa-solid fa-bolt"></i> Cache Manager
                     </a>
                 </li>
             </ul>

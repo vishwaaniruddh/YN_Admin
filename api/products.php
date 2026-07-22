@@ -2,6 +2,7 @@
 require_once __DIR__ . '/cors_header.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../includes/cache.php';
 
 $category_id = isset($_GET['category']) ? (int)$_GET['category'] : null;
 $category_slug = isset($_GET['category_slug']) ? trim($_GET['category_slug']) : null;
@@ -14,6 +15,14 @@ $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 12;
 $page = $page > 0 ? $page : 1;
 $limit = $limit > 0 ? $limit : 12;
 $offset = ($page - 1) * $limit;
+
+$cache_key = "products_c" . ($category_id ?: '0') . "_cs" . ($category_slug ?: 'none') . "_f" . ($featured ? '1' : '0') . "_sq" . ($search ?: 'none') . "_s" . $sort . "_p" . $page . "_l" . $limit;
+
+$cached_res = get_cache($cache_key, 3600, $pdo);
+if ($cached_res !== false) {
+    echo json_encode($cached_res);
+    exit;
+}
 
 try {
     $category_info = null;
@@ -131,7 +140,7 @@ try {
     // Log activity
     log_activity($pdo, 'api_fetch_products', 'product', null, "Fetched products list (page $page)", null, 'guest');
     
-    echo json_encode([
+    $response_data = [
         'success' => true,
         'category' => $category_info,
         'data' => $products,
@@ -141,7 +150,9 @@ try {
             'total_items' => $total_items,
             'limit' => $limit
         ]
-    ]);
+    ];
+    set_cache($cache_key, $response_data, $pdo);
+    echo json_encode($response_data);
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([

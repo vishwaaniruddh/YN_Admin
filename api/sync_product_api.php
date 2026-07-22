@@ -214,6 +214,9 @@ if ($action === 'apply') {
 
         $pdo->commit();
 
+        // Flush API cache so customer storefront reflects updated details immediately
+        purge_cache();
+
         echo json_encode([
             'success' => true,
             'message' => 'Product details successfully updated from SriShringarr API!',

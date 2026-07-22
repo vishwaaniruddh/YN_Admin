@@ -2,6 +2,7 @@
 require_once __DIR__ . '/cors_header.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/functions.php'; // For log_activity
+require_once __DIR__ . '/../includes/cache.php';
 
 // Pagination parameters
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -14,9 +15,20 @@ $is_tree = isset($_GET['tree']) && $_GET['tree'] === 'true';
 
 try {
     if ($is_tree) {
+        $cached_tree = get_cache('categories_tree', 3600, $pdo);
+        if ($cached_tree !== false) {
+            echo json_encode([
+                'success' => true,
+                'data' => $cached_tree
+            ]);
+            exit;
+        }
+
         $stmt = $pdo->query("SELECT * FROM categories WHERE deleted_at IS NULL ORDER BY name ASC");
         $categories = build_nested_category_tree($stmt->fetchAll());
         
+        set_cache('categories_tree', $categories, $pdo);
+
         echo json_encode([
             'success' => true,
             'data' => $categories
