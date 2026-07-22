@@ -50,24 +50,24 @@ try {
     }
 } catch (Exception $e) {}
 
-// 3. Top Viewed Products (using subquery to bypass strict MySQL GROUP BY rules)
+// 3. Top Viewed Products
 try {
     $topProductsStmt = $pdo->query("SELECT p.id, p.name, p.sku, p.main_image, p.price, p.view_count, 
         (SELECT COUNT(*) FROM visitor_logs v WHERE (v.product_id = p.id OR v.page_url LIKE CONCAT('%', p.slug, '%')) AND v.created_at >= DATE_SUB(NOW(), $interval_sql)) as log_views 
         FROM products p 
-        WHERE p.deleted_at IS NULL 
-        ORDER BY log_views DESC, p.view_count DESC 
+        WHERE p.deleted_at IS NULL AND p.status = 'published'
+        ORDER BY log_views DESC, p.view_count DESC, p.id DESC 
         LIMIT 6");
     $top_products = $topProductsStmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {}
 
-// 4. Top Viewed Categories (using subquery to bypass strict MySQL GROUP BY rules)
+// 4. Top Viewed Categories
 try {
     $topCatsStmt = $pdo->query("SELECT c.id, c.name, c.slug, 
         (SELECT COUNT(*) FROM visitor_logs v WHERE (v.category_id = c.id OR v.page_url LIKE CONCAT('%', c.slug, '%')) AND v.created_at >= DATE_SUB(NOW(), $interval_sql)) as cat_views 
         FROM categories c 
         WHERE c.deleted_at IS NULL 
-        ORDER BY cat_views DESC, c.id DESC 
+        ORDER BY cat_views DESC, c.id ASC 
         LIMIT 5");
     $top_categories = $topCatsStmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {}
@@ -131,7 +131,7 @@ try {
         <div class="dash-card-info">
             <h3>Top Viewed Product</h3>
             <p style="font-size: 14px; font-weight: 600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 180px;">
-                <?php echo !empty($top_products) && (($top_products[0]['log_views'] ?? 0) > 0 || ($top_products[0]['view_count'] ?? 0) > 0) ? htmlspecialchars($top_products[0]['name']) : 'N/A'; ?>
+                <?php echo !empty($top_products) ? htmlspecialchars($top_products[0]['name']) : 'N/A'; ?>
             </p>
         </div>
     </div>
@@ -159,10 +159,10 @@ try {
                         <thead style="position: sticky; top: 0; z-index: 10; background: #fff;">
                             <tr>
                                 <th style="width: 15%;">IP Address</th>
-                                <th style="width: 15%;">Source</th>
-                                <th style="width: 35%;">Visited Page</th>
+                                <th style="width: 18%;">Source</th>
+                                <th style="width: 32%;">Visited Page</th>
                                 <th style="width: 15%;">Device</th>
-                                <th style="width: 20%; text-align: right;">Time</th>
+                                <th style="width: 20%; text-align: right;">Time (IST)</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -209,18 +209,9 @@ try {
                 <h2><i class="fa-solid fa-fire" style="color: #f1c40f;"></i> Top Viewed Products</h2>
             </div>
             <div class="postbox-body" style="padding: 0;">
-                <?php 
-                $hasProductMetrics = false;
-                foreach ($top_products as $tp) {
-                    if (($tp['log_views'] ?? 0) > 0 || ($tp['view_count'] ?? 0) > 0) {
-                        $hasProductMetrics = true;
-                        break;
-                    }
-                }
-                ?>
-                <?php if (!$hasProductMetrics): ?>
+                <?php if (empty($top_products)): ?>
                     <div style="text-align: center; padding: 30px; color: #646970;">
-                        <p style="margin: 0; font-size: 14px;">No product view metrics recorded yet.</p>
+                        <p style="margin: 0; font-size: 14px;">No products found in database.</p>
                     </div>
                 <?php else: ?>
                     <table class="wp-list-table widefat fixed striped" style="margin: 0;">
@@ -235,29 +226,27 @@ try {
                         </thead>
                         <tbody>
                             <?php foreach ($top_products as $p): ?>
-                                <?php if (($p['log_views'] ?? 0) > 0 || ($p['view_count'] ?? 0) > 0): ?>
-                                    <tr>
-                                        <td>
-                                            <?php if (!empty($p['main_image'])): ?>
-                                                <img src="<?php echo sanitize_html($p['main_image']); ?>" style="width: 36px; height: 36px; object-fit: cover; border-radius: 4px;">
-                                            <?php else: ?>
-                                                <div style="width: 36px; height: 36px; background: #f1f5f9; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #94a3b8;">
-                                                    <i class="fa-solid fa-image"></i>
-                                                </div>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td>
-                                            <a href="product-edit.php?id=<?php echo $p['id']; ?>" style="font-weight: 600; color: #1e293b; text-decoration: none;">
-                                                <?php echo sanitize_html($p['name']); ?>
-                                            </a>
-                                        </td>
-                                        <td><code><?php echo sanitize_html($p['sku'] ?: 'N/A'); ?></code></td>
-                                        <td style="font-weight: 600; color: #16a34a;">₹<?php echo number_format($p['price'], 2); ?></td>
-                                        <td style="text-align: right; font-weight: 700; color: #0284c7;">
-                                            <?php echo number_format(max($p['log_views'], $p['view_count'])); ?> views
-                                        </td>
-                                    </tr>
-                                <?php endif; ?>
+                                <tr>
+                                    <td>
+                                        <?php if (!empty($p['main_image'])): ?>
+                                            <img src="<?php echo sanitize_html($p['main_image']); ?>" style="width: 36px; height: 36px; object-fit: cover; border-radius: 4px;">
+                                        <?php else: ?>
+                                            <div style="width: 36px; height: 36px; background: #f1f5f9; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #94a3b8;">
+                                                <i class="fa-solid fa-image"></i>
+                                            </div>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <a href="product-edit.php?id=<?php echo $p['id']; ?>" style="font-weight: 600; color: #1e293b; text-decoration: none;">
+                                            <?php echo sanitize_html($p['name']); ?>
+                                        </a>
+                                    </td>
+                                    <td><code><?php echo sanitize_html($p['sku'] ?: 'N/A'); ?></code></td>
+                                    <td style="font-weight: 600; color: #16a34a;">₹<?php echo number_format($p['price'], 2); ?></td>
+                                    <td style="text-align: right; font-weight: 700; color: #0284c7;">
+                                        <?php echo number_format(max(($p['log_views'] ?? 0), ($p['view_count'] ?? 0))); ?> views
+                                    </td>
+                                </tr>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
@@ -287,6 +276,7 @@ try {
                             if ($src['traffic_source'] === 'Instagram') $barBg = '#e1306c';
                             elseif ($src['traffic_source'] === 'Facebook') $barBg = '#1877f2';
                             elseif ($src['traffic_source'] === 'Google Search') $barBg = '#ea4335';
+                            elseif ($src['traffic_source'] === 'Googlebot / Crawler') $barBg = '#6366f1';
                             ?>
                             <div>
                                 <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #334155;">
@@ -309,30 +299,19 @@ try {
                 <h2><i class="fa-solid fa-layer-group" style="color: #3b82f6;"></i> Top Categories</h2>
             </div>
             <div class="postbox-body" style="padding: 16px;">
-                <?php 
-                $hasCategoryMetrics = false;
-                foreach ($top_categories as $cat) {
-                    if (($cat['cat_views'] ?? 0) > 0) {
-                        $hasCategoryMetrics = true;
-                        break;
-                    }
-                }
-                ?>
-                <?php if (!$hasCategoryMetrics): ?>
-                    <p style="text-align: center; color: #646970; font-size: 13px; margin: 10px 0;">No category traffic recorded yet.</p>
+                <?php if (empty($top_categories)): ?>
+                    <p style="text-align: center; color: #646970; font-size: 13px; margin: 10px 0;">No categories found in database.</p>
                 <?php else: ?>
                     <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px;">
                         <?php foreach ($top_categories as $cat): ?>
-                            <?php if (($cat['cat_views'] ?? 0) > 0): ?>
-                                <li style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9;">
-                                    <span style="font-size: 13px; font-weight: 600; color: #1e293b;">
-                                        <?php echo htmlspecialchars($cat['name']); ?>
-                                    </span>
-                                    <span style="font-size: 12px; font-weight: 700; color: #3b82f6; background: #eff6ff; padding: 2px 8px; border-radius: 10px;">
-                                        <?php echo number_format($cat['cat_views']); ?> views
-                                    </span>
-                                </li>
-                            <?php endif; ?>
+                            <li style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9;">
+                                <span style="font-size: 13px; font-weight: 600; color: #1e293b;">
+                                    <?php echo htmlspecialchars($cat['name']); ?>
+                                </span>
+                                <span style="font-size: 12px; font-weight: 700; color: #3b82f6; background: #eff6ff; padding: 2px 8px; border-radius: 10px;">
+                                    <?php echo number_format($cat['cat_views'] ?? 0); ?> views
+                                </span>
+                            </li>
                         <?php endforeach; ?>
                     </ul>
                 <?php endif; ?>
