@@ -2,6 +2,7 @@
 require_once __DIR__ . '/cors_header.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../includes/cache.php';
 
 $slug = isset($_GET['slug']) ? trim($_GET['slug']) : null;
 $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
@@ -9,6 +10,20 @@ $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
 if (!$slug && !$id) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'Product slug or id is required']);
+    exit;
+}
+
+$cache_key = "product_detail_" . ($slug ? "slug_" . md5($slug) : "id_" . $id);
+
+$cached_product = get_cache($cache_key, 3600, $pdo);
+if ($cached_product !== false) {
+    echo json_encode($cached_product);
+    // Increment view_count asynchronously in DB without delaying response
+    if (isset($cached_product['data']['id'])) {
+        try {
+            $pdo->exec("UPDATE products SET view_count = view_count + 1 WHERE id = " . (int)$cached_product['data']['id']);
+        } catch (Exception $e) {}
+    }
     exit;
 }
 
@@ -57,10 +72,12 @@ try {
             $product['has_discount'] = false;
         }
 
-        echo json_encode([
+        $response_data = [
             'success' => true,
             'data' => $product
-        ]);
+        ];
+        set_cache($cache_key, $response_data, $pdo);
+        echo json_encode($response_data);
     } else {
         http_response_code(404);
         echo json_encode([
