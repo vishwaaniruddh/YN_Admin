@@ -97,7 +97,7 @@ $current_script = basename($_SERVER['PHP_SELF']);
         <!-- Settings Group -->
         <li class="menu-section-label">System</li>
         <?php 
-        $settings_active = in_array($current_script, ['settings.php', 'mail-settings.php', 'masters.php']);
+        $settings_active = in_array($current_script, ['settings.php', 'mail-settings.php', 'masters.php', 'chatbot-settings.php']);
         ?>
         <li class="menu-item has-submenu <?php echo $settings_active ? 'open active-parent' : ''; ?>">
             <a href="javascript:void(0);" class="submenu-toggle">
@@ -109,6 +109,11 @@ $current_script = basename($_SERVER['PHP_SELF']);
                 <li class="<?php echo ($current_script == 'settings.php') ? 'active' : ''; ?>">
                     <a href="settings.php">
                         <i class="fa-solid fa-sliders"></i> General
+                    </a>
+                </li>
+                <li class="<?php echo ($current_script == 'chatbot-settings.php') ? 'active' : ''; ?>">
+                    <a href="chatbot-settings.php">
+                        <i class="fa-solid fa-robot"></i> AI Chatbot
                     </a>
                 </li>
                 <li class="<?php echo ($current_script == 'mail-settings.php') ? 'active' : ''; ?>">
