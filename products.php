@@ -156,11 +156,45 @@ try {
 
 <div class="wrap-header">
     <h1>Products</h1>
-    <div style="display: flex; gap: 10px;">
+    <div style="display: flex; gap: 10px; align-items: center;">
         <a href="product-add.php" class="button button-primary"><i class="fa-solid fa-plus"></i> Add New</a>
         <a href="product-import.php" class="button button-secondary"><i class="fa-solid fa-file-csv"></i> Bulk Import</a>
+
+        <!-- Export Dropdown -->
+        <div style="position: relative; display: inline-block;" id="export-dropdown-wrap">
+            <button type="button" onclick="document.getElementById('export-menu').classList.toggle('open')" class="button" style="display: inline-flex; align-items: center; gap: 7px; background: #16a34a; color: #fff; border-color: #15803d; font-weight: 600;">
+                <i class="fa-solid fa-download"></i> Export
+                <i class="fa-solid fa-chevron-down" style="font-size: 10px;"></i>
+            </button>
+            <ul id="export-menu" style="display:none; position: absolute; right: 0; top: calc(100% + 4px); background: #fff; border: 1px solid #c3c4c7; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); list-style: none; margin: 0; padding: 4px 0; z-index: 999; min-width: 180px;">
+                <li>
+                    <a href="export-products.php?format=excel<?php echo !empty($cat_filter) ? '&category_id=' . (int)$cat_filter : ''; ?>" style="display: flex; align-items: center; gap: 10px; padding: 9px 16px; text-decoration: none; color: #1e293b; font-size: 13px; font-weight: 500;">
+                        <i class="fa-solid fa-file-excel" style="color: #16a34a;"></i> Export as Excel (.xlsx)
+                    </a>
+                </li>
+                <li style="border-top: 1px solid #f0f0f1;">
+                    <a href="export-products.php?format=csv<?php echo !empty($cat_filter) ? '&category_id=' . (int)$cat_filter : ''; ?>" style="display: flex; align-items: center; gap: 10px; padding: 9px 16px; text-decoration: none; color: #1e293b; font-size: 13px; font-weight: 500;">
+                        <i class="fa-solid fa-file-csv" style="color: #0284c7;"></i> Export as CSV (.csv)
+                    </a>
+                </li>
+            </ul>
+        </div>
     </div>
 </div>
+
+<style>
+#export-menu.open { display: block !important; }
+</style>
+<script>
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+    var wrap = document.getElementById('export-dropdown-wrap');
+    if (wrap && !wrap.contains(e.target)) {
+        var menu = document.getElementById('export-menu');
+        if (menu) menu.classList.remove('open');
+    }
+});
+</script>
 
 <?php if (!empty($message)): ?>
     <div class="notice notice-<?php echo $message_type; ?> auto-dismiss">
