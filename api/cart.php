@@ -17,19 +17,24 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 try {
     if ($method === 'GET') {
-        // Fetch cart items
+        // Fetch cart items explicitly selecting p.id as product_id
         $stmt = $pdo->prepare("
-            SELECT c.id as cart_item_id, c.quantity, p.* 
+            SELECT c.id as cart_item_id, c.quantity, p.id as product_id, p.* 
             FROM cart_items c
             JOIN products p ON c.product_id = p.id
             WHERE c.session_token = ?
+            ORDER BY c.id DESC
         ");
         $stmt->execute([$session_token]);
-        $items = $stmt->fetchAll();
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         $total = 0;
         foreach($items as &$item) {
-            $discount = get_product_discount_info($pdo, $item['id'], $item['price']);
+            // Ensure product_id is explicitly set
+            $item['product_id'] = (int)$item['product_id'];
+            $item['stock_qty'] = ($item['stock_qty'] !== null && $item['stock_qty'] !== '') ? (int)$item['stock_qty'] : 99;
+
+            $discount = get_product_discount_info($pdo, $item['product_id'], $item['price']);
             if ($discount) {
                 $item['original_price'] = (float)$item['price'];
                 $item['discount_info'] = $discount;
@@ -53,16 +58,17 @@ try {
         $quantity = (int)($data['quantity'] ?? 1);
 
         if (!$product_id) {
-            throw new Exception("Product ID is required");
+            echo json_encode(["success" => false, "message" => "Product ID is required"]);
+            exit();
         }
 
         // Check stock quantity from products table
         $pStmt = $pdo->prepare("SELECT stock_qty FROM products WHERE id = ?");
         $pStmt->execute([$product_id]);
         $prod = $pStmt->fetch();
-        $availableStock = $prod && $prod['stock_qty'] !== null ? (int)$prod['stock_qty'] : 99;
+        $availableStock = ($prod && $prod['stock_qty'] !== null && $prod['stock_qty'] !== '') ? (int)$prod['stock_qty'] : 99;
 
-        // Check if exists
+        // Check if exists in cart
         $stmt = $pdo->prepare("SELECT id, quantity FROM cart_items WHERE session_token = ? AND product_id = ?");
         $stmt->execute([$session_token, $product_id]);
         $existing = $stmt->fetch();
@@ -70,7 +76,7 @@ try {
         $new_qty = $existing ? ($existing['quantity'] + $quantity) : $quantity;
 
         if ($availableStock > 0 && $new_qty > $availableStock) {
-            echo json_encode(["success" => false, "message" => "Cannot add more items than available stock ({$availableStock} available)."]);
+            echo json_encode(["success" => false, "message" => "Cannot add more items than available stock ({$availableStock} available).", "stock_qty" => $availableStock]);
             exit();
         }
 
@@ -93,16 +99,17 @@ try {
         $quantity = isset($data['quantity']) ? (int)$data['quantity'] : null;
 
         if (!$product_id || $quantity === null) {
-            throw new Exception("Product ID and quantity are required");
+            echo json_encode(["success" => false, "message" => "Product ID and quantity are required"]);
+            exit();
         }
 
         $pStmt = $pdo->prepare("SELECT stock_qty FROM products WHERE id = ?");
         $pStmt->execute([$product_id]);
         $prod = $pStmt->fetch();
-        $availableStock = $prod && $prod['stock_qty'] !== null ? (int)$prod['stock_qty'] : 99;
+        $availableStock = ($prod && $prod['stock_qty'] !== null && $prod['stock_qty'] !== '') ? (int)$prod['stock_qty'] : 99;
 
-        if ($availableStock > 0 && $quantity > $availableStock) {
-            echo json_encode(["success" => false, "message" => "Cannot set quantity higher than available stock ({$availableStock} available)."]);
+        if ($quantity > 0 && $availableStock > 0 && $quantity > $availableStock) {
+            echo json_encode(["success" => false, "message" => "Cannot set quantity higher than available stock ({$availableStock} available).", "stock_qty" => $availableStock]);
             exit();
         }
 
@@ -120,6 +127,11 @@ try {
     elseif ($method === 'DELETE') {
         // Remove single item or clear whole cart
         $product_id = $_GET['product_id'] ?? null;
+        if (!$product_id) {
+            $input = json_decode(file_get_contents("php://input"), true);
+            $product_id = $input['product_id'] ?? null;
+        }
+
         if ($product_id) {
             $del = $pdo->prepare("DELETE FROM cart_items WHERE session_token = ? AND product_id = ?");
             $del->execute([$session_token, $product_id]);
@@ -134,4 +146,3 @@ try {
     http_response_code(500);
     echo json_encode(["success" => false, "message" => $e->getMessage()]);
 }
-?>
