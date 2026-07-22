@@ -1,6 +1,6 @@
 <?php
 // admin/api/chatbot.php
-// AI Assistant Engine using Database-Driven Knowledge Base + Gemini Vision
+// AI Assistant Engine with Dynamic DB Knowledge Base + Gemini Vision
 require_once __DIR__ . '/cors_header.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/functions.php';
@@ -12,6 +12,7 @@ require_once __DIR__ . '/chatbot_training.php';
 $kbData = get_chatbot_db_knowledge($pdo);
 $storeInfo = $kbData['store_info'] ?? [];
 $trainedIntents = $kbData['intents'] ?? [];
+$aiContextStr = $kbData['ai_context'] ?? '';
 
 // Fetch Chatbot Settings from DB
 $settings = [];
@@ -37,17 +38,7 @@ if (empty($apiKey)) {
 }
 
 $welcomeMsg = $settings['chatbot_welcome_message'] ?? "Namaste! ✨ I am your YosshitaNeha Personal Assistant & Stylist. How can I help you today?";
-
-// System Prompt compiled dynamically from database knowledge
-$systemPrompt = "You are an expert luxury Indian fashion stylist for " . ($storeInfo['name'] ?? 'YosshitaNeha Fashion Studio') . ".
-STORE KNOWLEDGE BASE (LIVE DB DATA):
-- Phone / WhatsApp: " . ($storeInfo['phone1'] ?? '') . " / " . ($storeInfo['phone2'] ?? '') . "
-- Email: " . ($storeInfo['email'] ?? '') . "
-- Address: " . ($storeInfo['address'] ?? '') . "
-- Operating Hours: " . ($storeInfo['operating_hours'] ?? '') . "
-- Basic Stitching Price: ₹" . ($storeInfo['stitching_price'] ?? '1500') . "
-
-Be polite, helpful, concise, and give exact contact information when requested.";
+$systemPrompt = ($settings['chatbot_system_prompt'] ?? "You are an expert luxury Indian fashion stylist for YosshitaNeha Fashion Studio.") . "\n\n" . $aiContextStr;
 
 // 1. Config Check Endpoint
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'config') {
@@ -145,13 +136,13 @@ if (str_contains($msgLower, 'order') || str_contains($msgLower, 'track') || str_
     }
 
 } else {
-    // INTENT C: Match Query against Database-Driven Trained Intents
+    // INTENT C: Match Query against Database-Driven Trained Intents & FAQs
     $matchedIntentKey = null;
 
     foreach ($trainedIntents as $key => $intentData) {
         $keywords = $intentData['keywords'] ?? [];
         foreach ($keywords as $kw) {
-            if (str_contains($msgLower, $kw)) {
+            if (!empty($kw) && str_contains($msgLower, $kw)) {
                 $matchedIntentKey = $key;
                 break 2;
             }
