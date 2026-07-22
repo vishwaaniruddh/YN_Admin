@@ -55,26 +55,38 @@ try {
     }
 } catch (Exception $e) {}
 
-// 3. Top Viewed Products (using CONVERT for collation safety)
+// 3. Top Viewed Products (split pid + slug matching with explicit COLLATE)
 try {
     $topProductsStmt = $pdo->query("SELECT p.id, p.name, p.sku, p.main_image, p.price, p.view_count, 
-        (SELECT COUNT(*) FROM visitor_logs v WHERE (v.product_id = p.id OR (p.slug IS NOT NULL AND p.slug != '' AND v.page_url LIKE CONCAT('%', CONVERT(p.slug USING utf8mb4), '%'))) AND v.created_at >= DATE_SUB(NOW(), $interval_sql)) as log_views 
+        (SELECT COUNT(*) FROM visitor_logs v WHERE v.product_id = p.id AND v.created_at >= DATE_SUB(NOW(), $interval_sql)) as pid_views,
+        (SELECT COUNT(*) FROM visitor_logs v WHERE p.slug IS NOT NULL AND p.slug != '' AND v.page_url COLLATE utf8mb4_unicode_ci LIKE CONCAT('%', p.slug COLLATE utf8mb4_unicode_ci, '%') AND v.created_at >= DATE_SUB(NOW(), $interval_sql)) as slug_views
         FROM products p 
         WHERE p.deleted_at IS NULL AND (p.status = 'published' OR p.status IS NULL)
-        ORDER BY log_views DESC, p.view_count DESC, p.id DESC 
+        ORDER BY pid_views DESC, slug_views DESC, p.view_count DESC, p.id DESC 
         LIMIT 6");
     $top_products = $topProductsStmt->fetchAll(PDO::FETCH_ASSOC);
+    // Compute combined log_views for display
+    foreach ($top_products as &$tp) {
+        $tp['log_views'] = max(($tp['pid_views'] ?? 0), ($tp['slug_views'] ?? 0));
+    }
+    unset($tp);
 } catch (Exception $e) {}
 
-// 4. Top Viewed Categories (using CONVERT for collation safety)
+// 4. Top Viewed Categories (split cid + slug matching with explicit COLLATE)
 try {
     $topCatsStmt = $pdo->query("SELECT c.id, c.name, c.slug, 
-        (SELECT COUNT(*) FROM visitor_logs v WHERE (v.category_id = c.id OR (c.slug IS NOT NULL AND c.slug != '' AND v.page_url LIKE CONCAT('%', CONVERT(c.slug USING utf8mb4), '%'))) AND v.created_at >= DATE_SUB(NOW(), $interval_sql)) as cat_views 
+        (SELECT COUNT(*) FROM visitor_logs v WHERE v.category_id = c.id AND v.created_at >= DATE_SUB(NOW(), $interval_sql)) as cid_views,
+        (SELECT COUNT(*) FROM visitor_logs v WHERE c.slug IS NOT NULL AND c.slug != '' AND v.page_url COLLATE utf8mb4_unicode_ci LIKE CONCAT('%', c.slug COLLATE utf8mb4_unicode_ci, '%') AND v.created_at >= DATE_SUB(NOW(), $interval_sql)) as slug_views
         FROM categories c 
         WHERE c.deleted_at IS NULL 
-        ORDER BY cat_views DESC, c.id ASC 
+        ORDER BY cid_views DESC, slug_views DESC, c.id ASC 
         LIMIT 5");
     $top_categories = $topCatsStmt->fetchAll(PDO::FETCH_ASSOC);
+    // Compute combined cat_views for display
+    foreach ($top_categories as &$tc) {
+        $tc['cat_views'] = max(($tc['cid_views'] ?? 0), ($tc['slug_views'] ?? 0));
+    }
+    unset($tc);
 } catch (Exception $e) {}
 
 // 5. Live Visitor Log Stream
