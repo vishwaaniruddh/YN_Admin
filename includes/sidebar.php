@@ -20,22 +20,8 @@ $current_script = basename($_SERVER['PHP_SELF']);
             </a>
         </li>
         
-        <!-- Catalog Group -->
+        <!-- Management Group -->
         <li class="menu-section-label">Management</li>
-        
-        <li class="menu-item <?php echo ($current_script == 'orders.php') ? 'active' : ''; ?>">
-            <a href="orders.php">
-                <i class="fa-solid fa-box-open"></i>
-                <span>Orders</span>
-            </a>
-        </li>
-
-        <li class="menu-item <?php echo ($current_script == 'ecommerce.php') ? 'active' : ''; ?>">
-            <a href="ecommerce.php">
-                <i class="fa-solid fa-cart-shopping"></i>
-                <span>Ecommerce</span>
-            </a>
-        </li>
         
         <?php 
         $catalog_active = in_array($current_script, ['products.php', 'product-add.php', 'product-edit.php', 'categories.php']);
@@ -63,6 +49,20 @@ $current_script = basename($_SERVER['PHP_SELF']);
                     </a>
                 </li>
             </ul>
+        </li>
+
+        <li class="menu-item <?php echo ($current_script == 'ecommerce.php') ? 'active' : ''; ?>">
+            <a href="ecommerce.php">
+                <i class="fa-solid fa-cart-shopping"></i>
+                <span>Ecommerce</span>
+            </a>
+        </li>
+
+        <li class="menu-item <?php echo ($current_script == 'orders.php') ? 'active' : ''; ?>">
+            <a href="orders.php">
+                <i class="fa-solid fa-box-open"></i>
+                <span>Orders</span>
+            </a>
         </li>
 
         <!-- Tools Group -->
