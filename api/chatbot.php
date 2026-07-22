@@ -1,14 +1,15 @@
 <?php
 // admin/api/chatbot.php
-// AI Assistant Engine using Modular Training Data (chatbot_training.php) + Gemini Vision
+// AI Assistant Engine using Database-Driven Knowledge Base + Gemini Vision
 require_once __DIR__ . '/cors_header.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/functions.php';
 
 header('Content-Type: application/json');
 
-// Load Dedicated Knowledge Base & Training Data
-$kbData = require __DIR__ . '/chatbot_training.php';
+// Load Database-Driven Knowledge Engine
+require_once __DIR__ . '/chatbot_training.php';
+$kbData = get_chatbot_db_knowledge($pdo);
 $storeInfo = $kbData['store_info'] ?? [];
 $trainedIntents = $kbData['intents'] ?? [];
 
@@ -37,15 +38,14 @@ if (empty($apiKey)) {
 
 $welcomeMsg = $settings['chatbot_welcome_message'] ?? "Namaste! ✨ I am your YosshitaNeha Personal Assistant & Stylist. How can I help you today?";
 
-// System Prompt compiled from trained knowledge base
-$systemPrompt = "You are an expert luxury Indian fashion stylist for " . $storeInfo['name'] . ".
-STORE KNOWLEDGE BASE:
-- Phone / WhatsApp: " . implode(', ', $storeInfo['phones'] ?? []) . "
+// System Prompt compiled dynamically from database knowledge
+$systemPrompt = "You are an expert luxury Indian fashion stylist for " . ($storeInfo['name'] ?? 'YosshitaNeha Fashion Studio') . ".
+STORE KNOWLEDGE BASE (LIVE DB DATA):
+- Phone / WhatsApp: " . ($storeInfo['phone1'] ?? '') . " / " . ($storeInfo['phone2'] ?? '') . "
 - Email: " . ($storeInfo['email'] ?? '') . "
 - Address: " . ($storeInfo['address'] ?? '') . "
 - Operating Hours: " . ($storeInfo['operating_hours'] ?? '') . "
-- Customisation: Basic blouse stitching from ₹1,500. Hand embroidery quotes depend on fabric and work complexity.
-- Shipping: Domestic 3-7 days (free over ₹5,000). International 7-12 days.
+- Basic Stitching Price: ₹" . ($storeInfo['stitching_price'] ?? '1500') . "
 
 Be polite, helpful, concise, and give exact contact information when requested.";
 
@@ -145,7 +145,7 @@ if (str_contains($msgLower, 'order') || str_contains($msgLower, 'track') || str_
     }
 
 } else {
-    // INTENT C: Match Query against Trained Knowledge Base (`chatbot_training.php`)
+    // INTENT C: Match Query against Database-Driven Trained Intents
     $matchedIntentKey = null;
 
     foreach ($trainedIntents as $key => $intentData) {
