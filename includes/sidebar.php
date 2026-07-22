@@ -67,7 +67,7 @@ $current_script = basename($_SERVER['PHP_SELF']);
 
         <!-- Tools Group -->
         <?php 
-        $tools_active = in_array($current_script, ['export-products.php', 'desc-corrector.php', 'cache-manager.php']);
+        $tools_active = in_array($current_script, ['export-products.php', 'desc-corrector.php', 'analytics.php', 'cache-manager.php']);
         ?>
         <li class="menu-item has-submenu <?php echo $tools_active ? 'open active-parent' : ''; ?>">
             <a href="javascript:void(0);" class="submenu-toggle">
@@ -84,6 +84,11 @@ $current_script = basename($_SERVER['PHP_SELF']);
                 <li class="<?php echo ($current_script == 'desc-corrector.php') ? 'active' : ''; ?>">
                     <a href="desc-corrector.php">
                         <i class="fa-solid fa-wand-magic-sparkles"></i> Description Corrector
+                    </a>
+                </li>
+                <li class="<?php echo ($current_script == 'analytics.php') ? 'active' : ''; ?>">
+                    <a href="analytics.php">
+                        <i class="fa-solid fa-chart-line"></i> Analytics &amp; Traffic
                     </a>
                 </li>
                 <li class="<?php echo ($current_script == 'cache-manager.php') ? 'active' : ''; ?>">
