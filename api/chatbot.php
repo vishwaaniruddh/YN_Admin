@@ -1,6 +1,6 @@
 <?php
 // admin/api/chatbot.php
-// AI Assistant Engine (Gemini AI Vision + Catalog Search + Order Verification)
+// AI Assistant Engine (Gemini AI Vision + Intent Recognition + Order Verification)
 require_once __DIR__ . '/cors_header.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/functions.php';
@@ -19,7 +19,7 @@ try {
 $isEnabled = ($settings['chatbot_enabled'] ?? '1') === '1';
 $apiKey = $settings['chatbot_gemini_api_key'] ?? '';
 $welcomeMsg = $settings['chatbot_welcome_message'] ?? "Namaste! ✨ I am your YosshitaNeha Personal Assistant & Stylist. How can I help you today?";
-$systemPrompt = $settings['chatbot_system_prompt'] ?? "You are an expert luxury Indian fashion stylist for YosshitaNeha Fashion Studio.";
+$systemPrompt = $settings['chatbot_system_prompt'] ?? "You are an expert luxury Indian fashion stylist for YosshitaNeha Fashion Studio. Specialising in handcrafted designer blouses, heritage jewellery, and bespoke bridal customisation. Be helpful, concise, and polite.";
 
 // 1. Config Check Endpoint
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'config') {
@@ -58,9 +58,8 @@ $actionRequired = null;
 $msgLower = strtolower($userMsg);
 
 // INTENT A: Order Status & Account Inquiry
-if (str_contains($msgLower, 'order') || str_contains($msgLower, 'track') || str_contains($msgLower, 'shipment') || str_contains($msgLower, 'delivery') || preg_match('/#?YN-?\d+/i', $userMsg)) {
+if (str_contains($msgLower, 'order') || str_contains($msgLower, 'track') || str_contains($msgLower, 'shipment') || str_contains($msgLower, 'delivery status') || preg_match('/#?YN-?\d+/i', $userMsg)) {
     
-    // Extract potential order ID e.g. YN-1001 or 1001
     preg_match('/#?YN-?(\d+)/i', $userMsg, $orderMatches);
     $searchOrderId = $orderMatches[1] ?? null;
 
@@ -104,7 +103,6 @@ if (str_contains($msgLower, 'order') || str_contains($msgLower, 'track') || str_
 } elseif (!empty($imageBase64)) {
     // INTENT B: Visual Image Matching (Gemini Vision API or Smart Color Matcher)
     if (!empty($apiKey)) {
-        // Gemini API Vision Call
         $geminiRes = call_gemini_vision_api($apiKey, $userMsg, $imageBase64, $systemPrompt);
         if ($geminiRes) {
             $replyText = $geminiRes['text'];
@@ -118,28 +116,36 @@ if (str_contains($msgLower, 'order') || str_contains($msgLower, 'track') || str_
     }
 
 } else {
-    // INTENT C: Product Recommendations & Conversational Advice
+    // INTENT C: AI Conversational & Intent Recognition
+    
+    // First try Gemini API if API key is provided
     if (!empty($apiKey)) {
         $geminiRes = call_gemini_text_api($apiKey, $userMsg, $systemPrompt);
         if ($geminiRes) {
             $replyText = $geminiRes;
+            $products = search_matching_products($pdo, $userMsg);
         }
     }
 
+    // Smart Native Intent Recognition (Fallback mode)
     if (empty($replyText)) {
-        if (str_contains($msgLower, 'blouse') || str_contains($msgLower, 'saree')) {
-            $replyText = "We offer an exclusive range of handcrafted designer blouses! Take a look at these popular designs:";
+        if (str_contains($msgLower, 'custom') || str_contains($msgLower, 'stitch') || str_contains($msgLower, 'charge') || str_contains($msgLower, 'alter') || str_contains($msgLower, 'cost') || str_contains($msgLower, 'make')) {
+            $replyText = "✨ **Bespoke Customisation Services** ✨\n\nWe offer custom blouse stitching, embroidery, and outfit tailoring! Customisation charges depend on the fabric selection, hand embroidery, and pattern complexity.\n\nFor a custom quote & direct consultation with our Master Designer, visit our Contact page or message us directly on WhatsApp!";
             $products = search_matching_products($pdo, "blouse");
-        } elseif (str_contains($msgLower, 'jewel') || str_contains($msgLower, 'earring') || str_contains($msgLower, 'necklace')) {
+        } elseif (str_contains($msgLower, 'contact') || str_contains($msgLower, 'phone') || str_contains($msgLower, 'number') || str_contains($msgLower, 'whatsapp') || str_contains($msgLower, 'address') || str_contains($msgLower, 'studio')) {
+            $replyText = "📍 **YosshitaNeha Fashion Studio**\n\nSpecialising in designer blouses, heritage jewellery, and bespoke bridal wear.\n\n📱 You can reach our team directly via the **Contact** page or WhatsApp for immediate styling assistance.";
+        } elseif (str_contains($msgLower, 'ship') || str_contains($msgLower, 'deliver') || str_contains($msgLower, 'days') || str_contains($msgLower, 'time')) {
+            $replyText = "🚚 **Shipping & Delivery Policy**\n\n- Domestic Delivery: 3–7 business days\n- Bespoke/Customised Orders: 10–15 business days\n- International Shipping: Available worldwide!";
+        } elseif (str_contains($msgLower, 'blouse') || str_contains($msgLower, 'saree') || str_contains($msgLower, 'lehenga')) {
+            $replyText = "We offer an exclusive range of handcrafted designer blouses! Take a look at these popular designs from our catalog:";
+            $products = search_matching_products($pdo, "blouse");
+        } elseif (str_contains($msgLower, 'jewel') || str_contains($msgLower, 'earring') || str_contains($msgLower, 'necklace') || str_contains($msgLower, 'kundan') || str_contains($msgLower, 'polki')) {
             $replyText = "Discover our heritage jewellery collection, perfect for weddings, festivities, and special occasions:";
             $products = search_matching_products($pdo, "jewellery");
         } else {
             $replyText = "Here are some of our top featured designer collections at YosshitaNeha Studio:";
             $products = search_matching_products($pdo, "featured");
         }
-    } else {
-        // Also fetch product suggestions matching key terms
-        $products = search_matching_products($pdo, $userMsg);
     }
 }
 
@@ -184,7 +190,6 @@ function search_matching_products($pdo, $queryStr) {
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         if (empty($results)) {
-            // Fallback to top featured products
             $stmtF = $pdo->query("SELECT p.id, p.name, p.slug, p.price, p.sale_price, p.main_image, c.name as category_name 
                                   FROM products p 
                                   LEFT JOIN categories c ON p.category_id = c.id 
