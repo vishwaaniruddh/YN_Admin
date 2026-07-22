@@ -177,6 +177,7 @@ try {
                                         elseif ($src === 'Facebook') $badgeBg = '#1877f2';
                                         elseif ($src === 'Google Search') $badgeBg = '#ea4335';
                                         elseif ($src === 'Direct') $badgeBg = '#059669';
+                                        elseif ($src === 'Googlebot / Crawler') $badgeBg = '#6366f1';
                                         ?>
                                         <span style="background: <?php echo $badgeBg; ?>; color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">
                                             <?php echo htmlspecialchars($src); ?>

@@ -30,6 +30,9 @@ if (file_exists(__DIR__ . '/db_local.php')) {
     include __DIR__ . '/db_local.php';
 }
 
+// Set PHP Default Timezone to India Standard Time (GMT+5:30)
+date_default_timezone_set('Asia/Kolkata');
+
 try {
     // Attempt direct database connection
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $user, $pass, [
@@ -37,6 +40,9 @@ try {
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES => false,
     ]);
+
+    // Set MySQL Connection Timezone to India (+05:30)
+    $pdo->exec("SET time_zone = '+05:30'");
 } catch (PDOException $e) {
     // Local fallback: create database if missing on local development
     if (!$isProduction) {

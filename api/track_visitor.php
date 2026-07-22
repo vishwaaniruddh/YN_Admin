@@ -24,10 +24,25 @@ if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
 
 $referrer = trim($input['referrer'] ?? $_SERVER['HTTP_REFERER'] ?? '');
 $user_agent = trim($_SERVER['HTTP_USER_AGENT'] ?? $input['user_agent'] ?? '');
+$ua_lower = strtolower($user_agent);
+
+// Detect Search Engine Crawlers & Bots (e.g. Googlebot 66.249.xx.xx)
+$is_bot = false;
+if (preg_match('/(googlebot|bingbot|yandexbot|baiduspider|duckduckbot|slurp|facebookexternalhit|twitterbot|ahrefsbot|semrushbot|dotbot|rogerbot|curl|wget|python|php)/i', $user_agent) || str_starts_with($ip, '66.249.')) {
+    $is_bot = true;
+}
+
+// Check for legacy Japanese hack query patterns (e.g., /?w=23413602053, /?x=7029441740)
+$queryString = parse_url($page_url, PHP_URL_QUERY) ?? '';
+if (preg_match('/^[a-z]=\d+$/i', $queryString)) {
+    $is_bot = true;
+}
 
 // Parse Traffic Source
 $traffic_source = 'Direct';
-if (!empty($referrer)) {
+if ($is_bot) {
+    $traffic_source = 'Googlebot / Crawler';
+} elseif (!empty($referrer)) {
     $ref_lower = strtolower($referrer);
     if (str_contains($ref_lower, 'instagram.com') || str_contains($ref_lower, 'l.instagram.com')) {
         $traffic_source = 'Instagram';
@@ -44,8 +59,9 @@ if (!empty($referrer)) {
 
 // Parse Device Type
 $device_type = 'Desktop';
-$ua_lower = strtolower($user_agent);
-if (preg_match('/(ipad|tablet|(android(?!.*mobile)))/i', $user_agent)) {
+if ($is_bot) {
+    $device_type = 'Search Bot';
+} elseif (preg_match('/(ipad|tablet|(android(?!.*mobile)))/i', $user_agent)) {
     $device_type = 'Tablet';
 } elseif (preg_match('/(mobile|iphone|ipod|android|blackberry|opera mini|windows phone)/i', $user_agent)) {
     $device_type = 'Mobile';
@@ -65,7 +81,6 @@ if ($path === '/' || str_ends_with($path, '/') || str_contains($path, '/home')) 
     if (!empty($input['product_id'])) {
         $product_id = (int)$input['product_id'];
     } else {
-        // Extract product slug from URL path e.g. /product/product-ear640bcs
         preg_match('#/product/([^/?#]+)#i', $path, $m);
         if (!empty($m[1])) {
             $slug = trim($m[1]);
@@ -84,7 +99,6 @@ if ($path === '/' || str_ends_with($path, '/') || str_contains($path, '/home')) 
     if (!empty($input['category_id'])) {
         $category_id = (int)$input['category_id'];
     } else {
-        // Extract category slug e.g. /category/apparel/designer-blouses
         $parts = explode('/', trim($path, '/'));
         $lastSlug = end($parts);
         if (!empty($lastSlug) && $lastSlug !== 'category' && $lastSlug !== 'collections') {
@@ -123,8 +137,8 @@ try {
             $device_type
         ]);
 
-        // Increment product view count if product_id is resolved
-        if ($product_id) {
+        // Increment product view count if product_id is resolved and not a bot
+        if ($product_id && !$is_bot) {
             $pdo->prepare("UPDATE products SET view_count = view_count + 1 WHERE id = ?")->execute([$product_id]);
         }
     }
