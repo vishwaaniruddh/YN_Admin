@@ -17,8 +17,16 @@ if ($range === 'today') {
     $interval_sql = "INTERVAL 30 DAY";
 }
 
+$total_pageviews = 0;
+$unique_visitors = 0;
+$traffic_sources = [];
+$top_source_name = 'Direct';
+$top_products = [];
+$top_categories = [];
+$recent_logs = [];
+
+// 1. Total Pageviews & Unique Visitors
 try {
-    // 1. Total Pageviews & Unique Visitors
     $statsStmt = $pdo->query("SELECT 
         COUNT(*) as total_pageviews, 
         COUNT(DISTINCT ip_address) as unique_visitors 
@@ -27,58 +35,48 @@ try {
     $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
     $total_pageviews = $stats['total_pageviews'] ?? 0;
     $unique_visitors = $stats['unique_visitors'] ?? 0;
+} catch (Exception $e) {}
 
-    // 2. Traffic Sources Breakdown
+// 2. Traffic Sources Breakdown
+try {
     $sourcesStmt = $pdo->query("SELECT traffic_source, COUNT(*) as cnt 
         FROM visitor_logs 
         WHERE created_at >= DATE_SUB(NOW(), $interval_sql) 
         GROUP BY traffic_source 
         ORDER BY cnt DESC");
     $traffic_sources = $sourcesStmt->fetchAll(PDO::FETCH_ASSOC);
+    if (!empty($traffic_sources)) {
+        $top_source_name = $traffic_sources[0]['traffic_source'];
+    }
+} catch (Exception $e) {}
 
-    // Top Source Name
-    $top_source_name = !empty($traffic_sources) ? $traffic_sources[0]['traffic_source'] : 'Direct';
-
-    // 3. Top Viewed Products (matching visitor logs or view_count)
-    $topProductsStmt = $pdo->query("SELECT p.id, p.name, p.sku, p.main_image, p.price, p.view_count, COUNT(v.id) as log_views 
+// 3. Top Viewed Products (using subquery to bypass strict MySQL GROUP BY rules)
+try {
+    $topProductsStmt = $pdo->query("SELECT p.id, p.name, p.sku, p.main_image, p.price, p.view_count, 
+        (SELECT COUNT(*) FROM visitor_logs v WHERE (v.product_id = p.id OR v.page_url LIKE CONCAT('%', p.slug, '%')) AND v.created_at >= DATE_SUB(NOW(), $interval_sql)) as log_views 
         FROM products p 
-        LEFT JOIN visitor_logs v ON (v.product_id = p.id OR v.page_url LIKE CONCAT('%', p.slug, '%')) AND v.created_at >= DATE_SUB(NOW(), $interval_sql)
         WHERE p.deleted_at IS NULL 
-        GROUP BY p.id 
         ORDER BY log_views DESC, p.view_count DESC 
         LIMIT 6");
     $top_products = $topProductsStmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {}
 
-    // 4. Top Viewed Categories
-    $topCatsStmt = $pdo->query("SELECT c.id, c.name, c.slug, COUNT(v.id) as cat_views 
+// 4. Top Viewed Categories (using subquery to bypass strict MySQL GROUP BY rules)
+try {
+    $topCatsStmt = $pdo->query("SELECT c.id, c.name, c.slug, 
+        (SELECT COUNT(*) FROM visitor_logs v WHERE (v.category_id = c.id OR v.page_url LIKE CONCAT('%', c.slug, '%')) AND v.created_at >= DATE_SUB(NOW(), $interval_sql)) as cat_views 
         FROM categories c 
-        LEFT JOIN visitor_logs v ON (v.category_id = c.id OR v.page_url LIKE CONCAT('%', c.slug, '%')) AND v.created_at >= DATE_SUB(NOW(), $interval_sql)
         WHERE c.deleted_at IS NULL 
-        GROUP BY c.id 
-        HAVING cat_views > 0
-        ORDER BY cat_views DESC 
+        ORDER BY cat_views DESC, c.id DESC 
         LIMIT 5");
     $top_categories = $topCatsStmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {}
 
-    // If empty with date filter, fetch top categories across all time
-    if (empty($top_categories)) {
-        $topCatsStmtAll = $pdo->query("SELECT c.id, c.name, c.slug, COUNT(v.id) as cat_views 
-            FROM categories c 
-            JOIN visitor_logs v ON (v.category_id = c.id OR v.page_url LIKE CONCAT('%', c.slug, '%'))
-            WHERE c.deleted_at IS NULL 
-            GROUP BY c.id 
-            ORDER BY cat_views DESC 
-            LIMIT 5");
-        $top_categories = $topCatsStmtAll->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    // 5. Live Visitor Log Stream
+// 5. Live Visitor Log Stream
+try {
     $logsStmt = $pdo->query("SELECT * FROM visitor_logs ORDER BY id DESC LIMIT 30");
     $recent_logs = $logsStmt->fetchAll(PDO::FETCH_ASSOC);
-
-} catch (PDOException $e) {
-    $error_msg = $e->getMessage();
-}
+} catch (Exception $e) {}
 ?>
 
 <div class="wrap-header">
@@ -133,7 +131,7 @@ try {
         <div class="dash-card-info">
             <h3>Top Viewed Product</h3>
             <p style="font-size: 14px; font-weight: 600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 180px;">
-                <?php echo !empty($top_products) && ($top_products[0]['log_views'] > 0 || $top_products[0]['view_count'] > 0) ? htmlspecialchars($top_products[0]['name']) : 'N/A'; ?>
+                <?php echo !empty($top_products) && (($top_products[0]['log_views'] ?? 0) > 0 || ($top_products[0]['view_count'] ?? 0) > 0) ? htmlspecialchars($top_products[0]['name']) : 'N/A'; ?>
             </p>
         </div>
     </div>
@@ -310,19 +308,30 @@ try {
                 <h2><i class="fa-solid fa-layer-group" style="color: #3b82f6;"></i> Top Categories</h2>
             </div>
             <div class="postbox-body" style="padding: 16px;">
-                <?php if (empty($top_categories)): ?>
+                <?php 
+                $hasCategoryMetrics = false;
+                foreach ($top_categories as $cat) {
+                    if (($cat['cat_views'] ?? 0) > 0) {
+                        $hasCategoryMetrics = true;
+                        break;
+                    }
+                }
+                ?>
+                <?php if (!$hasCategoryMetrics): ?>
                     <p style="text-align: center; color: #646970; font-size: 13px; margin: 10px 0;">No category traffic recorded yet.</p>
                 <?php else: ?>
                     <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px;">
                         <?php foreach ($top_categories as $cat): ?>
-                            <li style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9;">
-                                <span style="font-size: 13px; font-weight: 600; color: #1e293b;">
-                                    <?php echo htmlspecialchars($cat['name']); ?>
-                                </span>
-                                <span style="font-size: 12px; font-weight: 700; color: #3b82f6; background: #eff6ff; padding: 2px 8px; border-radius: 10px;">
-                                    <?php echo number_format($cat['cat_views']); ?> views
-                                </span>
-                            </li>
+                            <?php if (($cat['cat_views'] ?? 0) > 0): ?>
+                                <li style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9;">
+                                    <span style="font-size: 13px; font-weight: 600; color: #1e293b;">
+                                        <?php echo htmlspecialchars($cat['name']); ?>
+                                    </span>
+                                    <span style="font-size: 12px; font-weight: 700; color: #3b82f6; background: #eff6ff; padding: 2px 8px; border-radius: 10px;">
+                                        <?php echo number_format($cat['cat_views']); ?> views
+                                    </span>
+                                </li>
+                            <?php endif; ?>
                         <?php endforeach; ?>
                     </ul>
                 <?php endif; ?>
