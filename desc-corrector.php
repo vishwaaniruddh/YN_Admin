@@ -5,8 +5,17 @@ require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 
-// Fetch products with formatting issues (bullets •, double question marks ??, \n? sequence, or leading ?)
-$stmt = $pdo->query("SELECT id, name, sku, main_image, description FROM products WHERE deleted_at IS NULL AND (description LIKE '%•%' OR description LIKE '%??%' OR description LIKE '%\\\\n%' OR description LIKE '?%') ORDER BY id DESC LIMIT 100");
+// Fetch products (supports search by SKU, Name, or ID, or default formatting issues)
+$search = trim($_GET['search'] ?? '');
+
+if (!empty($search)) {
+    $search_param = '%' . $search . '%';
+    $search_id = is_numeric($search) ? (int)$search : 0;
+    $stmt = $pdo->prepare("SELECT id, name, sku, main_image, description FROM products WHERE deleted_at IS NULL AND (sku LIKE ? OR name LIKE ? OR id = ?) ORDER BY id DESC LIMIT 100");
+    $stmt->execute([$search_param, $search_param, $search_id]);
+} else {
+    $stmt = $pdo->query("SELECT id, name, sku, main_image, description FROM products WHERE deleted_at IS NULL AND (description LIKE '%•%' OR description LIKE '%??%' OR description LIKE '%\\\\n%' OR description LIKE '?%') ORDER BY id DESC LIMIT 100");
+}
 $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $cleanedProducts = [];
@@ -79,21 +88,82 @@ foreach ($products as $p) {
     margin: 0;
 }
 .info-card {
-    background: rgba(212, 175, 55, 0.05);
-    border: 1px solid rgba(212, 175, 55, 0.2);
-    border-radius: 10px;
+    background: #181818;
+    border: 1px solid rgba(200, 165, 92, 0.3);
+    border-left: 4px solid #c8a55c;
+    border-radius: 8px;
     padding: 16px 20px;
     font-size: 13px;
-    color: #e2e8f0;
+    color: #cbd5e1;
     margin-bottom: 25px;
     line-height: 1.6;
 }
+.info-card strong {
+    color: #c8a55c;
+    font-size: 14px;
+    display: inline-block;
+    margin-bottom: 4px;
+}
 .info-card code {
-    background: rgba(0,0,0,0.5);
-    color: #ffb900;
+    background: #090909;
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.2);
     padding: 2px 6px;
     border-radius: 4px;
     font-family: monospace;
+    font-size: 12px;
+}
+.search-form {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.search-input {
+    background: #090909;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    color: #fff;
+    padding: 9px 14px;
+    font-size: 13px;
+    outline: none;
+    width: 260px;
+    transition: border-color 0.2s;
+}
+.search-input:focus {
+    border-color: #c8a55c;
+}
+.btn-search {
+    background: #334155;
+    color: #fff;
+    border: none;
+    padding: 9px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.2s;
+}
+.btn-search:hover {
+    background: #475569;
+}
+.btn-clear-search {
+    background: rgba(255, 255, 255, 0.08);
+    color: #94a3b8;
+    text-decoration: none;
+    padding: 9px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+.btn-clear-search:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.15);
 }
 .btn-bulk {
     background: #c8a55c;
@@ -249,11 +319,20 @@ foreach ($products as $p) {
             <h1>Format Description Tool</h1>
             <p>Detects and corrects leading bullets (•) and double question marks (??) into clean numbered list formatting.</p>
         </div>
-        <?php if (!empty($cleanedProducts)): ?>
-            <button onclick="bulkCorrectAll()" id="bulkBtn" class="btn-bulk">
-                <i class="fa-solid fa-wand-magic-sparkles"></i> Bulk Correct (Max 50)
-            </button>
-        <?php endif; ?>
+        <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+            <form method="GET" action="desc-corrector.php" class="search-form">
+                <input type="text" name="search" placeholder="Search SKU, Name or ID..." value="<?php echo htmlspecialchars($search); ?>" class="search-input">
+                <button type="submit" class="btn-search"><i class="fa-solid fa-magnifying-glass"></i> Search</button>
+                <?php if (!empty($search)): ?>
+                    <a href="desc-corrector.php" class="btn-clear-search" title="Clear Search"><i class="fa-solid fa-xmark"></i> Clear</a>
+                <?php endif; ?>
+            </form>
+            <?php if (!empty($cleanedProducts)): ?>
+                <button onclick="bulkCorrectAll()" id="bulkBtn" class="btn-bulk">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Bulk Correct (Max 50)
+                </button>
+            <?php endif; ?>
+        </div>
     </div>
 
     <!-- Informational Card -->
