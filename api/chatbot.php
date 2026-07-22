@@ -164,7 +164,7 @@ function search_matching_products($pdo, $queryStr) {
         $terms = explode(' ', strtolower($queryStr));
         $cleanTerms = array_filter($terms, fn($t) => strlen($t) > 2);
         
-        $where = "WHERE p.status = 'published' AND p.deleted_at IS NULL";
+        $where = "WHERE p.status = 'published' AND p.deleted_at IS NULL AND p.stock_qty > 0";
         $params = [];
 
         if (!empty($cleanTerms)) {
@@ -193,7 +193,7 @@ function search_matching_products($pdo, $queryStr) {
             $stmtF = $pdo->query("SELECT p.id, p.name, p.slug, p.price, p.sale_price, p.main_image, c.name as category_name 
                                   FROM products p 
                                   LEFT JOIN categories c ON p.category_id = c.id 
-                                  WHERE p.status = 'published' AND p.deleted_at IS NULL 
+                                  WHERE p.status = 'published' AND p.deleted_at IS NULL AND p.stock_qty > 0 
                                   ORDER BY p.id DESC LIMIT 4");
             $results = $stmtF->fetchAll(PDO::FETCH_ASSOC);
         }
