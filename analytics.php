@@ -11,7 +11,8 @@ require_once __DIR__ . '/includes/sidebar.php';
 // Fix collation on visitor_logs table if needed
 try {
     $pdo->exec("ALTER TABLE visitor_logs CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-} catch (Exception $e) {}
+} catch (Exception $e) {
+}
 
 // Time filter range (today, 7days, 30days)
 $range = $_GET['range'] ?? '7days';
@@ -40,7 +41,8 @@ try {
     $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
     $total_pageviews = $stats['total_pageviews'] ?? 0;
     $unique_visitors = $stats['unique_visitors'] ?? 0;
-} catch (Exception $e) {}
+} catch (Exception $e) {
+}
 
 // 2. Traffic Sources Breakdown
 try {
@@ -53,7 +55,8 @@ try {
     if (!empty($traffic_sources)) {
         $top_source_name = $traffic_sources[0]['traffic_source'];
     }
-} catch (Exception $e) {}
+} catch (Exception $e) {
+}
 
 // 3. Top Viewed Products (split pid + slug matching with explicit COLLATE)
 try {
@@ -70,7 +73,8 @@ try {
         $tp['log_views'] = max(($tp['pid_views'] ?? 0), ($tp['slug_views'] ?? 0));
     }
     unset($tp);
-} catch (Exception $e) {}
+} catch (Exception $e) {
+}
 
 // 4. Top Viewed Categories (split cid + slug matching with explicit COLLATE)
 try {
@@ -87,20 +91,24 @@ try {
         $tc['cat_views'] = max(($tc['cid_views'] ?? 0), ($tc['slug_views'] ?? 0));
     }
     unset($tc);
-} catch (Exception $e) {}
+} catch (Exception $e) {
+}
 
 // 5. Live Visitor Log Stream
 try {
     $logsStmt = $pdo->query("SELECT * FROM visitor_logs ORDER BY id DESC LIMIT 30");
     $recent_logs = $logsStmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (Exception $e) {}
+} catch (Exception $e) {
+}
 ?>
 
 <div class="wrap-header">
-    <h1><i class="fa-solid fa-chart-line" style="color: var(--wp-blue);"></i> Traffic &amp; Visitor Analytics Monitor</h1>
+    <h1><i class="fa-solid fa-chart-line" style="color: var(--wp-blue);"></i> Traffic &amp; Visitor Analytics Monitor
+    </h1>
     <div style="display: flex; gap: 10px; align-items: center;">
         <form method="GET" action="analytics.php">
-            <select name="range" onchange="this.form.submit()" class="form-control" style="padding: 6px 12px; font-size: 13px; font-weight: 600;">
+            <select name="range" onchange="this.form.submit()" class="form-control"
+                style="padding: 6px 12px; font-size: 13px; font-weight: 600;">
                 <option value="today" <?php echo $range === 'today' ? 'selected' : ''; ?>>Today</option>
                 <option value="7days" <?php echo $range === '7days' ? 'selected' : ''; ?>>Last 7 Days</option>
                 <option value="30days" <?php echo $range === '30days' ? 'selected' : ''; ?>>Last 30 Days</option>
@@ -147,7 +155,8 @@ try {
         </div>
         <div class="dash-card-info">
             <h3>Top Viewed Product</h3>
-            <p style="font-size: 14px; font-weight: 600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 180px;">
+            <p
+                style="font-size: 14px; font-weight: 600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 180px;">
                 <?php echo !empty($top_products) ? htmlspecialchars($top_products[0]['name']) : 'N/A'; ?>
             </p>
         </div>
@@ -159,17 +168,19 @@ try {
 
     <!-- Left Main Column: Live Traffic Stream & Products -->
     <div class="main-column">
-        
+
         <!-- Live Visitor Stream -->
         <div class="postbox" style="margin-bottom: 24px;">
             <div class="postbox-header">
-                <h2><i class="fa-solid fa-tower-cell" style="color: #2ecc71;"></i> Real-Time Visitor Activity Stream</h2>
+                <h2><i class="fa-solid fa-tower-cell" style="color: #2ecc71;"></i> Real-Time Visitor Activity Stream
+                </h2>
             </div>
             <div class="postbox-body" style="padding: 0; max-height: 480px; overflow-y: auto;">
                 <?php if (empty($recent_logs)): ?>
                     <div style="text-align: center; padding: 40px; color: #646970;">
                         <i class="fa-solid fa-user-clock" style="font-size: 36px; margin-bottom: 12px; color: #a7aaad;"></i>
-                        <p style="margin: 0; font-size: 14px;">No visitor traffic logs recorded yet. Visit the storefront to generate live logs!</p>
+                        <p style="margin: 0; font-size: 14px;">No visitor traffic logs recorded yet. Visit the storefront to
+                            generate live logs!</p>
                     </div>
                 <?php else: ?>
                     <table class="wp-list-table widefat fixed striped" style="margin: 0;">
@@ -185,18 +196,26 @@ try {
                         <tbody>
                             <?php foreach ($recent_logs as $log): ?>
                                 <tr>
-                                    <td><code style="font-family: monospace; font-weight: 600; color: #334155;"><?php echo htmlspecialchars($log['ip_address']); ?></code></td>
+                                    <td><code
+                                            style="font-family: monospace; font-weight: 600; color: #334155;"><?php echo htmlspecialchars($log['ip_address']); ?></code>
+                                    </td>
                                     <td>
-                                        <?php 
+                                        <?php
                                         $src = $log['traffic_source'];
                                         $badgeBg = '#64748b';
-                                        if ($src === 'Instagram') $badgeBg = '#e1306c';
-                                        elseif ($src === 'Facebook') $badgeBg = '#1877f2';
-                                        elseif ($src === 'Google Search') $badgeBg = '#ea4335';
-                                        elseif ($src === 'Direct') $badgeBg = '#059669';
-                                        elseif ($src === 'Googlebot / Crawler') $badgeBg = '#6366f1';
+                                        if ($src === 'Instagram')
+                                            $badgeBg = '#e1306c';
+                                        elseif ($src === 'Facebook')
+                                            $badgeBg = '#1877f2';
+                                        elseif ($src === 'Google Search')
+                                            $badgeBg = '#ea4335';
+                                        elseif ($src === 'Direct')
+                                            $badgeBg = '#059669';
+                                        elseif ($src === 'Googlebot / Crawler')
+                                            $badgeBg = '#6366f1';
                                         ?>
-                                        <span style="background: <?php echo $badgeBg; ?>; color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">
+                                        <span
+                                            style="background: <?php echo $badgeBg; ?>; color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;white-space:nowrap;">
                                             <?php echo htmlspecialchars($src); ?>
                                         </span>
                                     </td>
@@ -206,7 +225,8 @@ try {
                                         </span>
                                     </td>
                                     <td>
-                                        <i class="fa-solid fa-<?php echo strtolower($log['device_type']) === 'mobile' ? 'mobile-screen' : 'desktop'; ?>"></i>
+                                        <i
+                                            class="fa-solid fa-<?php echo strtolower($log['device_type']) === 'mobile' ? 'mobile-screen' : 'desktop'; ?>"></i>
                                         <?php echo htmlspecialchars($log['device_type']); ?>
                                     </td>
                                     <td style="text-align: right; color: #64748b; font-size: 12px;">
@@ -246,20 +266,24 @@ try {
                                 <tr>
                                     <td>
                                         <?php if (!empty($p['main_image'])): ?>
-                                            <img src="<?php echo sanitize_html($p['main_image']); ?>" style="width: 36px; height: 36px; object-fit: cover; border-radius: 4px;">
+                                            <img src="<?php echo sanitize_html($p['main_image']); ?>"
+                                                style="width: 36px; height: 36px; object-fit: cover; border-radius: 4px;">
                                         <?php else: ?>
-                                            <div style="width: 36px; height: 36px; background: #f1f5f9; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #94a3b8;">
+                                            <div
+                                                style="width: 36px; height: 36px; background: #f1f5f9; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #94a3b8;">
                                                 <i class="fa-solid fa-image"></i>
                                             </div>
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <a href="product-edit.php?id=<?php echo $p['id']; ?>" style="font-weight: 600; color: #1e293b; text-decoration: none;">
+                                        <a href="product-edit.php?id=<?php echo $p['id']; ?>"
+                                            style="font-weight: 600; color: #1e293b; text-decoration: none;">
                                             <?php echo sanitize_html($p['name']); ?>
                                         </a>
                                     </td>
                                     <td><code><?php echo sanitize_html($p['sku'] ?: 'N/A'); ?></code></td>
-                                    <td style="font-weight: 600; color: #16a34a;">₹<?php echo number_format($p['price'], 2); ?></td>
+                                    <td style="font-weight: 600; color: #16a34a;">₹<?php echo number_format($p['price'], 2); ?>
+                                    </td>
                                     <td style="text-align: right; font-weight: 700; color: #0284c7;">
                                         <?php echo number_format(max(($p['log_views'] ?? 0), ($p['view_count'] ?? 0))); ?> views
                                     </td>
@@ -275,7 +299,7 @@ try {
 
     <!-- Right Sidebar Column: Traffic Sources & Top Categories -->
     <div class="sidebar-column" style="width: 320px; flex-shrink: 0;">
-        
+
         <!-- Traffic Sources Breakdown -->
         <div class="postbox" style="margin-bottom: 24px;">
             <div class="postbox-header">
@@ -283,25 +307,34 @@ try {
             </div>
             <div class="postbox-body" style="padding: 16px;">
                 <?php if (empty($traffic_sources)): ?>
-                    <p style="text-align: center; color: #646970; font-size: 13px; margin: 10px 0;">No traffic source data available.</p>
+                    <p style="text-align: center; color: #646970; font-size: 13px; margin: 10px 0;">No traffic source data
+                        available.</p>
                 <?php else: ?>
                     <div style="display: flex; flex-direction: column; gap: 14px;">
                         <?php foreach ($traffic_sources as $src): ?>
-                            <?php 
+                            <?php
                             $pct = $total_pageviews > 0 ? round(($src['cnt'] / $total_pageviews) * 100) : 0;
                             $barBg = '#059669';
-                            if ($src['traffic_source'] === 'Instagram') $barBg = '#e1306c';
-                            elseif ($src['traffic_source'] === 'Facebook') $barBg = '#1877f2';
-                            elseif ($src['traffic_source'] === 'Google Search') $barBg = '#ea4335';
-                            elseif ($src['traffic_source'] === 'Googlebot / Crawler') $barBg = '#6366f1';
+                            if ($src['traffic_source'] === 'Instagram')
+                                $barBg = '#e1306c';
+                            elseif ($src['traffic_source'] === 'Facebook')
+                                $barBg = '#1877f2';
+                            elseif ($src['traffic_source'] === 'Google Search')
+                                $barBg = '#ea4335';
+                            elseif ($src['traffic_source'] === 'Googlebot / Crawler')
+                                $barBg = '#6366f1';
                             ?>
                             <div>
-                                <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #334155;">
+                                <div
+                                    style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #334155;">
                                     <span><?php echo htmlspecialchars($src['traffic_source']); ?></span>
                                     <span><?php echo number_format($src['cnt']); ?> (<?php echo $pct; ?>%)</span>
                                 </div>
-                                <div style="width: 100%; background: #e2e8f0; height: 8px; border-radius: 4px; overflow: hidden;">
-                                    <div style="width: <?php echo $pct; ?>%; background: <?php echo $barBg; ?>; height: 100%; border-radius: 4px;"></div>
+                                <div
+                                    style="width: 100%; background: #e2e8f0; height: 8px; border-radius: 4px; overflow: hidden;">
+                                    <div
+                                        style="width: <?php echo $pct; ?>%; background: <?php echo $barBg; ?>; height: 100%; border-radius: 4px;">
+                                    </div>
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -317,15 +350,18 @@ try {
             </div>
             <div class="postbox-body" style="padding: 16px;">
                 <?php if (empty($top_categories)): ?>
-                    <p style="text-align: center; color: #646970; font-size: 13px; margin: 10px 0;">No categories found in database.</p>
+                    <p style="text-align: center; color: #646970; font-size: 13px; margin: 10px 0;">No categories found in
+                        database.</p>
                 <?php else: ?>
                     <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px;">
                         <?php foreach ($top_categories as $cat): ?>
-                            <li style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9;">
+                            <li
+                                style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9;">
                                 <span style="font-size: 13px; font-weight: 600; color: #1e293b;">
                                     <?php echo htmlspecialchars($cat['name']); ?>
                                 </span>
-                                <span style="font-size: 12px; font-weight: 700; color: #3b82f6; background: #eff6ff; padding: 2px 8px; border-radius: 10px;">
+                                <span
+                                    style="font-size: 12px; font-weight: 700; color: #3b82f6; background: #eff6ff; padding: 2px 8px; border-radius: 10px;">
                                     <?php echo number_format($cat['cat_views'] ?? 0); ?> views
                                 </span>
                             </li>
