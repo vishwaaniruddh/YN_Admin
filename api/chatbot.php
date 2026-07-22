@@ -1,11 +1,16 @@
 <?php
 // admin/api/chatbot.php
-// AI Assistant Engine with Trained Knowledge Base & Gemini Vision Integration
+// AI Assistant Engine using Modular Training Data (chatbot_training.php) + Gemini Vision
 require_once __DIR__ . '/cors_header.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/functions.php';
 
 header('Content-Type: application/json');
+
+// Load Dedicated Knowledge Base & Training Data
+$kbData = require __DIR__ . '/chatbot_training.php';
+$storeInfo = $kbData['store_info'] ?? [];
+$trainedIntents = $kbData['intents'] ?? [];
 
 // Fetch Chatbot Settings from DB
 $settings = [];
@@ -32,20 +37,17 @@ if (empty($apiKey)) {
 
 $welcomeMsg = $settings['chatbot_welcome_message'] ?? "Namaste! ✨ I am your YosshitaNeha Personal Assistant & Stylist. How can I help you today?";
 
-// Trained Store Knowledge System Prompt
-$systemPrompt = "You are an expert luxury Indian fashion stylist for YosshitaNeha Fashion Studio. Specialising in handcrafted designer blouses, heritage jewellery (Kundan, Polki, Antique), and bespoke bridal customisation.
+// System Prompt compiled from trained knowledge base
+$systemPrompt = "You are an expert luxury Indian fashion stylist for " . $storeInfo['name'] . ".
+STORE KNOWLEDGE BASE:
+- Phone / WhatsApp: " . implode(', ', $storeInfo['phones'] ?? []) . "
+- Email: " . ($storeInfo['email'] ?? '') . "
+- Address: " . ($storeInfo['address'] ?? '') . "
+- Operating Hours: " . ($storeInfo['operating_hours'] ?? '') . "
+- Customisation: Basic blouse stitching from ₹1,500. Hand embroidery quotes depend on fabric and work complexity.
+- Shipping: Domestic 3-7 days (free over ₹5,000). International 7-12 days.
 
-STORE KNOWLEDGE DATA:
-- Store Name: YosshitaNeha Fashion Studio
-- Phone / WhatsApp: +91 9324243011 / +91 7506628663
-- Email: yosshita.neha@gmail.com
-- Address: 104, Shyamkamal Building B/1, Agarwal Market, Near Deenanath Mangeshkar Natya Mandir, Vile Parle East, Mumbai - 400057
-- Studio Hours: Monday to Saturday, 11:00 AM - 7:30 PM (IST)
-- Customisation Services: Blouse stitching starts from ₹1,500. Heavy bridal customisation & hand embroidery quotes depend on fabric, zari work, and pattern complexity. Customers can share outfit photos via WhatsApp (+91 9324243011) or upload photo in chat for an instant quote.
-- Domestic Shipping: 3-7 business days. Free shipping over ₹5,000.
-- International Shipping: Available worldwide (7-12 business days).
-
-Be warm, polite, luxury-oriented, concise, and helpful. Always give exact phone numbers and address when asked.";
+Be polite, helpful, concise, and give exact contact information when requested.";
 
 // 1. Config Check Endpoint
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'config') {
@@ -125,7 +127,7 @@ if (str_contains($msgLower, 'order') || str_contains($msgLower, 'track') || str_
         $replyText = "I can help you track your order! Please enter your registered **Email Address** or **Order Number (e.g. YN-1002)**.";
         $actionRequired = "request_verification";
     }
-    $products = []; // No product cards for order status
+    $products = [];
 
 } elseif (!empty($imageBase64)) {
     // INTENT B: Visual Image Matching (Gemini Vision API or Smart Color Matcher)
@@ -143,52 +145,36 @@ if (str_contains($msgLower, 'order') || str_contains($msgLower, 'track') || str_
     }
 
 } else {
-    // INTENT C: AI Conversational & Trained Intent Knowledge Base
-    
-    // 1. Phone / WhatsApp / Contact / Address / Location Intents
-    if (str_contains($msgLower, 'contact') || str_contains($msgLower, 'phone') || str_contains($msgLower, 'number') || str_contains($msgLower, 'call') || str_contains($msgLower, 'whatsapp') || str_contains($msgLower, 'address') || str_contains($msgLower, 'location') || str_contains($msgLower, 'studio') || str_contains($msgLower, 'where')) {
-        $replyText = "📍 **YosshitaNeha Fashion Studio Contact Information**\n\n" .
-                     "📞 **Phone / WhatsApp**: +91 9324243011 / +91 7506628663\n" .
-                     "✉️ **Email**: yosshita.neha@gmail.com\n" .
-                     "🏢 **Studio Address**: 104, Shyamkamal Building B/1, Agarwal Market, Near Deenanath Mangeshkar Natya Mandir, Vile Parle East, Mumbai - 400057\n" .
-                     "⏰ **Operating Hours**: Mon - Sat: 11:00 AM - 7:30 PM (IST)\n\n" .
-                     "Feel free to call or WhatsApp us directly for custom orders and instant assistance!";
-        $products = [];
+    // INTENT C: Match Query against Trained Knowledge Base (`chatbot_training.php`)
+    $matchedIntentKey = null;
 
-    // 2. Customisation & Stitching Charges Intents
-    } elseif (str_contains($msgLower, 'custom') || str_contains($msgLower, 'stitch') || str_contains($msgLower, 'charge') || str_contains($msgLower, 'alter') || str_contains($msgLower, 'cost') || str_contains($msgLower, 'make') || str_contains($msgLower, 'price to')) {
-        $replyText = "✨ **Bespoke Customisation Services & Pricing** ✨\n\n" .
-                     "• **Basic Blouse Stitching**: Starts from ₹1,500\n" .
-                     "• **Heavy Hand Embroidery & Bridal Wear**: Quotes depend on fabric, zari/zardozi work, and pattern complexity.\n\n" .
-                     "📱 **Get Instant Quote**: Send your reference design picture or requirements to our Master Designer via WhatsApp at **+91 9324243011** or upload your photo right here in the chat!";
-        $products = [];
+    foreach ($trainedIntents as $key => $intentData) {
+        $keywords = $intentData['keywords'] ?? [];
+        foreach ($keywords as $kw) {
+            if (str_contains($msgLower, $kw)) {
+                $matchedIntentKey = $key;
+                break 2;
+            }
+        }
+    }
 
-    // 3. Shipping & Delivery Intents
-    } elseif (str_contains($msgLower, 'ship') || str_contains($msgLower, 'deliver') || str_contains($msgLower, 'days') || str_contains($msgLower, 'time')) {
-        $replyText = "🚚 **Shipping & Delivery Policy**\n\n" .
-                     "• **Domestic Shipping**: 3–7 business days (Free shipping over ₹5,000)\n" .
-                     "• **Custom / Bespoke Orders**: 10–15 business days\n" .
-                     "• **International Shipping**: Delivered worldwide within 7–12 business days!";
-        $products = [];
-
-    // 4. Product Requests -> Fetch In-Stock Catalog Items
-    } elseif (str_contains($msgLower, 'blouse') || str_contains($msgLower, 'saree') || str_contains($msgLower, 'lehenga') || str_contains($msgLower, 'jewel') || str_contains($msgLower, 'earring') || str_contains($msgLower, 'necklace') || str_contains($msgLower, 'kundan') || str_contains($msgLower, 'polki') || str_contains($msgLower, 'show') || str_contains($msgLower, 'recommend') || str_contains($msgLower, 'buy')) {
+    if ($matchedIntentKey && isset($trainedIntents[$matchedIntentKey])) {
+        $intent = $trainedIntents[$matchedIntentKey];
+        $replyText = $intent['reply'];
         
-        if (!empty($apiKey)) {
-            $replyText = call_gemini_text_api($apiKey, $userMsg, $systemPrompt);
+        if (!empty($intent['show_products'])) {
+            $searchTerm = $intent['search_term'] ?? $userMsg;
+            $products = search_matching_products($pdo, $searchTerm);
+        } else {
+            $products = [];
         }
-        if (empty($replyText)) {
-            $replyText = "Here are our top active in-stock designs matching your request:";
-        }
-        $products = search_matching_products($pdo, $userMsg);
-
-    // 5. General Fashion Advice (using Gemini AI if available)
     } else {
+        // Fallback to Gemini AI if available, or polite store default
         if (!empty($apiKey)) {
             $replyText = call_gemini_text_api($apiKey, $userMsg, $systemPrompt);
         }
         if (empty($replyText)) {
-            $replyText = "Hello! Welcome to YosshitaNeha Fashion Studio. I am here to assist you with designer blouses, heritage jewellery, customisation quotes, and order tracking. How can I help you today?";
+            $replyText = "Hello! Welcome to YosshitaNeha Fashion Studio. I am here to assist you with designer blouses, heritage jewellery, customisation quotes, shipping, and order tracking. How can I help you today?";
         }
         $products = [];
     }
