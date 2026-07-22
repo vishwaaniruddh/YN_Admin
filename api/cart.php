@@ -5,8 +5,7 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/functions.php';
 
 // Get Session Token
-$headers = getallheaders();
-$session_token = isset($headers['X-Session-Token']) ? $headers['X-Session-Token'] : (isset($_GET['session_token']) ? $_GET['session_token'] : null);
+$session_token = get_session_token();
 
 if (!$session_token) {
     http_response_code(400);

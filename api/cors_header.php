@@ -11,3 +11,26 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS
 }
 
 header("Content-Type: application/json; charset=UTF-8");
+
+function get_session_token() {
+    if (!empty($_SERVER['HTTP_X_SESSION_TOKEN'])) {
+        return $_SERVER['HTTP_X_SESSION_TOKEN'];
+    }
+    if (function_exists('getallheaders')) {
+        $headers = getallheaders();
+        if ($headers) {
+            foreach ($headers as $key => $val) {
+                if (strtolower($key) === 'x-session-token') {
+                    return $val;
+                }
+            }
+        }
+    }
+    if (!empty($_GET['session_token'])) {
+        return $_GET['session_token'];
+    }
+    if (!empty($_POST['session_token'])) {
+        return $_POST['session_token'];
+    }
+    return null;
+}
