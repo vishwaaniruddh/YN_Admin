@@ -3,24 +3,29 @@
 $page_title = "Cache Manager";
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/includes/cache.php';
-require_once __DIR__ . '/includes/header.php';
-require_once __DIR__ . '/includes/sidebar.php';
+require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/functions.php';
 
 $message = '';
 $message_type = 'success';
 
-// Handle Actions
+// Handle session flash messages
+if (!empty($_SESSION['flash_msg'])) {
+    $message = $_SESSION['flash_msg']['text'] ?? '';
+    $message_type = $_SESSION['flash_msg']['type'] ?? 'success';
+    unset($_SESSION['flash_msg']);
+}
+
+// Handle POST Actions (PRG Pattern: Post-Redirect-Get)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'purge_all') {
         $count = purge_cache();
-        $message = "Successfully purged $count cached files!";
-        $message_type = "success";
+        $_SESSION['flash_msg'] = ['text' => "Successfully purged $count cached files!", 'type' => 'success'];
     } elseif ($action === 'purge_single' && !empty($_POST['cache_key'])) {
         purge_cache($_POST['cache_key']);
-        $message = "Purged cache item.";
-        $message_type = "success";
+        $_SESSION['flash_msg'] = ['text' => "Purged cache item.", 'type' => 'success'];
     } elseif ($action === 'warmup') {
         // Clear any old/stale cache files first
         purge_cache();
@@ -69,8 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ];
         set_cache($cache_key_prod, $prodResponse, $pdo);
 
-        $message = "Cache successfully warmed up! Pre-generated valid Category Tree and Product catalog endpoints.";
-        $message_type = "success";
+        $_SESSION['flash_msg'] = ['text' => "Cache successfully warmed up! Pre-generated valid Category Tree and Product catalog endpoints.", 'type' => 'success'];
     } elseif ($action === 'save_settings') {
         $enable_caching = isset($_POST['enable_caching']) ? '1' : '0';
         $cache_ttl = (int)($_POST['cache_ttl'] ?? 3600);
@@ -85,14 +89,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Flush cache on settings change
             purge_cache();
 
-            $message = "Cache settings updated successfully!";
-            $message_type = "success";
+            $_SESSION['flash_msg'] = ['text' => "Cache settings updated successfully!", 'type' => 'success'];
         } catch (Exception $e) {
-            $message = "Error updating settings: " . $e->getMessage();
-            $message_type = "error";
+            $_SESSION['flash_msg'] = ['text' => "Error updating settings: " . $e->getMessage(), 'type' => 'error'];
         }
     }
+
+    // Redirect to prevent "Confirm Form Resubmission" prompt on refresh
+    header("Location: cache-manager.php");
+    exit();
 }
+
+require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/includes/sidebar.php';
 
 // Fetch current stats
 $stats = get_cache_stats();
