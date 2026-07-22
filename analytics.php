@@ -1,5 +1,6 @@
 <?php
 // admin/analytics.php
+// Live Traffic & Visitor Analytics Monitor
 $page_title = "Traffic & Visitor Analytics";
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/includes/auth.php';
@@ -38,10 +39,10 @@ try {
     // Top Source Name
     $top_source_name = !empty($traffic_sources) ? $traffic_sources[0]['traffic_source'] : 'Direct';
 
-    // 3. Top Viewed Products
+    // 3. Top Viewed Products (matching visitor logs or view_count)
     $topProductsStmt = $pdo->query("SELECT p.id, p.name, p.sku, p.main_image, p.price, p.view_count, COUNT(v.id) as log_views 
         FROM products p 
-        LEFT JOIN visitor_logs v ON (v.product_id = p.id OR v.page_url LIKE CONCAT('%', p.slug, '%')) 
+        LEFT JOIN visitor_logs v ON (v.product_id = p.id OR v.page_url LIKE CONCAT('%', p.slug, '%')) AND v.created_at >= DATE_SUB(NOW(), $interval_sql)
         WHERE p.deleted_at IS NULL 
         GROUP BY p.id 
         ORDER BY log_views DESC, p.view_count DESC 
@@ -51,15 +52,28 @@ try {
     // 4. Top Viewed Categories
     $topCatsStmt = $pdo->query("SELECT c.id, c.name, c.slug, COUNT(v.id) as cat_views 
         FROM categories c 
-        JOIN visitor_logs v ON (v.category_id = c.id OR v.page_url LIKE CONCAT('%', c.slug, '%')) 
+        LEFT JOIN visitor_logs v ON (v.category_id = c.id OR v.page_url LIKE CONCAT('%', c.slug, '%')) AND v.created_at >= DATE_SUB(NOW(), $interval_sql)
         WHERE c.deleted_at IS NULL 
         GROUP BY c.id 
+        HAVING cat_views > 0
         ORDER BY cat_views DESC 
         LIMIT 5");
     $top_categories = $topCatsStmt->fetchAll(PDO::FETCH_ASSOC);
 
+    // If empty with date filter, fetch top categories across all time
+    if (empty($top_categories)) {
+        $topCatsStmtAll = $pdo->query("SELECT c.id, c.name, c.slug, COUNT(v.id) as cat_views 
+            FROM categories c 
+            JOIN visitor_logs v ON (v.category_id = c.id OR v.page_url LIKE CONCAT('%', c.slug, '%'))
+            WHERE c.deleted_at IS NULL 
+            GROUP BY c.id 
+            ORDER BY cat_views DESC 
+            LIMIT 5");
+        $top_categories = $topCatsStmtAll->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     // 5. Live Visitor Log Stream
-    $logsStmt = $pdo->query("SELECT * FROM visitor_logs ORDER BY id DESC LIMIT 25");
+    $logsStmt = $pdo->query("SELECT * FROM visitor_logs ORDER BY id DESC LIMIT 30");
     $recent_logs = $logsStmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
@@ -119,7 +133,7 @@ try {
         <div class="dash-card-info">
             <h3>Top Viewed Product</h3>
             <p style="font-size: 14px; font-weight: 600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 180px;">
-                <?php echo !empty($top_products) ? htmlspecialchars($top_products[0]['name']) : 'N/A'; ?>
+                <?php echo !empty($top_products) && ($top_products[0]['log_views'] > 0 || $top_products[0]['view_count'] > 0) ? htmlspecialchars($top_products[0]['name']) : 'N/A'; ?>
             </p>
         </div>
     </div>
@@ -179,8 +193,8 @@ try {
                                         <i class="fa-solid fa-<?php echo strtolower($log['device_type']) === 'mobile' ? 'mobile-screen' : 'desktop'; ?>"></i>
                                         <?php echo htmlspecialchars($log['device_type']); ?>
                                     </td>
-                                    <td style="text-align: right; color: #64748b; font-size: 12px; white-space: nowrap;">
-                                        <?php echo date('d M, h:i A', strtotime($log['created_at'])); ?>
+                                    <td style="text-align: right; color: #64748b; font-size: 12px;">
+                                        <?php echo date('M d, g:i a', strtotime($log['created_at'])); ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -190,19 +204,30 @@ try {
             </div>
         </div>
 
-        <!-- Most Viewed Products -->
+        <!-- Top Viewed Products Table -->
         <div class="postbox">
             <div class="postbox-header">
-                <h2><i class="fa-solid fa-fire-flame-curved" style="color: #f59e0b;"></i> Top Viewed Products</h2>
+                <h2><i class="fa-solid fa-fire" style="color: #f1c40f;"></i> Top Viewed Products</h2>
             </div>
             <div class="postbox-body" style="padding: 0;">
-                <?php if (empty($top_products)): ?>
-                    <p style="padding: 20px; color: #646970;">No product view metrics recorded yet.</p>
+                <?php 
+                $hasProductMetrics = false;
+                foreach ($top_products as $tp) {
+                    if (($tp['log_views'] ?? 0) > 0 || ($tp['view_count'] ?? 0) > 0) {
+                        $hasProductMetrics = true;
+                        break;
+                    }
+                }
+                ?>
+                <?php if (!$hasProductMetrics): ?>
+                    <div style="text-align: center; padding: 30px; color: #646970;">
+                        <p style="margin: 0; font-size: 14px;">No product view metrics recorded yet.</p>
+                    </div>
                 <?php else: ?>
                     <table class="wp-list-table widefat fixed striped" style="margin: 0;">
                         <thead>
                             <tr>
-                                <th style="width: 50px;">Image</th>
+                                <th style="width: 60px;">Image</th>
                                 <th>Product Name</th>
                                 <th>SKU</th>
                                 <th>Price</th>
@@ -211,21 +236,29 @@ try {
                         </thead>
                         <tbody>
                             <?php foreach ($top_products as $p): ?>
-                                <tr>
-                                    <td>
-                                        <img src="<?php echo htmlspecialchars($p['main_image'] ?: 'https://placehold.co/40x50/1A1A1A/D4AF37?text=No+Img'); ?>" style="width: 36px; height: 44px; object-fit: cover; border-radius: 4px;">
-                                    </td>
-                                    <td>
-                                        <a href="product-edit.php?id=<?php echo $p['id']; ?>" style="font-weight: 600; color: var(--wp-blue); text-decoration: none;">
-                                            <?php echo htmlspecialchars($p['name']); ?>
-                                        </a>
-                                    </td>
-                                    <td><code><?php echo htmlspecialchars($p['sku'] ?: 'N/A'); ?></code></td>
-                                    <td style="color: #059669; font-weight: 600;">₹<?php echo number_format($p['price'], 2); ?></td>
-                                    <td style="text-align: right; font-weight: 700; color: #d97706; font-size: 14px;">
-                                        <i class="fa-solid fa-eye" style="margin-right: 4px;"></i> <?php echo max((int)$p['log_views'], (int)$p['view_count']); ?>
-                                    </td>
-                                </tr>
+                                <?php if (($p['log_views'] ?? 0) > 0 || ($p['view_count'] ?? 0) > 0): ?>
+                                    <tr>
+                                        <td>
+                                            <?php if (!empty($p['main_image'])): ?>
+                                                <img src="<?php echo sanitize_html($p['main_image']); ?>" style="width: 36px; height: 36px; object-fit: cover; border-radius: 4px;">
+                                            <?php else: ?>
+                                                <div style="width: 36px; height: 36px; background: #f1f5f9; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #94a3b8;">
+                                                    <i class="fa-solid fa-image"></i>
+                                                </div>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <a href="product-edit.php?id=<?php echo $p['id']; ?>" style="font-weight: 600; color: #1e293b; text-decoration: none;">
+                                                <?php echo sanitize_html($p['name']); ?>
+                                            </a>
+                                        </td>
+                                        <td><code><?php echo sanitize_html($p['sku'] ?: 'N/A'); ?></code></td>
+                                        <td style="font-weight: 600; color: #16a34a;">₹<?php echo number_format($p['price'], 2); ?></td>
+                                        <td style="text-align: right; font-weight: 700; color: #0284c7;">
+                                            <?php echo number_format(max($p['log_views'], $p['view_count'])); ?> views
+                                        </td>
+                                    </tr>
+                                <?php endif; ?>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
@@ -235,68 +268,63 @@ try {
 
     </div>
 
-    <!-- Right Column: Traffic Sources & Category Trends -->
-    <div class="side-column">
-
+    <!-- Right Sidebar Column: Traffic Sources & Top Categories -->
+    <div class="sidebar-column" style="width: 320px; flex-shrink: 0;">
+        
         <!-- Traffic Sources Breakdown -->
         <div class="postbox" style="margin-bottom: 24px;">
             <div class="postbox-header">
-                <h2><i class="fa-solid fa-chart-pie" style="color: var(--wp-blue);"></i> Traffic Sources</h2>
+                <h2><i class="fa-solid fa-chart-pie" style="color: #9b59b6;"></i> Traffic Sources</h2>
             </div>
-            <div class="postbox-body">
+            <div class="postbox-body" style="padding: 16px;">
                 <?php if (empty($traffic_sources)): ?>
-                    <p style="color: #646970; margin: 0;">No traffic source data available for selected period.</p>
+                    <p style="text-align: center; color: #646970; font-size: 13px; margin: 10px 0;">No traffic source data available.</p>
                 <?php else: ?>
-                    <?php 
-                    $sumVisits = array_sum(array_column($traffic_sources, 'cnt'));
-                    foreach ($traffic_sources as $srcItem):
-                        $percent = $sumVisits > 0 ? round(($srcItem['cnt'] / $sumVisits) * 100, 1) : 0;
-                        $sName = $srcItem['traffic_source'];
-                        $barColor = '#3b82f6';
-                        if ($sName === 'Instagram') $barColor = '#e1306c';
-                        elseif ($sName === 'Facebook') $barColor = '#1877f2';
-                        elseif ($sName === 'Google Search') $barColor = '#ea4335';
-                        elseif ($sName === 'Direct') $barColor = '#10b981';
-                    ?>
-                        <div style="margin-bottom: 14px;">
-                            <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: #1e293b;">
-                                <span><?php echo htmlspecialchars($sName); ?></span>
-                                <span><?php echo $srcItem['cnt']; ?> (<?php echo $percent; ?>%)</span>
+                    <div style="display: flex; flex-direction: column; gap: 14px;">
+                        <?php foreach ($traffic_sources as $src): ?>
+                            <?php 
+                            $pct = $total_pageviews > 0 ? round(($src['cnt'] / $total_pageviews) * 100) : 0;
+                            $barBg = '#059669';
+                            if ($src['traffic_source'] === 'Instagram') $barBg = '#e1306c';
+                            elseif ($src['traffic_source'] === 'Facebook') $barBg = '#1877f2';
+                            elseif ($src['traffic_source'] === 'Google Search') $barBg = '#ea4335';
+                            ?>
+                            <div>
+                                <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #334155;">
+                                    <span><?php echo htmlspecialchars($src['traffic_source']); ?></span>
+                                    <span><?php echo number_format($src['cnt']); ?> (<?php echo $pct; ?>%)</span>
+                                </div>
+                                <div style="width: 100%; background: #e2e8f0; height: 8px; border-radius: 4px; overflow: hidden;">
+                                    <div style="width: <?php echo $pct; ?>%; background: <?php echo $barBg; ?>; height: 100%; border-radius: 4px;"></div>
+                                </div>
                             </div>
-                            <div style="width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
-                                <div style="width: <?php echo $percent; ?>%; height: 100%; background: <?php echo $barColor; ?>; border-radius: 4px;"></div>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
+                        <?php endforeach; ?>
+                    </div>
                 <?php endif; ?>
             </div>
         </div>
 
-        <!-- Top Category Views -->
+        <!-- Top Categories Breakdown -->
         <div class="postbox">
             <div class="postbox-header">
-                <h2><i class="fa-solid fa-layer-group" style="color: var(--wp-blue);"></i> Top Categories</h2>
+                <h2><i class="fa-solid fa-layer-group" style="color: #3b82f6;"></i> Top Categories</h2>
             </div>
-            <div class="postbox-body" style="padding: 0;">
+            <div class="postbox-body" style="padding: 16px;">
                 <?php if (empty($top_categories)): ?>
-                    <p style="padding: 16px; color: #646970; margin: 0;">No category traffic recorded yet.</p>
+                    <p style="text-align: center; color: #646970; font-size: 13px; margin: 10px 0;">No category traffic recorded yet.</p>
                 <?php else: ?>
-                    <table class="wp-list-table widefat fixed striped" style="margin: 0;">
-                        <thead>
-                            <tr>
-                                <th>Category</th>
-                                <th style="text-align: right;">Views</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($top_categories as $cat): ?>
-                                <tr>
-                                    <td style="font-weight: 600;"><?php echo htmlspecialchars($cat['name']); ?></td>
-                                    <td style="text-align: right; font-weight: 700; color: #2563eb;"><?php echo $cat['cat_views']; ?></td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
+                    <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px;">
+                        <?php foreach ($top_categories as $cat): ?>
+                            <li style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9;">
+                                <span style="font-size: 13px; font-weight: 600; color: #1e293b;">
+                                    <?php echo htmlspecialchars($cat['name']); ?>
+                                </span>
+                                <span style="font-size: 12px; font-weight: 700; color: #3b82f6; background: #eff6ff; padding: 2px 8px; border-radius: 10px;">
+                                    <?php echo number_format($cat['cat_views']); ?> views
+                                </span>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
                 <?php endif; ?>
             </div>
         </div>
