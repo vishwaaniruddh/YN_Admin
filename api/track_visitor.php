@@ -81,7 +81,7 @@ if ($path === '/' || str_ends_with($path, '/') || str_contains($path, '/home')) 
     if (!empty($input['product_id'])) {
         $product_id = (int)$input['product_id'];
     } else {
-        preg_match('#/product/([^/?#]+)#i', $path, $m);
+        preg_match('~/product/([^/?#]+)~i', $path, $m);
         if (!empty($m[1])) {
             $slug = trim($m[1]);
             try {
