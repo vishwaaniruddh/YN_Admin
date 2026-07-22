@@ -180,6 +180,40 @@ try {
     </div>
 </div>
 
+<style>
+.cache-key-badge {
+    background: #1e293b;
+    color: #f59e0b;
+    border: 1px solid #334155;
+    padding: 4px 8px;
+    border-radius: 5px;
+    font-weight: 600;
+    font-family: monospace;
+    font-size: 12px;
+    display: inline-block;
+    word-break: break-all;
+    line-height: 1.4;
+}
+.btn-purge-item {
+    background: #dc2626;
+    color: #ffffff;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s ease;
+}
+.btn-purge-item:hover {
+    background: #b91c1c;
+    color: #ffffff;
+}
+</style>
+
 <!-- Two-Column WordPress Layout -->
 <div class="wp-editor-columns">
     
@@ -189,39 +223,39 @@ try {
             <div class="postbox-header">
                 <h2><i class="fa-solid fa-list-check" style="color: var(--wp-blue);"></i> Cached API Endpoints</h2>
             </div>
-            <div class="postbox-body" style="padding: 0;">
+            <div class="postbox-body" style="padding: 0; max-height: 520px; overflow-y: auto;">
                 <?php if (empty($stats['items'])): ?>
                     <div style="text-align: center; padding: 40px; color: #646970;">
                         <i class="fa-solid fa-box-open" style="font-size: 36px; margin-bottom: 12px; color: #a7aaad;"></i>
                         <p style="margin: 0; font-size: 14px;">No active cache files on disk. Click <strong>Warm Up Cache</strong> to pre-generate endpoints.</p>
                     </div>
                 <?php else: ?>
-                    <table class="wp-list-table widefat fixed striped">
-                        <thead>
+                    <table class="wp-list-table widefat fixed striped" style="margin: 0;">
+                        <thead style="position: sticky; top: 0; z-index: 10; background: #fff;">
                             <tr>
-                                <th>Cache Key</th>
-                                <th>Size</th>
-                                <th>Age</th>
-                                <th>Created At</th>
-                                <th style="text-align: right;">Action</th>
+                                <th style="width: 45%;">Cache Key</th>
+                                <th style="width: 12%;">Size</th>
+                                <th style="width: 13%;">Age</th>
+                                <th style="width: 18%;">Created At</th>
+                                <th style="width: 12%; text-align: right;">Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($stats['items'] as $item): ?>
                                 <tr>
-                                    <td>
-                                        <code style="background: rgba(200, 165, 92, 0.15); color: #c8a55c; padding: 3px 8px; border-radius: 4px; font-weight: 600;">
+                                    <td style="word-break: break-all;">
+                                        <code class="cache-key-badge">
                                             <?php echo htmlspecialchars($item['key']); ?>
                                         </code>
                                     </td>
-                                    <td><?php echo $item['size_formatted']; ?></td>
-                                    <td><?php echo round($item['age_seconds'] / 60, 1); ?> mins ago</td>
-                                    <td><?php echo $item['created_at']; ?></td>
-                                    <td style="text-align: right;">
+                                    <td style="white-space: nowrap; font-weight: 500;"><?php echo $item['size_formatted']; ?></td>
+                                    <td style="white-space: nowrap;"><?php echo round($item['age_seconds'] / 60, 1); ?> mins ago</td>
+                                    <td style="white-space: nowrap;"><?php echo $item['created_at']; ?></td>
+                                    <td style="text-align: right; white-space: nowrap;">
                                         <form method="POST" style="display: inline;">
                                             <input type="hidden" name="action" value="purge_single">
                                             <input type="hidden" name="cache_key" value="<?php echo htmlspecialchars($item['key']); ?>">
-                                            <button type="submit" class="button button-small button-danger"><i class="fa-solid fa-xmark"></i> Purge</button>
+                                            <button type="submit" class="btn-purge-item"><i class="fa-solid fa-xmark"></i> Purge</button>
                                         </form>
                                     </td>
                                 </tr>
