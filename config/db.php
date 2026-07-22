@@ -22,7 +22,7 @@ if ($isProduction) {
     $host = 'localhost';
     $user = 'root';
     $pass = '';
-    $dbname = 'yn';
+    $dbname = 'yosshitaneha_db';
 }
 
 // Allow local override if db_local.php exists
