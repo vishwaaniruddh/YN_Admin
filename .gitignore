@@ -1,0 +1,9 @@
+# YN Admin .gitignore
+uploads/
+uploads/*
+!uploads/.gitkeep
+*.log
+.env
+config/db_local.php
+.DS_Store
+Thumbs.db

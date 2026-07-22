@@ -1,0 +1,21 @@
+{
+    "name": "yosshitaneha/admin-panel",
+    "description": "YosshitaNeha Fashion Studio Admin Panel",
+    "type": "project",
+    "require": {
+        "phpmailer/phpmailer": "^6.9",
+        "phpoffice/phpspreadsheet": "^2.1",
+        "firebase/php-jwt": "^6.10",
+        "dompdf/dompdf": "^3.1"
+    },
+    "config": {
+        "allow-plugins": {
+            "phpoffice/phpspreadsheet": true
+        },
+        "policy": {
+            "advisories": {
+                "block": false
+            }
+        }
+    }
+}
