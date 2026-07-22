@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $prods = $stmtProd->fetchAll(PDO::FETCH_ASSOC);
         set_cache('popular_products_12', $prods, $pdo);
 
-        $message = "Cache successfully warmed up! Pre-generated 3 core endpoints.";
+        $message = "Cache successfully warmed up! Pre-generated core endpoints.";
         $message_type = "success";
     } elseif ($action === 'save_settings') {
         $enable_caching = isset($_POST['enable_caching']) ? '1' : '0';
@@ -82,293 +82,145 @@ try {
 } catch (Exception $e) {}
 ?>
 
-<style>
-.cache-container {
-    padding: 25px 30px;
-    color: #e2e8f0;
-}
-.cache-header-card {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #1e1e1e;
-    padding: 24px 30px;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    margin-bottom: 25px;
-}
-.cache-header-card h1 {
-    font-size: 22px;
-    font-weight: 700;
-    color: #fff;
-    margin: 0 0 6px 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.cache-header-card p {
-    font-size: 13px;
-    color: #94a3b8;
-    margin: 0;
-}
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 20px;
-    margin-bottom: 25px;
-}
-.stat-card {
-    background: #181818;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
-    padding: 20px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-.stat-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 10px;
-    background: rgba(200, 165, 92, 0.12);
-    color: #c8a55c;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-}
-.stat-info h4 {
-    font-size: 22px;
-    font-weight: 700;
-    color: #fff;
-    margin: 0 0 2px 0;
-}
-.stat-info p {
-    font-size: 12px;
-    color: #94a3b8;
-    margin: 0;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-weight: 600;
-}
-.cache-grid-columns {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 25px;
-}
-.card-box {
-    background: #181818;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
-    padding: 22px;
-    margin-bottom: 25px;
-}
-.card-box h3 {
-    font-size: 16px;
-    font-weight: 600;
-    color: #fff;
-    margin: 0 0 16px 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.cache-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-}
-.cache-table th {
-    text-align: left;
-    padding: 10px 14px;
-    background: #101010;
-    color: #94a3b8;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-.cache-table td {
-    padding: 12px 14px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    color: #cbd5e1;
-}
-.cache-key-badge {
-    background: rgba(200, 165, 92, 0.15);
-    color: #c8a55c;
-    padding: 3px 8px;
-    border-radius: 4px;
-    font-family: monospace;
-    font-size: 12px;
-    font-weight: 600;
-}
-.btn-purge {
-    background: #d63638;
-    color: #fff;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 13px;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    transition: background 0.2s;
-}
-.btn-purge:hover { background: #b32d2e; }
-.btn-warm {
-    background: #c8a55c;
-    color: #000;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
-    font-weight: 700;
-    font-size: 13px;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    transition: background 0.2s;
-}
-.btn-warm:hover { background: #dfb96c; }
-.btn-sm-danger {
-    background: rgba(214, 54, 56, 0.2);
-    color: #f87171;
-    border: 1px solid rgba(214, 54, 56, 0.3);
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-size: 11px;
-    cursor: pointer;
-}
-.btn-sm-danger:hover { background: #d63638; color: #fff; }
-</style>
+<!-- Header Section in WordPress Admin Style -->
+<div class="wrap-header">
+    <h1><i class="fa-solid fa-bolt" style="color: var(--wp-blue);"></i> Cache Manager &amp; Performance Booster</h1>
+    <div style="display: flex; gap: 8px; align-items: center;">
+        <form method="POST" style="display: inline-block;">
+            <input type="hidden" name="action" value="warmup">
+            <button type="submit" class="button button-primary"><i class="fa-solid fa-fire-flame-curved"></i> Warm Up Cache</button>
+        </form>
+        <form method="POST" style="display: inline-block;" onsubmit="return confirm('Are you sure you want to purge all cached files?');">
+            <input type="hidden" name="action" value="purge_all">
+            <button type="submit" class="button button-danger"><i class="fa-solid fa-trash-can"></i> Purge All Cache</button>
+        </form>
+    </div>
+</div>
 
-<div class="cache-container">
+<?php if (!empty($message)): ?>
+    <div class="notice notice-<?php echo $message_type; ?> auto-dismiss">
+        <p><i class="fa-solid fa-circle-check"></i> <?php echo sanitize_html($message); ?></p>
+    </div>
+<?php endif; ?>
 
-    <!-- Header Section -->
-    <div class="cache-header-card">
-        <div>
-            <h1><i class="fa-solid fa-bolt" style="color: #ffb900;"></i> Cache Manager &amp; Performance Booster</h1>
-            <p>Accelerate customer page loads by serving pre-computed JSON responses directly in &lt; 5ms.</p>
+<!-- Stats Overview Grid -->
+<div class="dashboard-grid" style="margin-bottom: 25px;">
+    <div class="dash-card">
+        <div class="dash-card-icon" style="background-color: rgba(52, 152, 219, 0.12); color: #3498db;">
+            <i class="fa-solid fa-file-code"></i>
         </div>
-        <div style="display: flex; gap: 10px;">
-            <form method="POST">
-                <input type="hidden" name="action" value="warmup">
-                <button type="submit" class="btn-warm" title="Pre-generate core cache files">
-                    <i class="fa-solid fa-fire-flame-curved"></i> Warm Up Cache
-                </button>
-            </form>
-            <form method="POST" onsubmit="return confirm('Are you sure you want to purge all cached files?');">
-                <input type="hidden" name="action" value="purge_all">
-                <button type="submit" class="btn-purge">
-                    <i class="fa-solid fa-trash-can"></i> Purge All Cache
-                </button>
-            </form>
+        <div class="dash-card-info">
+            <h3>Cached Files</h3>
+            <p><?php echo $stats['total_files']; ?></p>
         </div>
     </div>
 
-    <?php if (!empty($message)): ?>
-        <div class="notice notice-<?php echo $message_type; ?> auto-dismiss" style="margin-bottom: 25px;">
-            <p><?php echo sanitize_html($message); ?></p>
+    <div class="dash-card">
+        <div class="dash-card-icon" style="background-color: rgba(155, 89, 182, 0.12); color: #9b59b6;">
+            <i class="fa-solid fa-hard-drive"></i>
         </div>
-    <?php endif; ?>
-
-    <!-- Metrics Stat Bar -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-icon"><i class="fa-solid fa-file-code"></i></div>
-            <div class="stat-info">
-                <h4><?php echo $stats['total_files']; ?></h4>
-                <p>Cached Files</p>
-            </div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-icon"><i class="fa-solid fa-hard-drive"></i></div>
-            <div class="stat-info">
-                <h4><?php echo $stats['total_size_formatted']; ?></h4>
-                <p>Disk Usage</p>
-            </div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-icon" style="color: #4ab866; background: rgba(74, 184, 102, 0.12);"><i class="fa-solid fa-gauge-high"></i></div>
-            <div class="stat-info">
-                <h4 style="color: #4ab866;">&lt; 5ms</h4>
-                <p>API Speedup</p>
-            </div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
-            <div class="stat-info">
-                <h4 style="font-size: 14px; margin-top: 4px;"><?php echo $stats['last_purge']; ?></h4>
-                <p>Last Purged</p>
-            </div>
+        <div class="dash-card-info">
+            <h3>Disk Usage</h3>
+            <p style="font-size: 20px;"><?php echo $stats['total_size_formatted']; ?></p>
         </div>
     </div>
 
-    <!-- Main Layout -->
-    <div class="cache-grid-columns">
-        
-        <!-- Left: Cached Items Listing -->
-        <div class="card-box">
-            <h3><i class="fa-solid fa-list-check" style="color: #c8a55c;"></i> Cached API Endpoints</h3>
-            <?php if (empty($stats['items'])): ?>
-                <div style="text-align: center; padding: 40px; color: #94a3b8;">
-                    <i class="fa-solid fa-box-open" style="font-size: 36px; margin-bottom: 12px; color: #475569;"></i>
-                    <p style="margin: 0; font-size: 14px;">No active cache files on disk. Click <strong>Warm Up Cache</strong> to pre-generate endpoints.</p>
-                </div>
-            <?php else: ?>
-                <table class="cache-table">
-                    <thead>
-                        <tr>
-                            <th>Cache Key</th>
-                            <th>Size</th>
-                            <th>Age</th>
-                            <th>Created At</th>
-                            <th style="text-align: right;">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($stats['items'] as $item): ?>
+    <div class="dash-card">
+        <div class="dash-card-icon" style="background-color: rgba(46, 204, 113, 0.12); color: #2ecc71;">
+            <i class="fa-solid fa-gauge-high"></i>
+        </div>
+        <div class="dash-card-info">
+            <h3>API Speedup</h3>
+            <p style="font-size: 20px; color: #2ecc71;">&lt; 5ms</p>
+        </div>
+    </div>
+
+    <div class="dash-card">
+        <div class="dash-card-icon" style="background-color: rgba(241, 196, 15, 0.12); color: #f1c40f;">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+        </div>
+        <div class="dash-card-info">
+            <h3>Last Purged</h3>
+            <p style="font-size: 13px; margin-top: 4px;"><?php echo $stats['last_purge']; ?></p>
+        </div>
+    </div>
+</div>
+
+<!-- Two-Column WordPress Layout -->
+<div class="wp-editor-columns">
+    
+    <!-- Left Main Column: Cached Endpoints -->
+    <div class="main-column">
+        <div class="postbox">
+            <div class="postbox-header">
+                <h2><i class="fa-solid fa-list-check" style="color: var(--wp-blue);"></i> Cached API Endpoints</h2>
+            </div>
+            <div class="postbox-body" style="padding: 0;">
+                <?php if (empty($stats['items'])): ?>
+                    <div style="text-align: center; padding: 40px; color: #646970;">
+                        <i class="fa-solid fa-box-open" style="font-size: 36px; margin-bottom: 12px; color: #a7aaad;"></i>
+                        <p style="margin: 0; font-size: 14px;">No active cache files on disk. Click <strong>Warm Up Cache</strong> to pre-generate endpoints.</p>
+                    </div>
+                <?php else: ?>
+                    <table class="wp-list-table widefat fixed striped">
+                        <thead>
                             <tr>
-                                <td><span class="cache-key-badge"><?php echo htmlspecialchars($item['key']); ?></span></td>
-                                <td><?php echo $item['size_formatted']; ?></td>
-                                <td><?php echo round($item['age_seconds'] / 60, 1); ?> mins ago</td>
-                                <td><?php echo $item['created_at']; ?></td>
-                                <td style="text-align: right;">
-                                    <form method="POST" style="display: inline;">
-                                        <input type="hidden" name="action" value="purge_single">
-                                        <input type="hidden" name="cache_key" value="<?php echo htmlspecialchars($item['key']); ?>">
-                                        <button type="submit" class="btn-sm-danger"><i class="fa-solid fa-xmark"></i> Purge</button>
-                                    </form>
-                                </td>
+                                <th>Cache Key</th>
+                                <th>Size</th>
+                                <th>Age</th>
+                                <th>Created At</th>
+                                <th style="text-align: right;">Action</th>
                             </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            <?php endif; ?>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($stats['items'] as $item): ?>
+                                <tr>
+                                    <td>
+                                        <code style="background: rgba(200, 165, 92, 0.15); color: #c8a55c; padding: 3px 8px; border-radius: 4px; font-weight: 600;">
+                                            <?php echo htmlspecialchars($item['key']); ?>
+                                        </code>
+                                    </td>
+                                    <td><?php echo $item['size_formatted']; ?></td>
+                                    <td><?php echo round($item['age_seconds'] / 60, 1); ?> mins ago</td>
+                                    <td><?php echo $item['created_at']; ?></td>
+                                    <td style="text-align: right;">
+                                        <form method="POST" style="display: inline;">
+                                            <input type="hidden" name="action" value="purge_single">
+                                            <input type="hidden" name="cache_key" value="<?php echo htmlspecialchars($item['key']); ?>">
+                                            <button type="submit" class="button button-small button-danger"><i class="fa-solid fa-xmark"></i> Purge</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php endif; ?>
+            </div>
         </div>
+    </div>
 
-        <!-- Right: Settings & Information -->
-        <div>
-            <div class="card-box">
-                <h3><i class="fa-solid fa-sliders" style="color: #c8a55c;"></i> Cache Settings</h3>
+    <!-- Right Side Column: Settings & Information -->
+    <div class="side-column">
+        <!-- Settings Postbox -->
+        <div class="postbox">
+            <div class="postbox-header">
+                <h2><i class="fa-solid fa-sliders" style="color: var(--wp-blue);"></i> Cache Settings</h2>
+            </div>
+            <div class="postbox-body">
                 <form method="POST">
                     <input type="hidden" name="action" value="save_settings">
 
-                    <div style="margin-bottom: 20px;">
-                        <label style="display: flex; align-items: center; cursor: pointer; gap: 10px; font-weight: 600; font-size: 14px; color: #fff;">
-                            <input type="checkbox" name="enable_caching" value="1" <?php echo $cachingEnabled ? 'checked' : ''; ?> style="width: 18px; height: 18px; accent-color: #c8a55c;">
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label style="display: flex; align-items: center; cursor: pointer; gap: 8px; font-weight: 600;">
+                            <input type="checkbox" name="enable_caching" value="1" <?php echo $cachingEnabled ? 'checked' : ''; ?>>
                             Enable API Response Caching
                         </label>
-                        <p style="font-size: 12px; color: #94a3b8; margin: 4px 0 0 28px;">Stores API responses in memory/disk to eliminate redundant SQL database queries.</p>
+                        <p style="font-size: 11px; color: #646970; margin: 4px 0 0 24px;">Stores API responses in memory/disk to eliminate redundant SQL database queries.</p>
                     </div>
 
-                    <div style="margin-bottom: 20px;">
-                        <label style="display: block; font-size: 13px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">Cache Expiration (TTL)</label>
-                        <select name="cache_ttl" style="width: 100%; background: #090909; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; padding: 10px; font-size: 13px;">
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label for="cache_ttl" style="font-weight: 600;">Cache Expiration (TTL)</label>
+                        <select name="cache_ttl" id="cache_ttl" class="form-control" style="margin-top: 6px;">
                             <option value="900" <?php echo ($cacheTTL == 900) ? 'selected' : ''; ?>>15 Minutes</option>
                             <option value="1800" <?php echo ($cacheTTL == 1800) ? 'selected' : ''; ?>>30 Minutes</option>
                             <option value="3600" <?php echo ($cacheTTL == 3600) ? 'selected' : ''; ?>>1 Hour (Recommended)</option>
@@ -377,20 +229,24 @@ try {
                         </select>
                     </div>
 
-                    <button type="submit" class="btn-warm" style="width: 100%; justify-content: center;">
+                    <button type="submit" class="button button-primary" style="width: 100%; justify-content: center; font-weight: 600;">
                         <i class="fa-solid fa-floppy-disk"></i> Save Cache Settings
                     </button>
                 </form>
             </div>
+        </div>
 
-            <div class="card-box" style="background: rgba(200, 165, 92, 0.05); border-color: rgba(200, 165, 92, 0.2);">
-                <h3 style="color: #c8a55c;"><i class="fa-solid fa-lightbulb"></i> How Automatic Invalidation Works</h3>
-                <p style="font-size: 12px; color: #cbd5e1; line-height: 1.6; margin: 0;">
-                    Whenever you edit or add a Product, Category, or Setting in the YosshitaNeha Admin panel, the system automatically purges stale cache. Customers will always see updated data instantly without manual intervention.
+        <!-- Automatic Invalidation Info Postbox -->
+        <div class="postbox">
+            <div class="postbox-header">
+                <h2><i class="fa-solid fa-lightbulb" style="color: #ffb900;"></i> Automatic Invalidation</h2>
+            </div>
+            <div class="postbox-body">
+                <p style="font-size: 13px; color: #646970; line-height: 1.6; margin: 0;">
+                    Whenever you edit or add a Product, Category, or Setting in the YosshitaNeha Admin panel, the system automatically purges stale cache. Storefront customers will always see updated data instantly without manual intervention.
                 </p>
             </div>
         </div>
-
     </div>
 
 </div>
