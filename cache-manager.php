@@ -22,29 +22,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $message = "Purged cache item.";
         $message_type = "success";
     } elseif ($action === 'warmup') {
-        // Pre-warm key caches
-        init_cache_dir();
-        
-        // 1. Warm Categories Tree
+        // Clear any old/stale cache files first
+        purge_cache();
+
+        // 1. Warm Categories Tree using build_nested_category_tree
         $stmtCat = $pdo->query("SELECT * FROM categories WHERE deleted_at IS NULL ORDER BY name ASC");
-        $cats = $stmtCat->fetchAll(PDO::FETCH_ASSOC);
-        set_cache('categories_tree', get_category_tree($cats), $pdo);
+        $allCats = $stmtCat->fetchAll(PDO::FETCH_ASSOC);
+        $categoriesTree = build_nested_category_tree($allCats);
+        set_cache('categories_tree', $categoriesTree, $pdo);
 
-        // 2. Warm Site Settings
-        $stmtSettings = $pdo->query("SELECT setting_key, setting_value FROM site_settings");
-        $settingsRows = $stmtSettings->fetchAll(PDO::FETCH_ASSOC);
-        $settingsMap = [];
-        foreach ($settingsRows as $row) {
-            $settingsMap[$row['setting_key']] = $row['setting_value'];
+        // 2. Warm Default Products list (products_c0_csnone_f0_sqnone_snewest_p1_l12)
+        $cache_key_prod = "products_c0_csnone_f0_sqnone_snewest_p1_l12";
+        $stmtProd = $pdo->query("SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.status = 'published' AND p.deleted_at IS NULL ORDER BY p.id DESC LIMIT 12");
+        $products = $stmtProd->fetchAll(PDO::FETCH_ASSOC);
+        
+        foreach ($products as &$product) {
+            $imgStmt = $pdo->prepare("SELECT image_path, thumb_path FROM product_images WHERE product_id = ? ORDER BY sort_order ASC");
+            $imgStmt->execute([$product['id']]);
+            $product['images'] = $imgStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $discount = get_product_discount_info($pdo, $product['id'], $product['price']);
+            if ($discount) {
+                $product['original_price'] = (float)$product['price'];
+                $product['discount_info'] = $discount;
+                $product['sale_price'] = $discount['discounted_price'];
+                $product['has_discount'] = true;
+            } else {
+                $product['original_price'] = (float)$product['price'];
+                $product['has_discount'] = false;
+            }
         }
-        set_cache('site_settings', $settingsMap, $pdo);
 
-        // 3. Warm Popular Products
-        $stmtProd = $pdo->query("SELECT id, name, slug, sku, price, sale_price, stock_qty, main_image, category_id FROM products WHERE status = 'published' AND deleted_at IS NULL ORDER BY id DESC LIMIT 12");
-        $prods = $stmtProd->fetchAll(PDO::FETCH_ASSOC);
-        set_cache('popular_products_12', $prods, $pdo);
+        $count_stmt = $pdo->query("SELECT COUNT(*) FROM products WHERE status = 'published' AND deleted_at IS NULL");
+        $total_items = (int)$count_stmt->fetchColumn();
 
-        $message = "Cache successfully warmed up! Pre-generated core endpoints.";
+        $prodResponse = [
+            'success' => true,
+            'category' => null,
+            'data' => $products,
+            'pagination' => [
+                'current_page' => 1,
+                'total_pages' => ceil($total_items / 12),
+                'total_items' => $total_items,
+                'limit' => 12
+            ]
+        ];
+        set_cache($cache_key_prod, $prodResponse, $pdo);
+
+        $message = "Cache successfully warmed up! Pre-generated valid Category Tree and Product catalog endpoints.";
         $message_type = "success";
     } elseif ($action === 'save_settings') {
         $enable_caching = isset($_POST['enable_caching']) ? '1' : '0';
