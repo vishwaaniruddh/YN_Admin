@@ -224,7 +224,7 @@ try {
                                             <?php echo htmlspecialchars($log['page_url']); ?>
                                         </span>
                                     </td>
-                                    <td>
+                                    <td style="white-space: nowrap;">
                                         <i
                                             class="fa-solid fa-<?php echo strtolower($log['device_type']) === 'mobile' ? 'mobile-screen' : 'desktop'; ?>"></i>
                                         <?php echo htmlspecialchars($log['device_type']); ?>
