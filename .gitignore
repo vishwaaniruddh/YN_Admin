@@ -2,6 +2,10 @@
 uploads/
 uploads/*
 !uploads/.gitkeep
+cache/*.json
+cache/last_purge.txt
+!cache/.htaccess
+!cache/index.php
 *.log
 .env
 config/db_local.php
