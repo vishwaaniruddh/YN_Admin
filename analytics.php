@@ -8,6 +8,11 @@ require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 
+// Fix collation on visitor_logs table if needed
+try {
+    $pdo->exec("ALTER TABLE visitor_logs CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+} catch (Exception $e) {}
+
 // Time filter range (today, 7days, 30days)
 $range = $_GET['range'] ?? '7days';
 $interval_sql = "INTERVAL 7 DAY";
@@ -50,21 +55,21 @@ try {
     }
 } catch (Exception $e) {}
 
-// 3. Top Viewed Products
+// 3. Top Viewed Products (using CONVERT for collation safety)
 try {
     $topProductsStmt = $pdo->query("SELECT p.id, p.name, p.sku, p.main_image, p.price, p.view_count, 
-        (SELECT COUNT(*) FROM visitor_logs v WHERE (v.product_id = p.id OR v.page_url LIKE CONCAT('%', p.slug, '%')) AND v.created_at >= DATE_SUB(NOW(), $interval_sql)) as log_views 
+        (SELECT COUNT(*) FROM visitor_logs v WHERE (v.product_id = p.id OR (p.slug IS NOT NULL AND p.slug != '' AND v.page_url LIKE CONCAT('%', CONVERT(p.slug USING utf8mb4), '%'))) AND v.created_at >= DATE_SUB(NOW(), $interval_sql)) as log_views 
         FROM products p 
-        WHERE p.deleted_at IS NULL AND p.status = 'published'
+        WHERE p.deleted_at IS NULL AND (p.status = 'published' OR p.status IS NULL)
         ORDER BY log_views DESC, p.view_count DESC, p.id DESC 
         LIMIT 6");
     $top_products = $topProductsStmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {}
 
-// 4. Top Viewed Categories
+// 4. Top Viewed Categories (using CONVERT for collation safety)
 try {
     $topCatsStmt = $pdo->query("SELECT c.id, c.name, c.slug, 
-        (SELECT COUNT(*) FROM visitor_logs v WHERE (v.category_id = c.id OR v.page_url LIKE CONCAT('%', c.slug, '%')) AND v.created_at >= DATE_SUB(NOW(), $interval_sql)) as cat_views 
+        (SELECT COUNT(*) FROM visitor_logs v WHERE (v.category_id = c.id OR (c.slug IS NOT NULL AND c.slug != '' AND v.page_url LIKE CONCAT('%', CONVERT(c.slug USING utf8mb4), '%'))) AND v.created_at >= DATE_SUB(NOW(), $interval_sql)) as cat_views 
         FROM categories c 
         WHERE c.deleted_at IS NULL 
         ORDER BY cat_views DESC, c.id ASC 
