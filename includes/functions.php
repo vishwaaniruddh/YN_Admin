@@ -607,6 +607,25 @@ function format_order_number($id) {
 }
 
 /**
+ * Get dynamic Frontend URL depending on environment (Production vs Local)
+ */
+function get_frontend_url($path = '') {
+    $httpHost = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';
+    $docRoot = $_SERVER['DOCUMENT_ROOT'] ?? '';
+    
+    $isProduction = (
+        str_contains($httpHost, 'yosshitaneha.com') || 
+        str_contains($docRoot, 'u464193275') ||
+        (!str_contains($httpHost, 'localhost') && !str_contains($httpHost, '127.0.0.1') && !empty($httpHost))
+    );
+
+    $baseUrl = $isProduction ? 'https://yosshitaneha.com' : 'http://localhost:5173';
+    
+    $path = ltrim($path, '/');
+    return $path !== '' ? $baseUrl . '/' . $path : $baseUrl;
+}
+
+/**
  * Send System Email using database configured SMTP / PHPMailer settings
  */
 /**
@@ -939,7 +958,7 @@ function send_order_email($pdo, $orderId, $statusType = 'success') {
 
                     $htmlBody .= '
                     <div style="text-align: center; margin-top: 35px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
-                        <a href="http://localhost:5173/account" style="display: inline-block; background-color: #c8a55c; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 25px; font-weight: bold; font-size: 13px;">View Order Online</a>
+                        <a href="' . get_frontend_url('account') . '" style="display: inline-block; background-color: #c8a55c; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 25px; font-weight: bold; font-size: 13px;">View Order Online</a>
                     </div>
                 </div>
 
@@ -992,7 +1011,7 @@ function send_welcome_email($pdo, $toEmail, $customerName) {
                     <p style="color: #50575e; font-size: 14px; line-height: 1.6;">Thank you for registering with YosshitaNeha. We are delighted to welcome you to our world of handcrafted luxury bridal couture, fine jewelry, and bespoke fashion.</p>
                     <p style="color: #50575e; font-size: 14px; line-height: 1.6;">Your account is ready. You can now save your addresses, track orders in real-time, and curate your personalized wishlist.</p>
                     <div style="text-align: center; margin-top: 30px;">
-                        <a href="http://localhost:5173/account" style="display: inline-block; background-color: #c8a55c; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 25px; font-weight: bold; font-size: 13px;">Explore My Account</a>
+                        <a href="' . get_frontend_url('account') . '" style="display: inline-block; background-color: #c8a55c; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 25px; font-weight: bold; font-size: 13px;">Explore My Account</a>
                     </div>
                 </div>
                 <div style="background-color: #f8f9fa; border-top: 1px solid #e2e8f0; padding: 20px; text-align: center; color: #646970; font-size: 11px;">
