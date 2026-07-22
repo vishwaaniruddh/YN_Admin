@@ -6,7 +6,11 @@ require_once __DIR__ . '/../includes/functions.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
-$action = $_GET['action'] ?? $_POST['action'] ?? '';
+$input_raw = file_get_contents('php://input');
+$json_data = json_decode($input_raw, true);
+$post_data = is_array($json_data) ? array_merge($_REQUEST, $json_data) : $_REQUEST;
+
+$action = $post_data['action'] ?? '';
 
 if ($action === 'fetch') {
     $sku = trim($_GET['sku'] ?? '');

@@ -835,7 +835,7 @@ function executeSyncApply() {
         external: fetchedSyncPayload
     };
 
-    fetch('api/sync_product_api.php', {
+    fetch('api/sync_product_api.php?action=apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
