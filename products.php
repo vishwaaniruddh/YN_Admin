@@ -207,6 +207,37 @@ try {
     </form>
 </div>
 
+<!-- Result Count Info Bar -->
+<div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; margin-bottom: 4px;">
+    <div style="font-size: 13px; color: #50575e;">
+        <?php
+        $range_start = min(($current_page - 1) * $items_per_page + 1, $total_items);
+        $range_end   = min($current_page * $items_per_page, $total_items);
+        if ($total_items === 0):
+        ?>
+            <span>No products found.</span>
+        <?php elseif (!empty($search) || !empty($cat_filter) || !empty($stock_filter) || $featured_filter !== ''): ?>
+            <span>
+                Showing <strong><?php echo number_format($range_start); ?>–<?php echo number_format($range_end); ?></strong>
+                of <strong><?php echo number_format($total_items); ?></strong> filtered products
+                <?php if (!empty($search)): ?>
+                    &nbsp;<span style="background: #e8f0fe; color: #1a73e8; padding: 2px 8px; border-radius: 10px; font-weight: 600;">
+                        "<?php echo sanitize_html($search); ?>"
+                    </span>
+                <?php endif; ?>
+            </span>
+        <?php else: ?>
+            <span>
+                Showing <strong><?php echo number_format($range_start); ?>–<?php echo number_format($range_end); ?></strong>
+                of <strong><?php echo number_format($total_items); ?></strong> products
+            </span>
+        <?php endif; ?>
+    </div>
+    <div style="font-size: 12px; color: #8c8f94;">
+        Page <?php echo $current_page; ?> of <?php echo max(1, $total_pages); ?>
+    </div>
+</div>
+
 <!-- Products Table -->
 <table class="wp-list-table">
     <thead>
