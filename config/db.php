@@ -1,24 +1,60 @@
 <?php
 // admin/config/db.php
 
-$host = 'localhost';
-$user = 'root';
-$pass = '';
-$dbname = 'yosshitaneha_db';
+$httpHost = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';
+$docRoot = $_SERVER['DOCUMENT_ROOT'] ?? '';
+
+// Environment Auto-Detection (Production vs Local)
+$isProduction = (
+    str_contains($httpHost, 'yosshitaneha.com') || 
+    str_contains($docRoot, 'u464193275') ||
+    (!str_contains($httpHost, 'localhost') && !str_contains($httpHost, '127.0.0.1') && !empty($httpHost))
+);
+
+if ($isProduction) {
+    // Live Server Credentials
+    $host = 'localhost';
+    $user = 'u464193275_yosshitanehafs';
+    $pass = 'AVav@@2026';
+    $dbname = 'u464193275_yosshitanehafs';
+} else {
+    // Local Development Credentials
+    $host = 'localhost';
+    $user = 'root';
+    $pass = '';
+    $dbname = 'yn';
+}
+
+// Allow local override if db_local.php exists
+if (file_exists(__DIR__ . '/db_local.php')) {
+    include __DIR__ . '/db_local.php';
+}
 
 try {
-    // 1. Connect to MySQL Server (without selecting database)
-    $pdo = new PDO("mysql:host=$host;charset=utf8mb4", $user, $pass, [
+    // Attempt direct database connection
+    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $user, $pass, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES => false,
     ]);
+} catch (PDOException $e) {
+    // Local fallback: create database if missing on local development
+    if (!$isProduction) {
+        try {
+            $pdo = new PDO("mysql:host=$host;charset=utf8mb4", $user, $pass, [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            ]);
+            $pdo->exec("CREATE DATABASE IF NOT EXISTS `$dbname` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+            $pdo->exec("USE `$dbname`");
+        } catch (PDOException $e2) {
+            die("Database Connection failed: " . $e2->getMessage());
+        }
+    } else {
+        die("Database Connection failed: " . $e->getMessage());
+    }
+}
 
-    // 2. Create database if it doesn't exist
-    $pdo->exec("CREATE DATABASE IF NOT EXISTS `$dbname` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-    
-    // 3. Select the database
-    $pdo->exec("USE `$dbname`");
+try {
 
     // 4. Create Tables
     
