@@ -8,6 +8,7 @@ require_once __DIR__ . '/functions.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
     <title><?php echo isset($page_title) ? $page_title . " &lsaquo; " : ""; ?>YosshitaNeha Fashion Studio Admin</title>
     
     <!-- FontAwesome for Premium Icons -->

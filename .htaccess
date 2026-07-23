@@ -13,6 +13,7 @@ Options -Indexes
 </IfModule>
 
 <IfModule mod_headers.c>
+    Header set X-Robots-Tag "noindex, nofollow, noarchive, nosnippet"
     <FilesMatch "\.(jpg|jpeg|png|webp|gif|ico|svg)$">
         Header set Cache-Control "max-age=31536000, public, immutable"
     </FilesMatch>
