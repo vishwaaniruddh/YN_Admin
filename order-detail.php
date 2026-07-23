@@ -247,28 +247,62 @@ require_once __DIR__ . '/includes/sidebar.php';
 
                 <!-- Total Amount Summary Box -->
                 <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
-                    <div style="width: 280px; background: #f8f9fa; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 16px;">
+                    <div style="width: 320px; background: #f8f9fa; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 16px;">
                         <div style="display: flex; justify-content: space-between; font-size: 13px; color: #646970; margin-bottom: 6px;">
                             <span>Payment Method</span>
                             <span style="color: #1d2327; font-weight: 600;"><?php echo htmlspecialchars($order['payment_method'] ?: 'Online Payment'); ?></span>
                         </div>
+
+                        <?php if (!empty($order['transaction_id'])): ?>
+                            <div style="display: flex; justify-content: space-between; font-size: 12px; color: #646970; margin-bottom: 6px;">
+                                <span>Transaction ID</span>
+                                <span style="color: #0f172a; font-weight: 600; font-family: monospace;"><?php echo htmlspecialchars($order['transaction_id']); ?></span>
+                            </div>
+                        <?php endif; ?>
+
                         <?php if (!empty($order['courier_name'])): ?>
                             <div style="display: flex; justify-content: space-between; font-size: 13px; color: #646970; margin-bottom: 6px;">
                                 <span>Courier Partner</span>
                                 <span style="color: #1d2327; font-weight: 600;"><?php echo htmlspecialchars($order['courier_name']); ?></span>
                             </div>
                         <?php endif; ?>
+
                         <?php if (!empty($order['tracking_number'])): ?>
                             <div style="display: flex; justify-content: space-between; font-size: 13px; color: #646970; margin-bottom: 6px;">
                                 <span>POD / Tracking No.</span>
                                 <span style="color: var(--wp-blue); font-weight: 700; font-family: monospace;"><?php echo htmlspecialchars($order['tracking_number']); ?></span>
                             </div>
                         <?php endif; ?>
-                        <div style="display: flex; justify-content: space-between; font-size: 13px; color: #646970; margin-bottom: 8px;">
-                            <span>Express Delivery</span>
-                            <span style="color: var(--wp-success-green); font-weight: 700;">FREE</span>
+
+                        <div style="height: 1px; background: #e2e8f0; margin: 8px 0;"></div>
+
+                        <?php 
+                        $computedSubtotal = $order['subtotal_amount'] > 0 ? (float)$order['subtotal_amount'] : array_sum(array_map(function($i){ return (float)$i['price'] * (int)$i['quantity']; }, $items));
+                        ?>
+                        <div style="display: flex; justify-content: space-between; font-size: 13px; color: #646970; margin-bottom: 6px;">
+                            <span>Items Subtotal</span>
+                            <span style="color: #1d2327; font-weight: 600;">₹<?php echo number_format($computedSubtotal, 2); ?></span>
                         </div>
-                        <div style="display: flex; justify-content: space-between; font-size: 16px; font-weight: 700; color: var(--wp-blue); border-top: 1px solid #e2e8f0; padding-top: 8px;">
+
+                        <?php if ($order['discount_amount'] > 0 || !empty($order['coupon_code'])): ?>
+                            <div style="display: flex; justify-content: space-between; font-size: 13px; color: #0d9488; margin-bottom: 6px; font-weight: 600;">
+                                <span>Coupon Discount <?php echo !empty($order['coupon_code']) ? '(' . htmlspecialchars($order['coupon_code']) . ')' : ''; ?></span>
+                                <span>-₹<?php echo number_format($order['discount_amount'], 2); ?></span>
+                            </div>
+                        <?php endif; ?>
+
+                        <div style="display: flex; justify-content: space-between; font-size: 13px; color: #646970; margin-bottom: 8px;">
+                            <span>Shipping Fee</span>
+                            <span>
+                                <?php if ($order['shipping_charge'] > 0): ?>
+                                    <span style="color: #1d2327; font-weight: 600;">₹<?php echo number_format($order['shipping_charge'], 2); ?></span>
+                                <?php else: ?>
+                                    <span style="color: var(--wp-success-green); font-weight: 700;">FREE</span>
+                                <?php endif; ?>
+                            </span>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; font-size: 16px; font-weight: 700; color: var(--wp-blue); border-top: 2px solid #e2e8f0; padding-top: 8px; margin-top: 4px;">
                             <span>Grand Total</span>
                             <span>₹<?php echo number_format($order['total_amount'], 2); ?></span>
                         </div>

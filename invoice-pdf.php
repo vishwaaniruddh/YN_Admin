@@ -106,6 +106,11 @@ foreach ($items as $item) {
     </tr>';
 }
 
+$invSubtotalVal = $order['subtotal_amount'] > 0 ? (float)$order['subtotal_amount'] : array_sum(array_map(function($i){ return (float)$i['price'] * (int)$i['quantity']; }, $items));
+$invShippingVal = (float)($order['shipping_charge'] ?? 0);
+$invDiscountVal = (float)($order['discount_amount'] ?? 0);
+$invCouponCode = trim($order['coupon_code'] ?? '');
+
 $action = strtolower(trim($_GET['action'] ?? $_GET['mode'] ?? 'pdf'));
 
 // Clean Standalone HTML Template for PDF & Print using DejaVu Sans for Rupee Symbol Support
@@ -128,10 +133,10 @@ $html = '
         .items-table th { background: #f8f9fa; color: #333; font-weight: bold; text-transform: uppercase; font-size: 10px; padding: 8px; border-bottom: 2px solid #cbd5e1; }
         .totals-box { margin-top: 15px; float: right; width: 330px; }
         .totals-table td { padding: 6px; }
-        .grand-total { font-size: 15px; font-weight: bold; color: #c8a55c; border-top: 2px solid #111; border-bottom: 2px solid #111; }
-        .footer-note { margin-top: 30px; clear: both; border-top: 1px solid #eee; padding-top: 12px; font-size: 10px; color: #777; text-align: center; }
+        .grand-total td { font-size: 14px; font-weight: bold; color: #c8a55c; border-top: 2px solid #c8a55c; padding-top: 8px; }
+        .footer-note { text-align: center; margin-top: 30px; padding-top: 10px; border-top: 1px solid #eee; font-size: 9px; color: #777; }
         @media print {
-            body { padding: 0; background: #fff; }
+            body { padding: 0; }
             .invoice-box { border: none; box-shadow: none; padding: 0; }
             .no-print { display: none !important; }
         }
@@ -211,19 +216,35 @@ $html = '
         <div class="totals-box">
             <table class="totals-table">
                 <tr>
-                    <td style="color: #666; width: 120px; white-space: nowrap;">Payment Method:</td>
+                    <td style="color: #666; width: 140px; white-space: nowrap;">Payment Method:</td>
                     <td style="text-align: right; font-weight: bold; color: #111;">' . htmlspecialchars($order['payment_method'] ?: 'Online Payment') . '</td>
                 </tr>
+                ' . (!empty($order['transaction_id']) ? '
                 <tr>
-                    <td style="color: #666;">Express Shipping:</td>
-                    <td style="text-align: right; color: #16a34a; font-weight: bold;">FREE</td>
+                    <td style="color: #666;">Txn ID:</td>
+                    <td style="text-align: right; font-family: monospace; font-size: 10px; color: #333;">' . htmlspecialchars($order['transaction_id']) . '</td>
+                </tr>
+                ' : '') . '
+                <tr>
+                    <td style="color: #666;">Items Subtotal:</td>
+                    <td style="text-align: right; color: #111; font-weight: bold;">₹' . number_format($invSubtotalVal, 2) . '</td>
+                </tr>
+                ' . ($invDiscountVal > 0 || !empty($invCouponCode) ? '
+                <tr>
+                    <td style="color: #0d9488; font-weight: bold;">Coupon (' . htmlspecialchars($invCouponCode ?: 'Discount') . '):</td>
+                    <td style="text-align: right; color: #0d9488; font-weight: bold;">-₹' . number_format($invDiscountVal, 2) . '</td>
+                </tr>
+                ' : '') . '
+                <tr>
+                    <td style="color: #666;">Shipping Fee:</td>
+                    <td style="text-align: right; color: ' . ($invShippingVal > 0 ? '#111' : '#16a34a') . '; font-weight: bold;">' . ($invShippingVal > 0 ? '₹' . number_format($invShippingVal, 2) : 'FREE') . '</td>
                 </tr>
                 <tr class="grand-total">
                     <td>Grand Total:</td>
                     <td style="text-align: right;">' . $totalFormatted . '</td>
                 </tr>
             </table>
-        </div>
+        </div></div>
 
         <div style="clear: both;"></div>
 
