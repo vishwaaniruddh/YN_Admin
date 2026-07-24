@@ -90,9 +90,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif ($action === 'add_model') {
         $name = trim($_POST['model_name'] ?? '');
-        $gender = trim($_POST['model_gender'] ?? 'Female');
-        $shot_type = trim($_POST['shot_type'] ?? 'Full Body');
-        $hair_style = trim($_POST['hair_style'] ?? 'As per product');
         $active_tab = 'models';
         
         if (!empty($name) && isset($_FILES['model_image']) && $_FILES['model_image']['error'] === UPLOAD_ERR_OK) {
@@ -112,8 +109,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 if (move_uploaded_file($_FILES['model_image']['tmp_name'], $destPath)) {
                     $relPath = 'assets/models/' . $fileName;
-                    $insModel = $pdo->prepare("INSERT INTO ai_models (name, gender, image_path, shot_type, hair_style, is_active) VALUES (?, ?, ?, ?, ?, 1)");
-                    $insModel->execute([$name, $gender, $relPath, $shot_type, $hair_style]);
+                    $insModel = $pdo->prepare("INSERT INTO ai_models (name, image_path, is_active) VALUES (?, ?, 1)");
+                    $insModel->execute([$name, $relPath]);
                     $message = "AI Reference Model '$name' saved to database successfully!";
                     $message_type = "success";
                 } else {
@@ -130,9 +127,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'edit_model') {
         $model_id = (int)($_POST['model_id'] ?? 0);
         $name = trim($_POST['model_name'] ?? '');
-        $gender = trim($_POST['model_gender'] ?? 'Female');
-        $shot_type = trim($_POST['shot_type'] ?? 'Full Body');
-        $hair_style = trim($_POST['hair_style'] ?? 'As per product');
         $is_active = isset($_POST['is_active']) ? 1 : 0;
         $active_tab = 'models';
         
@@ -155,8 +149,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
                 
-                $updM = $pdo->prepare("UPDATE ai_models SET name = ?, gender = ?, image_path = ?, shot_type = ?, hair_style = ?, is_active = ? WHERE id = ?");
-                $updM->execute([$name, $gender, $relPath, $shot_type, $hair_style, $is_active, $model_id]);
+                $updM = $pdo->prepare("UPDATE ai_models SET name = ?, image_path = ?, is_active = ? WHERE id = ?");
+                $updM->execute([$name, $relPath, $is_active, $model_id]);
                 $message = "AI Reference Model updated successfully!";
                 $message_type = "success";
             } catch (Exception $e) {
@@ -596,32 +590,6 @@ require_once __DIR__ . '/includes/sidebar.php';
                         <input type="text" name="model_name" class="form-control" placeholder="e.g. Model 6 - Royal Bride" required style="width: 100%;">
                     </div>
 
-                    <div class="form-group" style="margin-bottom: 16px;">
-                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Model Gender</label>
-                        <select name="model_gender" class="form-control" style="width: 100%;">
-                            <option value="Female">Female</option>
-                            <option value="Male">Male</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group" style="margin-bottom: 16px;">
-                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Default Shot Type</label>
-                        <select name="shot_type" class="form-control" style="width: 100%;">
-                            <?php foreach ($ai_shot_types as $st): ?>
-                                <option value="<?php echo sanitize_html($st['name']); ?>"><?php echo sanitize_html($st['name']); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-
-                    <div class="form-group" style="margin-bottom: 16px;">
-                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Default Hair Style</label>
-                        <select name="hair_style" class="form-control" style="width: 100%;">
-                            <?php foreach ($ai_hair_styles as $hs): ?>
-                                <option value="<?php echo sanitize_html($hs['name']); ?>"><?php echo sanitize_html($hs['name']); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-
                     <div class="form-group" style="margin-bottom: 20px;">
                         <label style="font-weight: 600; display: block; margin-bottom: 4px;">Face Reference Image <span style="color: var(--wp-error-red);">*</span></label>
                         <input type="file" name="model_image" accept="image/png, image/jpeg, image/webp" class="form-control" required style="width: 100%;">
@@ -653,13 +621,9 @@ require_once __DIR__ . '/includes/sidebar.php';
                             <div style="padding: 10px; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
                                 <div style="margin-bottom: 8px;">
                                     <h4 style="margin: 0 0 4px 0; font-size: 13px; font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo sanitize_html($m['name']); ?></h4>
-                                    <div style="display: flex; flex-direction: column; gap: 2px; font-size: 10px; color: #64748b;">
-                                        <span><i class="fa-solid fa-camera text-blue-500"></i> <strong>Shot:</strong> <?php echo sanitize_html($m['shot_type'] ?? 'Full Body'); ?></span>
-                                        <span><i class="fa-solid fa-scissors text-pink-500"></i> <strong>Hair:</strong> <?php echo sanitize_html($m['hair_style'] ?? 'As per product'); ?></span>
-                                    </div>
                                 </div>
                                 <div style="display: flex; gap: 6px; margin-top: 6px;">
-                                    <button type="button" class="button" onclick="editModel(<?php echo $m['id']; ?>, <?php echo htmlspecialchars(json_encode($m['name'])); ?>, '<?php echo $m['gender']; ?>', '<?php echo sanitize_html($m['shot_type'] ?? 'Full Body'); ?>', '<?php echo sanitize_html($m['hair_style'] ?? 'As per product'); ?>', <?php echo $m['is_active']; ?>)" style="flex: 1; font-size: 11px; padding: 2px 4px; text-align: center;">
+                                    <button type="button" class="button" onclick="editModel(<?php echo $m['id']; ?>, <?php echo htmlspecialchars(json_encode($m['name'])); ?>, <?php echo $m['is_active']; ?>)" style="flex: 1; font-size: 11px; padding: 2px 4px; text-align: center;">
                                         <i class="fa-solid fa-pen"></i> Edit
                                     </button>
                                     <form method="POST" action="chatbot-settings.php?tab=models" onsubmit="return confirm('Delete this model from DB?');" style="display: inline;">
@@ -824,32 +788,6 @@ require_once __DIR__ . '/includes/sidebar.php';
             </div>
 
             <div class="form-group" style="margin-bottom: 16px;">
-                <label style="font-weight: 600; display: block; margin-bottom: 4px;">Gender</label>
-                <select name="model_gender" id="edit_model_gender" class="form-control" style="width: 100%;">
-                    <option value="Female">Female</option>
-                    <option value="Male">Male</option>
-                </select>
-            </div>
-
-            <div class="form-group" style="margin-bottom: 16px;">
-                <label style="font-weight: 600; display: block; margin-bottom: 4px;">Shot Type</label>
-                <select name="shot_type" id="edit_shot_type" class="form-control" style="width: 100%;">
-                    <?php foreach ($ai_shot_types as $st): ?>
-                        <option value="<?php echo sanitize_html($st['name']); ?>"><?php echo sanitize_html($st['name']); ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-
-            <div class="form-group" style="margin-bottom: 16px;">
-                <label style="font-weight: 600; display: block; margin-bottom: 4px;">Hair Style</label>
-                <select name="hair_style" id="edit_hair_style" class="form-control" style="width: 100%;">
-                    <?php foreach ($ai_hair_styles as $hs): ?>
-                        <option value="<?php echo sanitize_html($hs['name']); ?>"><?php echo sanitize_html($hs['name']); ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-
-            <div class="form-group" style="margin-bottom: 16px;">
                 <label style="font-weight: 600; display: block; margin-bottom: 4px;">Replace Face Image (Optional)</label>
                 <input type="file" name="model_image" accept="image/png, image/jpeg, image/webp" class="form-control" style="width: 100%;">
             </div>
@@ -928,12 +866,9 @@ function editFaq(id, keywords, answer) {
     document.getElementById('edit-faq-modal').style.display = 'flex';
 }
 
-function editModel(id, name, gender, shotType, hairStyle, isActive) {
+function editModel(id, name, isActive) {
     document.getElementById('edit_model_id').value = id;
     document.getElementById('edit_model_name').value = name;
-    document.getElementById('edit_model_gender').value = gender;
-    document.getElementById('edit_shot_type').value = shotType || 'Full Body';
-    document.getElementById('edit_hair_style').value = hairStyle || 'As per product';
     document.getElementById('edit_model_active').checked = (isActive == 1);
     document.getElementById('edit-model-modal').style.display = 'flex';
 }
