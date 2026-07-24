@@ -88,6 +88,100 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $message_type = "error";
             }
         }
+    } elseif ($action === 'add_model') {
+        $name = trim($_POST['model_name'] ?? '');
+        $gender = trim($_POST['model_gender'] ?? 'Female');
+        $active_tab = 'models';
+        
+        if (!empty($name) && isset($_FILES['model_image']) && $_FILES['model_image']['error'] === UPLOAD_ERR_OK) {
+            try {
+                $ext = strtolower(pathinfo($_FILES['model_image']['name'], PATHINFO_EXTENSION));
+                if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
+                    throw new Exception("Only JPG, PNG and WebP image files allowed.");
+                }
+                
+                $uploadDir = __DIR__ . '/assets/models';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0777, true);
+                }
+                
+                $fileName = 'model_custom_' . time() . '_' . rand(100, 999) . '.' . $ext;
+                $destPath = $uploadDir . '/' . $fileName;
+                
+                if (move_uploaded_file($_FILES['model_image']['tmp_name'], $destPath)) {
+                    $relPath = 'assets/models/' . $fileName;
+                    $insModel = $pdo->prepare("INSERT INTO ai_models (name, gender, image_path, is_active) VALUES (?, ?, ?, 1)");
+                    $insModel->execute([$name, $gender, $relPath]);
+                    $message = "AI Reference Model '$name' saved to database successfully!";
+                    $message_type = "success";
+                } else {
+                    throw new Exception("Failed to save model image to disk.");
+                }
+            } catch (Exception $e) {
+                $message = "Error creating AI model: " . $e->getMessage();
+                $message_type = "error";
+            }
+        } else {
+            $message = "Model Name and Image file are required.";
+            $message_type = "error";
+        }
+    } elseif ($action === 'edit_model') {
+        $model_id = (int)($_POST['model_id'] ?? 0);
+        $name = trim($_POST['model_name'] ?? '');
+        $gender = trim($_POST['model_gender'] ?? 'Female');
+        $is_active = isset($_POST['is_active']) ? 1 : 0;
+        $active_tab = 'models';
+        
+        if ($model_id > 0 && !empty($name)) {
+            try {
+                $stmtM = $pdo->prepare("SELECT * FROM ai_models WHERE id = ?");
+                $stmtM->execute([$model_id]);
+                $curM = $stmtM->fetch(PDO::FETCH_ASSOC);
+                
+                $relPath = $curM['image_path'] ?? '';
+                if (isset($_FILES['model_image']) && $_FILES['model_image']['error'] === UPLOAD_ERR_OK) {
+                    $ext = strtolower(pathinfo($_FILES['model_image']['name'], PATHINFO_EXTENSION));
+                    $uploadDir = __DIR__ . '/assets/models';
+                    if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
+                    
+                    $fileName = 'model_' . $model_id . '_' . time() . '.' . $ext;
+                    $destPath = $uploadDir . '/' . $fileName;
+                    if (move_uploaded_file($_FILES['model_image']['tmp_name'], $destPath)) {
+                        $relPath = 'assets/models/' . $fileName;
+                    }
+                }
+                
+                $updM = $pdo->prepare("UPDATE ai_models SET name = ?, gender = ?, image_path = ?, is_active = ? WHERE id = ?");
+                $updM->execute([$name, $gender, $relPath, $is_active, $model_id]);
+                $message = "AI Reference Model updated successfully!";
+                $message_type = "success";
+            } catch (Exception $e) {
+                $message = "Error updating AI model: " . $e->getMessage();
+                $message_type = "error";
+            }
+        }
+    } elseif ($action === 'delete_model') {
+        $model_id = (int)($_POST['model_id'] ?? 0);
+        $active_tab = 'models';
+        if ($model_id > 0) {
+            try {
+                $stmtM = $pdo->prepare("SELECT image_path FROM ai_models WHERE id = ?");
+                $stmtM->execute([$model_id]);
+                $curPath = $stmtM->fetchColumn();
+                
+                if ($curPath && file_exists(__DIR__ . '/' . $curPath) && strpos($curPath, 'model_custom_') !== false) {
+                    @unlink(__DIR__ . '/' . $curPath);
+                }
+                
+                $delM = $pdo->prepare("DELETE FROM ai_models WHERE id = ?");
+                $delM->execute([$model_id]);
+                $message = "AI Reference Model deleted from database.";
+                $message_type = "success";
+            } catch (Exception $e) {
+                $message = "Error deleting AI model: " . $e->getMessage();
+                $message_type = "error";
+            }
+        }
     }
 }
 
@@ -111,6 +205,30 @@ $systemPrompt = $settings['chatbot_system_prompt'] ?? "You are an expert luxury 
 // Load All Custom FAQs
 $faqs = $pdo->query("SELECT * FROM chatbot_faqs ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
 
+// Auto-create and seed ai_models table
+try {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS ai_models (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        gender VARCHAR(20) DEFAULT 'Female',
+        image_path VARCHAR(255) NOT NULL,
+        is_active TINYINT(1) DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
+
+    $checkModels = $pdo->query("SELECT COUNT(*) FROM ai_models")->fetchColumn();
+    if ($checkModels == 0) {
+        $seedStmt = $pdo->prepare("INSERT INTO ai_models (name, gender, image_path, is_active) VALUES (?, ?, ?, 1)");
+        $seedStmt->execute(["Model 1 - Fair Royal Face", "Female", "assets/models/model_1.png"]);
+        $seedStmt->execute(["Model 2 - North Indian Bridal", "Female", "assets/models/model_2.png"]);
+        $seedStmt->execute(["Model 3 - South Indian Grace", "Female", "assets/models/model_3.png"]);
+        $seedStmt->execute(["Model 4 - Modern Minimalist", "Female", "assets/models/model_4.png"]);
+        $seedStmt->execute(["Model 5 - Dusky Glamour", "Female", "assets/models/model_5.png"]);
+    }
+} catch (PDOException $e) {}
+
+$ai_models = $pdo->query("SELECT * FROM ai_models ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 ?>
@@ -132,6 +250,9 @@ require_once __DIR__ . '/includes/sidebar.php';
     </a>
     <a href="chatbot-settings.php?tab=knowledge" class="nav-tab <?php echo $active_tab === 'knowledge' ? 'nav-tab-active' : ''; ?>" style="padding: 10px 20px; font-weight: 600; text-decoration: none; border: 1px solid #c3c4c7; border-bottom: none; border-radius: 4px 4px 0 0; background: <?php echo $active_tab === 'knowledge' ? '#fff' : '#f0f0f1'; ?>; color: <?php echo $active_tab === 'knowledge' ? '#1d2327' : '#50575e'; ?>;">
         <i class="fa-solid fa-book-open" style="color: #16a34a;"></i> 2. Knowledge Base &amp; Custom Q&amp;A (<?php echo count($faqs); ?>)
+    </a>
+    <a href="chatbot-settings.php?tab=models" class="nav-tab <?php echo $active_tab === 'models' ? 'nav-tab-active' : ''; ?>" style="padding: 10px 20px; font-weight: 600; text-decoration: none; border: 1px solid #c3c4c7; border-bottom: none; border-radius: 4px 4px 0 0; background: <?php echo $active_tab === 'models' ? '#fff' : '#f0f0f1'; ?>; color: <?php echo $active_tab === 'models' ? '#1d2327' : '#50575e'; ?>;">
+        <i class="fa-solid fa-user-astronaut" style="color: #2271b1;"></i> 3. AI Face Reference Models (<?php echo count($ai_models); ?>)
     </a>
 </div>
 
@@ -227,7 +348,7 @@ require_once __DIR__ . '/includes/sidebar.php';
         </div>
     </form>
 
-<?php else: ?>
+<?php elseif ($active_tab === 'knowledge'): ?>
     <!-- TAB 2: KNOWLEDGE BASE & CUSTOM Q&A MANAGER -->
     <div style="display: grid; grid-template-columns: 360px 1fr; gap: 24px; align-items: start; margin-bottom: 40px;">
         
@@ -311,6 +432,84 @@ require_once __DIR__ . '/includes/sidebar.php';
             </div>
         </div>
     </div>
+<?php elseif ($active_tab === 'models'): ?>
+    <!-- TAB 3: AI FACE REFERENCE MODELS MANAGER -->
+    <div style="display: grid; grid-template-columns: 320px 1fr; gap: 24px; align-items: start; margin-bottom: 40px;">
+        
+        <!-- Add New AI Model Form -->
+        <div class="postbox">
+            <div class="postbox-header">
+                <h2><i class="fa-solid fa-plus-circle" style="color: var(--wp-blue);"></i> Add New AI Model</h2>
+            </div>
+            <div class="postbox-body" style="padding: 20px;">
+                <form method="POST" action="chatbot-settings.php?tab=models" enctype="multipart/form-data">
+                    <input type="hidden" name="action" value="add_model">
+
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Model Name <span style="color: var(--wp-error-red);">*</span></label>
+                        <input type="text" name="model_name" class="form-control" placeholder="e.g. Model 6 - Royal Bride" required style="width: 100%;">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Model Gender</label>
+                        <select name="model_gender" class="form-control" style="width: 100%;">
+                            <option value="Female">Female</option>
+                            <option value="Male">Male</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Face Reference Image <span style="color: var(--wp-error-red);">*</span></label>
+                        <input type="file" name="model_image" accept="image/png, image/jpeg, image/webp" class="form-control" required style="width: 100%;">
+                        <small style="color: #64748b; display: block; margin-top: 4px;">Upload a clear portrait front face image.</small>
+                    </div>
+
+                    <button type="submit" class="button button-primary" style="width: 100%; justify-content: center; padding: 8px;">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> Save Model to DB
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- AI Models Grid -->
+        <div class="postbox">
+            <div class="postbox-header">
+                <h2><i class="fa-solid fa-user-astronaut" style="color: var(--wp-blue);"></i> Active AI Reference Models in Database (<?php echo count($ai_models); ?>)</h2>
+            </div>
+            <div class="postbox-body" style="padding: 20px;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px;">
+                    <?php foreach ($ai_models as $m): ?>
+                        <div style="border: 1px solid var(--wp-border); border-radius: 6px; overflow: hidden; background: #fff; display: flex; flex-direction: column;">
+                            <div style="position: relative; aspect-ratio: 1/1; background: #f6f7f7; overflow: hidden;">
+                                <img src="<?php echo sanitize_html($m['image_path']); ?>?v=<?php echo strtotime($m['created_at'] ?? 'now'); ?>" style="width: 100%; height: 100%; object-fit: cover;" alt="<?php echo sanitize_html($m['name']); ?>">
+                                <span style="position: absolute; top: 6px; right: 6px; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 3px; background: <?php echo $m['is_active'] ? '#16a34a' : '#94a3b8'; ?>; color: #fff;">
+                                    <?php echo $m['is_active'] ? 'Active' : 'Disabled'; ?>
+                                </span>
+                            </div>
+                            <div style="padding: 10px; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                                <div style="margin-bottom: 8px;">
+                                    <h4 style="margin: 0 0 2px 0; font-size: 13px; font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo sanitize_html($m['name']); ?></h4>
+                                    <span style="font-size: 11px; color: #64748b;"><?php echo sanitize_html($m['gender']); ?></span>
+                                </div>
+                                <div style="display: flex; gap: 6px; margin-top: 6px;">
+                                    <button type="button" class="button" onclick="editModel(<?php echo $m['id']; ?>, <?php echo htmlspecialchars(json_encode($m['name'])); ?>, '<?php echo $m['gender']; ?>', <?php echo $m['is_active']; ?>)" style="flex: 1; font-size: 11px; padding: 2px 4px; text-align: center;">
+                                        <i class="fa-solid fa-pen"></i> Edit
+                                    </button>
+                                    <form method="POST" action="chatbot-settings.php?tab=models" onsubmit="return confirm('Delete this model from DB?');" style="display: inline;">
+                                        <input type="hidden" name="action" value="delete_model">
+                                        <input type="hidden" name="model_id" value="<?php echo $m['id']; ?>">
+                                        <button type="submit" class="button" style="color: #ef4444; padding: 2px 6px; font-size: 11px;" title="Delete Model">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+    </div>
 <?php endif; ?>
 
 <!-- Edit FAQ Modal -->
@@ -339,12 +538,60 @@ require_once __DIR__ . '/includes/sidebar.php';
     </div>
 </div>
 
+<!-- Edit Model Modal -->
+<div id="edit-model-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99999; align-items: center; justify-content: center;">
+    <div style="background: #fff; border-radius: 8px; width: 450px; max-width: 90vw; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+        <h3 style="margin-top: 0; margin-bottom: 16px;"><i class="fa-solid fa-pen-to-square" style="color: var(--wp-blue);"></i> Edit AI Model</h3>
+        <form method="POST" action="chatbot-settings.php?tab=models" enctype="multipart/form-data">
+            <input type="hidden" name="action" value="edit_model">
+            <input type="hidden" name="model_id" id="edit_model_id">
+
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 4px;">Model Name</label>
+                <input type="text" name="model_name" id="edit_model_name" class="form-control" required style="width: 100%;">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 4px;">Gender</label>
+                <select name="model_gender" id="edit_model_gender" class="form-control" style="width: 100%;">
+                    <option value="Female">Female</option>
+                    <option value="Male">Male</option>
+                </select>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 4px;">Replace Face Image (Optional)</label>
+                <input type="file" name="model_image" accept="image/png, image/jpeg, image/webp" class="form-control" style="width: 100%;">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer;">
+                    <input type="checkbox" name="is_active" id="edit_model_active" value="1"> Enable / Active Model
+                </label>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" onclick="document.getElementById('edit-model-modal').style.display = 'none';" class="button">Cancel</button>
+                <button type="submit" class="button button-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
 function editFaq(id, keywords, answer) {
     document.getElementById('edit_faq_id').value = id;
     document.getElementById('edit_keywords').value = keywords;
     document.getElementById('edit_answer').value = answer;
     document.getElementById('edit-faq-modal').style.display = 'flex';
+}
+
+function editModel(id, name, gender, isActive) {
+    document.getElementById('edit_model_id').value = id;
+    document.getElementById('edit_model_name').value = name;
+    document.getElementById('edit_model_gender').value = gender;
+    document.getElementById('edit_model_active').checked = (isActive == 1);
+    document.getElementById('edit-model-modal').style.display = 'flex';
 }
 </script>
 

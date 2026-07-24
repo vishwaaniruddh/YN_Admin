@@ -450,14 +450,36 @@ try {
                                         <span style="font-size: 10px; color: #50575e; font-weight: 600;">NONE</span>
                                     </div>
                                 </label>
-                                <?php for ($i = 1; $i <= 5; $i++): ?>
+                                <?php
+                                $db_ai_models = [];
+                                try {
+                                    $db_ai_models = $pdo->query("SELECT * FROM ai_models WHERE is_active = 1 ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+                                } catch (Exception $e) {}
+
+                                if (!empty($db_ai_models)):
+                                    foreach ($db_ai_models as $dbm):
+                                ?>
+                                <label class="ai-model-picker" style="position: relative;" title="<?php echo sanitize_html($dbm['name']); ?>">
+                                    <input type="radio" name="ai_model_face" value="<?php echo sanitize_html($dbm['image_path']); ?>" class="ai-radio-hidden">
+                                    <div class="ai-model-box" style="width: 56px; height: 56px; border: 1px solid var(--wp-border); border-radius: 4px; overflow: hidden; cursor: pointer;">
+                                        <img src="<?php echo sanitize_html($dbm['image_path']); ?>" alt="<?php echo sanitize_html($dbm['name']); ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                                    </div>
+                                </label>
+                                <?php
+                                    endforeach;
+                                else:
+                                    for ($i = 1; $i <= 5; $i++):
+                                ?>
                                 <label class="ai-model-picker" style="position: relative;">
-                                    <input type="radio" name="ai_model_face" value="model_<?= $i ?>.png" class="ai-radio-hidden">
+                                    <input type="radio" name="ai_model_face" value="assets/models/model_<?= $i ?>.png" class="ai-radio-hidden">
                                     <div class="ai-model-box" style="width: 56px; height: 56px; border: 1px solid var(--wp-border); border-radius: 4px; overflow: hidden; cursor: pointer;" title="Model <?= $i ?>">
                                         <img src="assets/models/model_<?= $i ?>.png" alt="Model <?= $i ?>" style="width: 100%; height: 100%; object-fit: cover;">
                                     </div>
                                 </label>
-                                <?php endfor; ?>
+                                <?php
+                                    endfor;
+                                endif;
+                                ?>
                             </div>
                         </div>
 
