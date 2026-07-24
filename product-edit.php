@@ -265,9 +265,12 @@ try {
 }
 ?>
 
-<div class="wrap-header">
-    <h1>Edit Product: <?php echo sanitize_html($product['name']); ?></h1>
-    <div style="display: flex; gap: 8px; align-items: center;">
+<div class="wrap-header" style="flex-wrap: wrap; gap: 12px; align-items: flex-start;">
+    <div>
+        <h1 style="margin: 0; font-size: 22px; font-weight: 600; color: var(--wp-text-dark);">Edit Product</h1>
+        <p style="margin: 4px 0 0 0; font-size: 13px; color: #50575e; font-weight: 500; line-height: 1.4; max-width: 650px;"><?php echo sanitize_html($product['name']); ?></p>
+    </div>
+    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
         <button type="button" class="button" onclick="openSyncModal()" style="background-color: #8b2e3b; color: #fff; border-color: #72242e;">
             <i class="fa-solid fa-cloud-arrow-down"></i> Sync from SriShringarr API
         </button>
