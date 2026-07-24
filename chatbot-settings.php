@@ -91,6 +91,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'add_model') {
         $name = trim($_POST['model_name'] ?? '');
         $gender = trim($_POST['model_gender'] ?? 'Female');
+        $shot_type = trim($_POST['shot_type'] ?? 'Full Body');
+        $hair_style = trim($_POST['hair_style'] ?? 'As per product');
         $active_tab = 'models';
         
         if (!empty($name) && isset($_FILES['model_image']) && $_FILES['model_image']['error'] === UPLOAD_ERR_OK) {
@@ -110,8 +112,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 if (move_uploaded_file($_FILES['model_image']['tmp_name'], $destPath)) {
                     $relPath = 'assets/models/' . $fileName;
-                    $insModel = $pdo->prepare("INSERT INTO ai_models (name, gender, image_path, is_active) VALUES (?, ?, ?, 1)");
-                    $insModel->execute([$name, $gender, $relPath]);
+                    $insModel = $pdo->prepare("INSERT INTO ai_models (name, gender, image_path, shot_type, hair_style, is_active) VALUES (?, ?, ?, ?, ?, 1)");
+                    $insModel->execute([$name, $gender, $relPath, $shot_type, $hair_style]);
                     $message = "AI Reference Model '$name' saved to database successfully!";
                     $message_type = "success";
                 } else {
@@ -129,6 +131,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $model_id = (int)($_POST['model_id'] ?? 0);
         $name = trim($_POST['model_name'] ?? '');
         $gender = trim($_POST['model_gender'] ?? 'Female');
+        $shot_type = trim($_POST['shot_type'] ?? 'Full Body');
+        $hair_style = trim($_POST['hair_style'] ?? 'As per product');
         $is_active = isset($_POST['is_active']) ? 1 : 0;
         $active_tab = 'models';
         
@@ -151,8 +155,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
                 
-                $updM = $pdo->prepare("UPDATE ai_models SET name = ?, gender = ?, image_path = ?, is_active = ? WHERE id = ?");
-                $updM->execute([$name, $gender, $relPath, $is_active, $model_id]);
+                $updM = $pdo->prepare("UPDATE ai_models SET name = ?, gender = ?, image_path = ?, shot_type = ?, hair_style = ?, is_active = ? WHERE id = ?");
+                $updM->execute([$name, $gender, $relPath, $shot_type, $hair_style, $is_active, $model_id]);
                 $message = "AI Reference Model updated successfully!";
                 $message_type = "success";
             } catch (Exception $e) {
@@ -205,25 +209,31 @@ $systemPrompt = $settings['chatbot_system_prompt'] ?? "You are an expert luxury 
 // Load All Custom FAQs
 $faqs = $pdo->query("SELECT * FROM chatbot_faqs ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
 
-// Auto-create and seed ai_models table
+// Auto-create and seed ai_models table with shot_type & hair_style
 try {
     $pdo->exec("CREATE TABLE IF NOT EXISTS ai_models (
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         gender VARCHAR(20) DEFAULT 'Female',
         image_path VARCHAR(255) NOT NULL,
+        shot_type VARCHAR(255) DEFAULT 'Full Body',
+        hair_style VARCHAR(255) DEFAULT 'As per product',
         is_active TINYINT(1) DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )");
 
+    // Ensure columns exist if table was created previously
+    try { $pdo->exec("ALTER TABLE ai_models ADD COLUMN shot_type VARCHAR(255) DEFAULT 'Full Body'"); } catch (Exception $ex) {}
+    try { $pdo->exec("ALTER TABLE ai_models ADD COLUMN hair_style VARCHAR(255) DEFAULT 'As per product'"); } catch (Exception $ex) {}
+
     $checkModels = $pdo->query("SELECT COUNT(*) FROM ai_models")->fetchColumn();
     if ($checkModels == 0) {
-        $seedStmt = $pdo->prepare("INSERT INTO ai_models (name, gender, image_path, is_active) VALUES (?, ?, ?, 1)");
-        $seedStmt->execute(["Model 1 - Fair Royal Face", "Female", "assets/models/model_1.png"]);
-        $seedStmt->execute(["Model 2 - North Indian Bridal", "Female", "assets/models/model_2.png"]);
-        $seedStmt->execute(["Model 3 - South Indian Grace", "Female", "assets/models/model_3.png"]);
-        $seedStmt->execute(["Model 4 - Modern Minimalist", "Female", "assets/models/model_4.png"]);
-        $seedStmt->execute(["Model 5 - Dusky Glamour", "Female", "assets/models/model_5.png"]);
+        $seedStmt = $pdo->prepare("INSERT INTO ai_models (name, gender, image_path, shot_type, hair_style, is_active) VALUES (?, ?, ?, ?, ?, 1)");
+        $seedStmt->execute(["Model 1 - Fair Royal Face", "Female", "assets/models/model_1.png", "Full Body", "Open Flowing Hair"]);
+        $seedStmt->execute(["Model 2 - North Indian Bridal", "Female", "assets/models/model_2.png", "Close-up Portrait", "Tied Bun with Gajra"]);
+        $seedStmt->execute(["Model 3 - South Indian Grace", "Female", "assets/models/model_3.png", "Half Body", "Traditional Braid (Choti)"]);
+        $seedStmt->execute(["Model 4 - Modern Minimalist", "Female", "assets/models/model_4.png", "Full Body", "Half Up, Half Down"]);
+        $seedStmt->execute(["Model 5 - Dusky Glamour", "Female", "assets/models/model_5.png", "Close-up Portrait", "Side Swept Waves"]);
     }
 } catch (PDOException $e) {}
 
@@ -458,6 +468,29 @@ require_once __DIR__ . '/includes/sidebar.php';
                         </select>
                     </div>
 
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Default Shot Type</label>
+                        <select name="shot_type" class="form-control" style="width: 100%;">
+                            <option value="Full Body">Full Body</option>
+                            <option value="Close-up Portrait">Close-up Portrait</option>
+                            <option value="Half Body">Half Body</option>
+                            <option value="Back View">Back View</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Default Hair Style</label>
+                        <select name="hair_style" class="form-control" style="width: 100%;">
+                            <option value="As per product">As per product</option>
+                            <option value="Open Flowing Hair">Open Flowing Hair</option>
+                            <option value="Tied Bun with Gajra">Tied Bun with Gajra</option>
+                            <option value="Traditional Braid (Choti)">Traditional Braid (Choti)</option>
+                            <option value="Half Up, Half Down">Half Up, Half Down</option>
+                            <option value="Side Swept Waves">Side Swept Waves</option>
+                            <option value="Sleek Straight">Sleek Straight</option>
+                        </select>
+                    </div>
+
                     <div class="form-group" style="margin-bottom: 20px;">
                         <label style="font-weight: 600; display: block; margin-bottom: 4px;">Face Reference Image <span style="color: var(--wp-error-red);">*</span></label>
                         <input type="file" name="model_image" accept="image/png, image/jpeg, image/webp" class="form-control" required style="width: 100%;">
@@ -477,7 +510,7 @@ require_once __DIR__ . '/includes/sidebar.php';
                 <h2><i class="fa-solid fa-user-astronaut" style="color: var(--wp-blue);"></i> Active AI Reference Models in Database (<?php echo count($ai_models); ?>)</h2>
             </div>
             <div class="postbox-body" style="padding: 20px;">
-                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px;">
                     <?php foreach ($ai_models as $m): ?>
                         <div style="border: 1px solid var(--wp-border); border-radius: 6px; overflow: hidden; background: #fff; display: flex; flex-direction: column;">
                             <div style="position: relative; aspect-ratio: 1/1; background: #f6f7f7; overflow: hidden;">
@@ -488,11 +521,14 @@ require_once __DIR__ . '/includes/sidebar.php';
                             </div>
                             <div style="padding: 10px; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
                                 <div style="margin-bottom: 8px;">
-                                    <h4 style="margin: 0 0 2px 0; font-size: 13px; font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo sanitize_html($m['name']); ?></h4>
-                                    <span style="font-size: 11px; color: #64748b;"><?php echo sanitize_html($m['gender']); ?></span>
+                                    <h4 style="margin: 0 0 4px 0; font-size: 13px; font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo sanitize_html($m['name']); ?></h4>
+                                    <div style="display: flex; flex-direction: column; gap: 2px; font-size: 10px; color: #64748b;">
+                                        <span><i class="fa-solid fa-camera text-blue-500"></i> <strong>Shot:</strong> <?php echo sanitize_html($m['shot_type'] ?? 'Full Body'); ?></span>
+                                        <span><i class="fa-solid fa-scissors text-pink-500"></i> <strong>Hair:</strong> <?php echo sanitize_html($m['hair_style'] ?? 'As per product'); ?></span>
+                                    </div>
                                 </div>
                                 <div style="display: flex; gap: 6px; margin-top: 6px;">
-                                    <button type="button" class="button" onclick="editModel(<?php echo $m['id']; ?>, <?php echo htmlspecialchars(json_encode($m['name'])); ?>, '<?php echo $m['gender']; ?>', <?php echo $m['is_active']; ?>)" style="flex: 1; font-size: 11px; padding: 2px 4px; text-align: center;">
+                                    <button type="button" class="button" onclick="editModel(<?php echo $m['id']; ?>, <?php echo htmlspecialchars(json_encode($m['name'])); ?>, '<?php echo $m['gender']; ?>', '<?php echo sanitize_html($m['shot_type'] ?? 'Full Body'); ?>', '<?php echo sanitize_html($m['hair_style'] ?? 'As per product'); ?>', <?php echo $m['is_active']; ?>)" style="flex: 1; font-size: 11px; padding: 2px 4px; text-align: center;">
                                         <i class="fa-solid fa-pen"></i> Edit
                                     </button>
                                     <form method="POST" action="chatbot-settings.php?tab=models" onsubmit="return confirm('Delete this model from DB?');" style="display: inline;">
@@ -560,6 +596,29 @@ require_once __DIR__ . '/includes/sidebar.php';
             </div>
 
             <div class="form-group" style="margin-bottom: 16px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 4px;">Shot Type</label>
+                <select name="shot_type" id="edit_shot_type" class="form-control" style="width: 100%;">
+                    <option value="Full Body">Full Body</option>
+                    <option value="Close-up Portrait">Close-up Portrait</option>
+                    <option value="Half Body">Half Body</option>
+                    <option value="Back View">Back View</option>
+                </select>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 4px;">Hair Style</label>
+                <select name="hair_style" id="edit_hair_style" class="form-control" style="width: 100%;">
+                    <option value="As per product">As per product</option>
+                    <option value="Open Flowing Hair">Open Flowing Hair</option>
+                    <option value="Tied Bun with Gajra">Tied Bun with Gajra</option>
+                    <option value="Traditional Braid (Choti)">Traditional Braid (Choti)</option>
+                    <option value="Half Up, Half Down">Half Up, Half Down</option>
+                    <option value="Side Swept Waves">Side Swept Waves</option>
+                    <option value="Sleek Straight">Sleek Straight</option>
+                </select>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 16px;">
                 <label style="font-weight: 600; display: block; margin-bottom: 4px;">Replace Face Image (Optional)</label>
                 <input type="file" name="model_image" accept="image/png, image/jpeg, image/webp" class="form-control" style="width: 100%;">
             </div>
@@ -586,10 +645,12 @@ function editFaq(id, keywords, answer) {
     document.getElementById('edit-faq-modal').style.display = 'flex';
 }
 
-function editModel(id, name, gender, isActive) {
+function editModel(id, name, gender, shotType, hairStyle, isActive) {
     document.getElementById('edit_model_id').value = id;
     document.getElementById('edit_model_name').value = name;
     document.getElementById('edit_model_gender').value = gender;
+    document.getElementById('edit_shot_type').value = shotType || 'Full Body';
+    document.getElementById('edit_hair_style').value = hairStyle || 'As per product';
     document.getElementById('edit_model_active').checked = (isActive == 1);
     document.getElementById('edit-model-modal').style.display = 'flex';
 }

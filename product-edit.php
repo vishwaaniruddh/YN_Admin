@@ -460,7 +460,7 @@ try {
                                     foreach ($db_ai_models as $dbm):
                                 ?>
                                 <label class="ai-model-picker" style="position: relative;" title="<?php echo sanitize_html($dbm['name']); ?>">
-                                    <input type="radio" name="ai_model_face" value="<?php echo sanitize_html($dbm['image_path']); ?>" class="ai-radio-hidden">
+                                    <input type="radio" name="ai_model_face" value="<?php echo sanitize_html($dbm['image_path']); ?>" data-shot="<?php echo sanitize_html($dbm['shot_type'] ?? 'Full Body'); ?>" data-hair="<?php echo sanitize_html($dbm['hair_style'] ?? 'As per product'); ?>" class="ai-radio-hidden">
                                     <div class="ai-model-box" style="width: 56px; height: 56px; border: 1px solid var(--wp-border); border-radius: 4px; overflow: hidden; cursor: pointer;">
                                         <img src="<?php echo sanitize_html($dbm['image_path']); ?>" alt="<?php echo sanitize_html($dbm['name']); ?>" style="width: 100%; height: 100%; object-fit: cover;">
                                     </div>
@@ -1364,6 +1364,22 @@ function updateFinalPrompt() {
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('input[name="ai_model_face"], input[name="ai_bg_preset"], input[name="ai_shot_type"], input[name="ai_hair_style"]').forEach(input => {
         input.addEventListener('change', updateFinalPrompt);
+    });
+
+    document.querySelectorAll('input[name="ai_model_face"]').forEach(input => {
+        input.addEventListener('change', function() {
+            const shotVal = this.getAttribute('data-shot');
+            const hairVal = this.getAttribute('data-hair');
+            if (shotVal) {
+                const shotRadio = Array.from(document.querySelectorAll('input[name="ai_shot_type"]')).find(r => r.value.toLowerCase().includes(shotVal.toLowerCase()));
+                if (shotRadio) shotRadio.checked = true;
+            }
+            if (hairVal && hairVal !== 'As per product') {
+                const hairRadio = Array.from(document.querySelectorAll('input[name="ai_hair_style"]')).find(r => r.value.toLowerCase().includes(hairVal.toLowerCase()));
+                if (hairRadio) hairRadio.checked = true;
+            }
+            updateFinalPrompt();
+        });
     });
 
     document.getElementById('ai_bg_custom')?.addEventListener('input', updateFinalPrompt);
