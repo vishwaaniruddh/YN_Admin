@@ -85,6 +85,7 @@ if ($action === 'fetch') {
     $external_desc = $api_data['product_desc'] ?? '';
     $external_main_image = $api_data['details']['image_path'] ?? ($api_data['images'][0] ?? '');
     $external_images = is_array($api_data['images'] ?? null) ? $api_data['images'] : [];
+    $external_stock = isset($api_data['details']['inventory']) ? (int)$api_data['details']['inventory'] : (isset($api_data['inventory']) ? (int)$api_data['inventory'] : 0);
 
     echo json_encode([
         'success' => true,
@@ -93,6 +94,7 @@ if ($action === 'fetch') {
             'sku' => $sku,
             'name' => $local_product['name'] ?? '',
             'description' => $local_product['description'] ?? '',
+            'stock_qty' => (int)($local_product['stock_qty'] ?? 0),
             'main_image' => $local_product['main_image'] ?? '',
             'gallery' => $local_gallery
         ],
@@ -100,6 +102,7 @@ if ($action === 'fetch') {
             'sku' => $sku,
             'name' => $external_name,
             'description' => $external_desc,
+            'stock_qty' => $external_stock,
             'main_image' => $external_main_image,
             'images' => $external_images
         ]
@@ -119,6 +122,7 @@ if ($action === 'apply') {
     $sync_name = !empty($post_data['sync_name']);
     $sync_description = !empty($post_data['sync_description']);
     $sync_images = !empty($post_data['sync_images']);
+    $sync_stock = !empty($post_data['sync_stock']);
     $external = $post_data['external'] ?? [];
 
     if ($product_id <= 0) {
@@ -145,6 +149,7 @@ if ($action === 'apply') {
         $updated_slug = $product['slug'];
         $updated_desc = $product['description'];
         $updated_main_image = $product['main_image'];
+        $updated_stock_qty = (int)($product['stock_qty'] ?? 0);
 
         // 1. Sync Product Name & Slug
         if ($sync_name && !empty($external['name'])) {
@@ -165,7 +170,12 @@ if ($action === 'apply') {
             $updated_desc = trim($external['description']);
         }
 
-        // 3. Sync Images
+        // 3. Sync Stock Quantity
+        if ($sync_stock && isset($external['stock_qty'])) {
+            $updated_stock_qty = (int)$external['stock_qty'];
+        }
+
+        // 4. Sync Images
         $new_main_image_path = $updated_main_image;
         if ($sync_images) {
             // Main Image
@@ -202,13 +212,14 @@ if ($action === 'apply') {
         }
 
         // Execute product table update
-        $sql = "UPDATE products SET name = ?, slug = ?, description = ?, main_image = ? WHERE id = ?";
+        $sql = "UPDATE products SET name = ?, slug = ?, description = ?, main_image = ?, stock_qty = ? WHERE id = ?";
         $stmt_upd = $pdo->prepare($sql);
         $stmt_upd->execute([
             $updated_name,
             $updated_slug,
             $updated_desc,
             $new_main_image_path,
+            $updated_stock_qty,
             $product_id
         ]);
 

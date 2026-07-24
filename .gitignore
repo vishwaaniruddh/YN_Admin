@@ -9,5 +9,9 @@ cache/last_purge.txt
 *.log
 .env
 config/db_local.php
+config/secrets.php
+config/secrets*.php
+!config/secrets.example.php
 .DS_Store
 Thumbs.db
+

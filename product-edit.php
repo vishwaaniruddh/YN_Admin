@@ -89,13 +89,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Begin Transaction
                 $pdo->beginTransaction();
 
-                // Handle Main Image replacement
+                // Handle Main Image replacement via file upload OR selected available image
                 $main_image_path = $product['main_image'];
                 if (isset($_FILES['main_image']) && $_FILES['main_image']['error'] === UPLOAD_ERR_OK) {
                     $upload = upload_image($_FILES['main_image'], 'uploads/products/' . $sku, 'main');
                     if (is_array($upload) && isset($upload['filepath'])) {
-                        // Delete previous main image from disk
-                        if ($product['main_image'] && file_exists(__DIR__ . '/../' . $product['main_image'])) {
+                        // Delete previous main image from disk if custom file
+                        if ($product['main_image'] && file_exists(__DIR__ . '/../' . $product['main_image']) && strpos($product['main_image'], 'ai_') === false) {
                             unlink(__DIR__ . '/../' . $product['main_image']);
                             
                             // Delete thumbnail of main image if exists
@@ -110,6 +110,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $message = $upload['error'];
                         $message_type = 'error';
                         throw new Exception($upload['error']);
+                    }
+                } elseif (!empty($_POST['selected_main_image_path'])) {
+                    $selected_path = trim($_POST['selected_main_image_path']);
+                    if ($selected_path !== '') {
+                        $main_image_path = $selected_path;
+                    }
+                }
+
+                // Update gallery image weights / sort order
+                if (!empty($_POST['image_weights']) && is_array($_POST['image_weights'])) {
+                    $stmt_weight = $pdo->prepare("UPDATE product_images SET sort_order = ? WHERE id = ? AND product_id = ?");
+                    foreach ($_POST['image_weights'] as $img_id => $weight_val) {
+                        $stmt_weight->execute([(int)$weight_val, (int)$img_id, $product_id]);
                     }
                 }
 
@@ -284,8 +297,17 @@ try {
                 </div>
                 <div class="postbox-body">
                     <div class="form-group">
-                        <label for="p_name">Product Name <span style="color: var(--wp-error-red);">*</span></label>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <label for="p_name" style="margin-bottom: 0;">Product Name <span style="color: var(--wp-error-red);">*</span></label>
+                            <button type="button" onclick="aiGenerateNames()" id="aiNamesBtn" class="button" style="font-size: 11px; padding: 2px 8px; height: 26px;">
+                                <i class="fa-solid fa-wand-magic-sparkles" style="color: var(--wp-blue);"></i> AI Suggest Names
+                            </button>
+                        </div>
                         <input type="text" name="name" id="p_name" class="form-control" value="<?php echo sanitize_html($product['name']); ?>" required>
+                        <div id="aiNamesResult" style="display: none; margin-top: 8px; padding: 10px; background: #f6f7f7; border: 1px solid var(--wp-border); border-radius: 4px;">
+                            <p style="font-size: 11px; font-weight: 600; color: #50575e; margin-bottom: 6px;">Click to apply suggested name:</p>
+                            <div id="aiNamesList" style="display: flex; flex-direction: column; gap: 4px;"></div>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -294,8 +316,28 @@ try {
                     </div>
 
                     <div class="form-group">
-                        <label for="p_desc">Detailed Description</label>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+                            <label for="p_desc" style="margin-bottom: 0;">Detailed Description</label>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 11px; color: #50575e;">Words: <input type="number" id="aiDescMaxWords" value="100" min="10" max="500" class="form-control" style="width: 55px; height: 24px; padding: 1px 4px; font-size: 11px; display: inline-block;"></span>
+                                <button type="button" onclick="aiGenerateDescription()" id="aiDescBtn" class="button" style="font-size: 11px; padding: 2px 8px; height: 26px;">
+                                    <i class="fa-solid fa-wand-magic-sparkles" style="color: var(--wp-blue);"></i> AI Generate Description
+                                </button>
+                            </div>
+                        </div>
                         <textarea name="description" id="p_desc" class="form-control" rows="8"><?php echo sanitize_html($product['description']); ?></textarea>
+                        
+                        <div id="aiLoading" style="display: none; align-items: center; gap: 6px; padding: 8px; font-size: 12px; color: #50575e; margin-top: 6px;">
+                            <i class="fa-solid fa-spinner fa-spin" style="color: var(--wp-blue);"></i> AI is generating description...
+                        </div>
+
+                        <div id="aiDescResult" style="display: none; margin-top: 8px; padding: 10px; background: #f6f7f7; border: 1px solid var(--wp-border); border-radius: 4px;">
+                            <p style="font-size: 11px; font-weight: 600; color: #50575e; margin-bottom: 4px;">Generated Description Preview:</p>
+                            <textarea id="aiDescTextarea" rows="5" class="form-control" style="width: 100%; margin-bottom: 6px; font-size: 12px;"></textarea>
+                            <button type="button" onclick="applyAiDescription()" id="applyDescBtn" class="button button-primary" style="font-size: 11px; height: 26px; padding: 2px 10px;">
+                                Apply to Description Field
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -357,11 +399,17 @@ try {
                     <?php if (!empty($gallery_images)): ?>
                         <p style="font-weight: 500; margin-bottom: 8px;">Current Gallery Images:</p>
                         <div class="gallery-grid" style="margin-bottom: 20px;">
-                            <?php foreach ($gallery_images as $gimg): ?>
-                                <div class="gallery-item" id="gallery_item_<?php echo $gimg['id']; ?>">
-                                    <img src="<?php echo sanitize_html($gimg['thumb_path']); ?>" alt="Gallery Image">
-                                    <div class="gallery-item-delete" onclick="markGalleryImageForDeletion(<?php echo $gimg['id']; ?>)" title="Remove this image">
-                                        <i class="fa-solid fa-xmark"></i>
+                            <?php foreach ($gallery_images as $gidx => $gimg): ?>
+                                <div class="gallery-item" id="gallery_item_<?php echo $gimg['id']; ?>" style="display: flex; flex-direction: column; align-items: center; background: #fff; padding: 6px; border: 1px solid var(--wp-border); border-radius: 4px;">
+                                    <div style="position: relative; width: 100%; aspect-ratio: 1/1; overflow: hidden; border-radius: 3px;">
+                                        <img src="<?php echo sanitize_html($gimg['thumb_path'] ?: $gimg['image_path']); ?>" alt="Gallery Image" style="width: 100%; height: 100%; object-fit: cover;">
+                                        <div class="gallery-item-delete" onclick="markGalleryImageForDeletion(<?php echo $gimg['id']; ?>)" title="Remove this image">
+                                            <i class="fa-solid fa-xmark"></i>
+                                        </div>
+                                    </div>
+                                    <div style="margin-top: 6px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 4px;" title="Set rendering weight order on frontend">
+                                        <span style="font-size: 10px; color: #50575e; font-weight: 600;">Weight:</span>
+                                        <input type="number" min="0" name="image_weights[<?php echo $gimg['id']; ?>]" value="<?php echo (int)($gimg['sort_order'] ?? ($gidx + 1)); ?>" class="form-control" style="width: 50px; height: 24px; padding: 1px 4px; font-size: 11px; text-align: center;">
                                     </div>
                                 </div>
                             <?php endforeach; ?>
@@ -376,6 +424,132 @@ try {
                     <!-- Live Gallery Previews (New uploads) -->
                     <div class="gallery-grid" id="gallery_preview_grid">
                         <!-- JS inserted items here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Image Studio (Gemini) -->
+            <div class="postbox">
+                <div class="postbox-header">
+                    <h2>AI Image Studio</h2>
+                </div>
+                <div class="postbox-body">
+                    <p style="font-size: 12px; color: #50575e; margin-top: 0; margin-bottom: 15px;">Generate AI fashion model photos wearing this exact product.</p>
+
+                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                        <!-- Face Reference Models -->
+                        <div>
+                            <label style="font-size: 12px; font-weight: 600; color: var(--wp-text-dark); margin-bottom: 6px; display: block;">Model Face (Optional)</label>
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                <label class="ai-model-picker">
+                                    <input type="radio" name="ai_model_face" value="" checked class="ai-radio-hidden">
+                                    <div class="ai-model-box" style="width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; background: #f6f7f7; border: 1px solid var(--wp-border); border-radius: 4px; cursor: pointer;">
+                                        <span style="font-size: 10px; color: #50575e; font-weight: 600;">NONE</span>
+                                    </div>
+                                </label>
+                                <?php for ($i = 1; $i <= 5; $i++): ?>
+                                <label class="ai-model-picker" style="position: relative;">
+                                    <input type="radio" name="ai_model_face" value="model_<?= $i ?>.png" class="ai-radio-hidden">
+                                    <div class="ai-model-box" style="width: 56px; height: 56px; border: 1px solid var(--wp-border); border-radius: 4px; overflow: hidden; cursor: pointer;" title="Model <?= $i ?>">
+                                        <img src="assets/models/model_<?= $i ?>.png" alt="Model <?= $i ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                                    </div>
+                                </label>
+                                <?php endfor; ?>
+                            </div>
+                        </div>
+
+                        <!-- Background Presets -->
+                        <div>
+                            <label style="font-size: 12px; font-weight: 600; color: var(--wp-text-dark); margin-bottom: 6px; display: block;">Background / Props Preset</label>
+                            <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="bg_preset_container">
+                                <?php
+                                $bgPresets = [
+                                    'Palace' => 'elegant royal palace with marble pillars and chandeliers',
+                                    'Beach' => 'golden hour beach with soft waves and sunset sky',
+                                    'Studio' => 'clean professional photography studio with soft gradient backdrop',
+                                    'Mountains' => 'majestic Himalayan mountains with misty peaks',
+                                    'Lake' => 'serene lake with reflections and lush greenery',
+                                    'Garden' => 'blooming flower garden with roses and jasmine',
+                                    'Haveli' => 'traditional Rajasthani haveli with jharokha windows',
+                                    'City Night' => 'modern city skyline at night with bokeh lights'
+                                ];
+                                $first = true;
+                                foreach ($bgPresets as $label => $promptPart):
+                                ?>
+                                <label class="ai-bg-picker">
+                                    <input type="radio" name="ai_bg_preset" value="<?= htmlspecialchars($promptPart) ?>" <?= $first ? 'checked' : '' ?> class="ai-radio-hidden">
+                                    <div class="ai-bg-pill"><?= $label ?></div>
+                                </label>
+                                <?php $first = false; endforeach; ?>
+                            </div>
+                            <input type="text" id="ai_bg_custom" class="form-control" style="margin-top: 6px; width: 100%; font-size: 12px;" value="elegant royal palace with marble pillars and chandeliers" placeholder="Describe background and props...">
+                        </div>
+
+                        <!-- Shot & Hair Controls -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div>
+                                <label style="font-size: 12px; font-weight: 600; color: var(--wp-text-dark); margin-bottom: 6px; display: block;">Shot Type</label>
+                                <div style="display: flex; flex-direction: column; gap: 4px;">
+                                    <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_shot_type" value="close-up portrait shot focusing on the face and details"> Close-up Portrait</label>
+                                    <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_shot_type" value="half body shot from waist up, showing torso and face"> Half Body</label>
+                                    <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_shot_type" value="full body head-to-toe shot showing the complete outfit/jewelry look" checked> Full Body</label>
+                                    <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_shot_type" value="shot from behind showing the back design and details"> Back View</label>
+                                </div>
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; font-weight: 600; color: var(--wp-text-dark); margin-bottom: 6px; display: block;">Hair Style</label>
+                                <div style="display: flex; flex-direction: column; gap: 4px;">
+                                    <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_hair_style" value="open flowing hair with soft waves"> Open Flowing</label>
+                                    <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_hair_style" value="neatly tied bun with gajra flowers"> Tied / Bun</label>
+                                    <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_hair_style" value="traditional long braided hair"> Traditional Braid</label>
+                                    <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_hair_style" value="" checked> Default</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Final Prompt Textarea -->
+                        <div>
+                            <label style="font-size: 12px; font-weight: 600; color: var(--wp-text-dark); margin-bottom: 6px; display: block;">Final Prompt (Auto-Assembled)</label>
+                            <textarea id="ai_final_prompt" rows="3" class="form-control" style="width: 100%; font-size: 12px;">A photorealistic beautiful Indian fashion model wearing this exact product. The background should have elegant royal palace with marble pillars and chandeliers. Shot type: full body head-to-toe shot showing the complete outfit/jewelry look. Aspect ratio: 2:3 vertical fashion portrait format.</textarea>
+                        </div>
+
+                        <!-- Action Bar -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--wp-border); padding-top: 12px;">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <label style="font-size: 12px; font-weight: 500;">Variations:</label>
+                                <div style="display: flex; gap: 4px;">
+                                    <?php for ($n = 1; $n <= 4; $n++): ?>
+                                    <label class="ai-bg-picker">
+                                        <input type="radio" name="ai_num_images" value="<?= $n ?>" <?= $n === 1 ? 'checked' : '' ?> class="ai-radio-hidden">
+                                        <div class="ai-bg-pill"><?= $n ?> <?= $n === 1 ? 'Image' : 'Images' ?></div>
+                                    </label>
+                                    <?php endfor; ?>
+                                </div>
+                            </div>
+
+                            <button type="button" onclick="aiGenerateAdvancedImage()" id="aiImageBtn" class="button button-primary">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Model Image
+                            </button>
+                        </div>
+
+                        <!-- Loading Indicator -->
+                        <div id="aiImageLoading" style="display: none; align-items: center; gap: 8px; padding: 10px; background: #f6f7f7; border: 1px solid var(--wp-border); border-radius: 4px; font-size: 12px; color: #50575e;">
+                            <i class="fa-solid fa-spinner fa-spin" style="font-size: 14px; color: var(--wp-blue);"></i>
+                            <span>AI is generating image(s)... Please wait 15-20 seconds.</span>
+                        </div>
+
+                        <!-- Generated Results -->
+                        <div id="aiImageResult" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--wp-border);">
+                            <p style="font-size: 12px; font-weight: 600; margin-bottom: 8px;">Generated Images:</p>
+                            
+                            <div id="aiImageGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 10px;"></div>
+                            
+                            <div style="display: flex; justify-content: center;">
+                                <button type="button" onclick="resetAiImage()" class="button button-small">
+                                    <i class="fa-solid fa-rotate-left"></i> Clear & Try Again
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -445,21 +619,30 @@ try {
                     <h2>Main Product Image</h2>
                 </div>
                 <div class="postbox-body">
-                    <div class="main-image-preview-container">
+                    <div class="main-image-preview-container" style="text-align: center; margin-bottom: 12px;">
                         <?php if ($product['main_image']): ?>
-                            <img id="main_image_preview" src="<?php echo sanitize_html($product['main_image']); ?>" alt="Main Image">
+                            <img id="main_image_preview" src="<?php echo sanitize_html($product['main_image']); ?>" alt="Main Image" style="max-width: 100%; max-height: 220px; border-radius: 4px; border: 1px solid var(--wp-border); object-fit: contain;">
                             <div id="main_image_placeholder" style="display: none;"></div>
                         <?php else: ?>
-                            <img id="main_image_preview" src="" alt="Main Image Preview" style="display: none;">
+                            <img id="main_image_preview" src="" alt="Main Image Preview" style="display: none; max-width: 100%; max-height: 220px; border-radius: 4px; border: 1px solid var(--wp-border); object-fit: contain;">
                             <div id="main_image_placeholder" style="color: #8c8f94; padding: 20px 0;">
                                 <i class="fa-regular fa-image" style="font-size: 40px; margin-bottom: 8px;"></i>
                                 <p>No product image set</p>
                             </div>
                         <?php endif; ?>
                     </div>
-                    <div class="image-upload-wrapper" style="padding: 10px; border-style: solid; border-width: 1px;">
-                        <p><i class="fa-solid fa-cloud-arrow-up" style="font-size: 16px; margin: 0 5px 0 0;"></i> Replace Main Image</p>
-                        <input type="file" name="main_image" id="main_image_input" accept="image/*">
+
+                    <input type="hidden" name="selected_main_image_path" id="selected_main_image_path" value="">
+
+                    <!-- 2 Replacement Options -->
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <button type="button" class="button" onclick="openSelectMainImageModal()" style="width: 100%; justify-content: center; font-size: 12px; height: 32px;">
+                            <i class="fa-solid fa-images" style="color: var(--wp-blue);"></i> Replace from Available Images
+                        </button>
+                        <label class="button button-primary" style="width: 100%; text-align: center; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; height: 32px; margin: 0;">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> Replace with New File
+                            <input type="file" name="main_image" id="main_image_input" accept="image/*" style="display: none;" onchange="previewNewMainImage(this)">
+                        </label>
                     </div>
                 </div>
             </div>
@@ -518,6 +701,65 @@ function undoGalleryImageDeletion(imageId) {
 
 <!-- Sync Confirmation Modal -->
 <style>
+.wp-editor-columns {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    width: 100%;
+}
+.main-column {
+    flex: 1 1 0%;
+    min-width: 0;
+}
+.side-column {
+    width: 280px;
+    min-width: 280px;
+    max-width: 280px;
+    flex: 0 0 280px;
+}
+@media (max-width: 991px) {
+    .wp-editor-columns {
+        flex-direction: column;
+    }
+    .side-column {
+        width: 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+        flex: 1 1 auto !important;
+    }
+}
+
+.ai-radio-hidden {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+}
+.ai-radio-hidden:checked + .ai-model-box {
+    border-color: #2271b1 !important;
+    box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.3);
+}
+.ai-bg-pill {
+    padding: 4px 10px;
+    background: #f6f7f7;
+    border: 1px solid var(--wp-border);
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--wp-text-dark);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.ai-bg-pill:hover {
+    background: #f0f0f1;
+    border-color: #8c8f94;
+}
+.ai-radio-hidden:checked + .ai-bg-pill {
+    background: #2271b1;
+    color: #fff;
+    border-color: #135e96;
+}
+
 .sync-modal-overlay {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
@@ -677,6 +919,16 @@ function undoGalleryImageDeletion(imageId) {
                             <td><div id="sync_remote_desc" class="sync-val-new sync-text-box"></div></td>
                         </tr>
 
+                        <!-- Stock Quantity / Inventory -->
+                        <tr>
+                            <td style="text-align: center;">
+                                <input type="checkbox" id="chk_sync_stock" class="sync-field-check" checked>
+                            </td>
+                            <td><strong>Stock Quantity (Inventory)</strong></td>
+                            <td><span id="sync_local_stock" class="sync-val-old"></span></td>
+                            <td><span id="sync_remote_stock" class="sync-val-new"></span></td>
+                        </tr>
+
                         <!-- Images -->
                         <tr>
                             <td style="text-align: center;">
@@ -717,7 +969,112 @@ function undoGalleryImageDeletion(imageId) {
     </div>
 </div>
 
+<!-- Modal: Select Main Image from Available Images -->
+<div id="selectMainImageModal" class="sync-modal-overlay" style="display: none;">
+    <div class="sync-modal-dialog" style="max-width: 600px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid var(--wp-border); color: var(--wp-text-dark);">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--wp-border); padding-bottom: 12px; margin-bottom: 15px;">
+            <h3 style="margin: 0; font-size: 15px; font-weight: 600; color: var(--wp-text-dark); display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-images" style="color: var(--wp-blue);"></i> Select Main Product Image
+            </h3>
+            <button type="button" onclick="closeSelectMainImageModal()" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #646970;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <p style="font-size: 12px; color: #50575e; margin-bottom: 12px;">Click any image below to set it as the primary product image:</p>
+
+        <div id="available_images_grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; max-height: 320px; overflow-y: auto; padding: 4px;">
+            <?php
+            $all_available_imgs = [];
+            if (!empty($product['main_image'])) {
+                $all_available_imgs[] = ['path' => $product['main_image'], 'thumb' => $product['main_image'], 'is_main' => true];
+            }
+            if (!empty($gallery_images)) {
+                foreach ($gallery_images as $gimg) {
+                    if ($gimg['image_path'] !== $product['main_image']) {
+                        $all_available_imgs[] = ['path' => $gimg['image_path'], 'thumb' => $gimg['thumb_path'], 'is_main' => false];
+                    }
+                }
+            }
+            foreach ($all_available_imgs as $aidx => $aimg):
+            ?>
+            <div class="available-img-card" onclick="chooseMainImage('<?php echo sanitize_html($aimg['path']); ?>', this)" style="position: relative; aspect-ratio: 1/1; border: 2px solid var(--wp-border); border-radius: 4px; overflow: hidden; cursor: pointer; transition: all 0.15s ease;">
+                <img src="<?php echo sanitize_html($aimg['thumb'] ?: $aimg['path']); ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                <?php if (!empty($aimg['is_main'])): ?>
+                    <span style="position: absolute; top: 4px; left: 4px; background: #2271b1; color: #fff; font-size: 9px; font-weight: 700; padding: 2px 5px; border-radius: 3px;">CURRENT MAIN</span>
+                <?php endif; ?>
+            </div>
+            <?php endforeach; ?>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; border-top: 1px solid var(--wp-border); padding-top: 12px;">
+            <button type="button" class="button" onclick="closeSelectMainImageModal()">Cancel</button>
+            <button type="button" id="confirmMainImgBtn" class="button button-primary" onclick="confirmSelectedMainImage()" disabled>
+                <i class="fa-solid fa-check"></i> Set as Main Image
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
+let pendingMainImagePath = '';
+
+function openSelectMainImageModal() {
+    document.getElementById('selectMainImageModal').style.display = 'flex';
+}
+
+function closeSelectMainImageModal() {
+    document.getElementById('selectMainImageModal').style.display = 'none';
+    pendingMainImagePath = '';
+}
+
+function chooseMainImage(imgPath, cardEl) {
+    pendingMainImagePath = imgPath;
+    document.querySelectorAll('.available-img-card').forEach(c => {
+        c.style.borderColor = 'var(--wp-border)';
+        c.style.boxShadow = 'none';
+    });
+    cardEl.style.borderColor = '#2271b1';
+    cardEl.style.boxShadow = '0 0 0 2px rgba(34, 113, 177, 0.4)';
+    document.getElementById('confirmMainImgBtn').disabled = false;
+}
+
+function confirmSelectedMainImage() {
+    if (!pendingMainImagePath) return;
+    
+    document.getElementById('selected_main_image_path').value = pendingMainImagePath;
+    
+    const preview = document.getElementById('main_image_preview');
+    const placeholder = document.getElementById('main_image_placeholder');
+    if (preview) {
+        preview.src = pendingMainImagePath;
+        preview.style.display = 'inline-block';
+    }
+    if (placeholder) {
+        placeholder.style.display = 'none';
+    }
+    
+    closeSelectMainImageModal();
+}
+
+function previewNewMainImage(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('main_image_preview');
+            const placeholder = document.getElementById('main_image_placeholder');
+            if (preview) {
+                preview.src = e.target.result;
+                preview.style.display = 'inline-block';
+            }
+            if (placeholder) {
+                placeholder.style.display = 'none';
+            }
+            document.getElementById('selected_main_image_path').value = '';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
 let fetchedSyncPayload = null;
 const currentProductId = <?php echo (int)$product['id']; ?>;
 
@@ -777,6 +1134,9 @@ function populateSyncComparison(local, external) {
     document.getElementById('sync_local_desc').textContent = local.description || '(Empty)';
     document.getElementById('sync_remote_desc').textContent = external.description || '(None)';
 
+    document.getElementById('sync_local_stock').textContent = (local.stock_qty !== undefined ? local.stock_qty : 0) + ' units';
+    document.getElementById('sync_remote_stock').textContent = (external.stock_qty !== undefined ? external.stock_qty : 0) + ' units';
+
     // Local Images preview
     const localImgGrid = document.getElementById('sync_local_images_preview');
     localImgGrid.innerHTML = '';
@@ -815,9 +1175,10 @@ function executeSyncApply() {
 
     const syncName = document.getElementById('chk_sync_name').checked;
     const syncDesc = document.getElementById('chk_sync_desc').checked;
+    const syncStock = document.getElementById('chk_sync_stock').checked;
     const syncImages = document.getElementById('chk_sync_images').checked;
 
-    if (!syncName && !syncDesc && !syncImages) {
+    if (!syncName && !syncDesc && !syncStock && !syncImages) {
         alert('Please select at least one field to sync.');
         return;
     }
@@ -831,6 +1192,7 @@ function executeSyncApply() {
         product_id: currentProductId,
         sync_name: syncName,
         sync_description: syncDesc,
+        sync_stock: syncStock,
         sync_images: syncImages,
         external: fetchedSyncPayload
     };
@@ -857,6 +1219,238 @@ function executeSyncApply() {
         document.getElementById('sync_error_state').style.display = 'block';
         document.getElementById('btn_confirm_sync').disabled = false;
     });
+}
+
+// --- AI Features JavaScript Handlers ---
+function showEl(id) { 
+    const el = document.getElementById(id); 
+    if (el) { el.style.display = 'flex'; el.classList.remove('hidden'); }
+}
+function hideEl(id) { 
+    const el = document.getElementById(id); 
+    if (el) { el.style.display = 'none'; el.classList.add('hidden'); }
+}
+
+async function aiGenerateNames() {
+    const btn = document.getElementById('aiNamesBtn');
+    if (!btn) return;
+    btn.disabled = true;
+    showEl('aiLoading');
+    hideEl('aiNamesResult');
+    try {
+        const response = await fetch(`api/ai_product_api.php?action=ai_suggest_names&product_id=${currentProductId}`);
+        const data = await response.json();
+        if (data.success && data.names) {
+            document.getElementById('aiNamesList').innerHTML = data.names.map(name => `
+                <button type="button" onclick="applyProductName('${name.replace(/'/g, "\\'")}')" class="button button-small" style="width: 100%; text-align: left; background: #ffffff; color: var(--wp-text-dark); border-color: #c3c4c7; font-size: 11px; padding: 4px 8px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="white-space: normal; line-height: 1.3;">${name}</span>
+                    <i class="fa-solid fa-check" style="font-size: 10px; color: var(--wp-blue); flex-shrink: 0; margin-left: 6px;"></i>
+                </button>
+            `).join('');
+            document.getElementById('aiNamesResult').style.display = 'block';
+        } else {
+            alert('Error: ' + (data.error || 'Failed to generate names'));
+        }
+    } catch (err) {
+        console.error(err);
+        alert('A network error occurred while generating product names.');
+    } finally {
+        btn.disabled = false;
+        hideEl('aiLoading');
+    }
+}
+
+function applyProductName(newName) {
+    const nameInput = document.getElementById('p_name');
+    if (nameInput) {
+        nameInput.value = newName;
+        nameInput.focus();
+        nameInput.style.transition = 'all 0.3s ease';
+        nameInput.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.4)';
+        setTimeout(() => { nameInput.style.boxShadow = ''; }, 1000);
+    }
+}
+
+async function aiGenerateDescription() {
+    const btn = document.getElementById('aiDescBtn');
+    const maxWords = document.getElementById('aiDescMaxWords')?.value || 100;
+    if (!btn) return;
+    btn.disabled = true;
+    showEl('aiLoading');
+    hideEl('aiDescResult');
+    try {
+        const response = await fetch(`api/ai_product_api.php?action=ai_suggest_description&product_id=${currentProductId}&max_words=${maxWords}`);
+        const data = await response.json();
+        if (data.success && data.description) {
+            document.getElementById('aiDescTextarea').value = data.description;
+            document.getElementById('aiDescResult').style.display = 'block';
+        } else {
+            alert('Error: ' + (data.error || 'Failed to generate description'));
+        }
+    } catch (err) {
+        console.error(err);
+        alert('A network error occurred while generating description.');
+    } finally {
+        btn.disabled = false;
+        hideEl('aiLoading');
+    }
+}
+
+function applyAiDescription() {
+    const val = document.getElementById('aiDescTextarea').value.trim();
+    const descInput = document.getElementById('p_desc');
+    if (descInput && val) {
+        descInput.value = val;
+        descInput.focus();
+        descInput.style.transition = 'all 0.3s ease';
+        descInput.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.4)';
+        setTimeout(() => { descInput.style.boxShadow = ''; }, 1000);
+    }
+}
+
+function updateFinalPrompt() {
+    const prodName = document.getElementById('p_name')?.value || 'fashion item';
+    const faceInput = document.querySelector('input[name="ai_model_face"]:checked')?.value || '';
+    const customBg = document.getElementById('ai_bg_custom')?.value.trim() || 'clean studio background';
+    const shotType = document.querySelector('input[name="ai_shot_type"]:checked')?.value || '';
+    const hairStyle = document.querySelector('input[name="ai_hair_style"]:checked')?.value || '';
+
+    let promptParts = [
+        `A photorealistic beautiful Indian fashion model wearing this exact ${prodName}.`,
+        `The background should have ${customBg}.`,
+        `Shot type: ${shotType}.`,
+        `Do not change the product details.`,
+        `Aspect ratio: 2:3 vertical fashion portrait format.`
+    ];
+
+    if (hairStyle) {
+        promptParts.push(`The model should have ${hairStyle}.`);
+    }
+    if (faceInput) {
+        promptParts.push(`The model's face must match the reference photo exactly.`);
+    }
+
+    const finalBox = document.getElementById('ai_final_prompt');
+    if (finalBox) {
+        finalBox.value = promptParts.join(' ');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('input[name="ai_model_face"], input[name="ai_bg_preset"], input[name="ai_shot_type"], input[name="ai_hair_style"]').forEach(input => {
+        input.addEventListener('change', updateFinalPrompt);
+    });
+
+    document.getElementById('ai_bg_custom')?.addEventListener('input', updateFinalPrompt);
+
+    document.querySelectorAll('input[name="ai_bg_preset"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const customInput = document.getElementById('ai_bg_custom');
+            if (customInput) {
+                customInput.value = e.target.value;
+                updateFinalPrompt();
+            }
+        });
+    });
+});
+
+async function aiGenerateAdvancedImage() {
+    const btn = document.getElementById('aiImageBtn');
+    const faceInput = document.querySelector('input[name="ai_model_face"]:checked')?.value || '';
+    const finalPrompt = document.getElementById('ai_final_prompt')?.value.trim() || '';
+    const numImages = document.querySelector('input[name="ai_num_images"]:checked')?.value || 1;
+
+    if (!btn) return;
+    btn.disabled = true;
+    showEl('aiImageLoading');
+    hideEl('aiImageResult');
+    document.getElementById('aiImageGrid').innerHTML = '';
+
+    try {
+        const response = await fetch(`api/ai_product_api.php?action=ai_generate_model_image&product_id=${currentProductId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                prompt: finalPrompt,
+                face_reference: faceInput,
+                num_images: parseInt(numImages)
+            })
+        });
+        const data = await response.json();
+
+        if (data.success && data.images_base64 && data.images_base64.length > 0) {
+            const grid = document.getElementById('aiImageGrid');
+            data.images_base64.forEach((b64, index) => {
+                grid.innerHTML += `
+                    <div style="display: flex; flex-direction: column; gap: 8px; background: #ffffff; border: 1px solid var(--wp-border); padding: 8px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        <img src="data:image/jpeg;base64,${b64}" style="width: 100%; aspect-ratio: 2/3; object-fit: cover; border-radius: 4px;">
+                        <button type="button" onclick="saveAiGeneratedImage(this, '${b64}')" class="button button-primary" style="width: 100%; justify-content: center; padding: 6px; font-size: 11px; background: #008a20; border-color: #00701a;">
+                            <i class="fa-solid fa-floppy-disk"></i> Save Image ${index + 1}
+                        </button>
+                    </div>
+                `;
+            });
+            document.getElementById('aiImageResult').style.display = 'block';
+        } else {
+            alert('Error: ' + (data.error || 'Failed to generate model images'));
+        }
+    } catch (err) {
+        console.error(err);
+        alert('A network error occurred while generating images.');
+    } finally {
+        btn.disabled = false;
+        hideEl('aiImageLoading');
+    }
+}
+
+function resetAiImage() {
+    hideEl('aiImageResult');
+    document.getElementById('aiImageGrid').innerHTML = '';
+    document.getElementById('ai_final_prompt')?.focus();
+}
+
+async function saveAiGeneratedImage(btn, base64Str) {
+    const origHTML = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+    btn.disabled = true;
+
+    try {
+        const response = await fetch(`api/ai_product_api.php?action=save_ai_image&product_id=${currentProductId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image_base64: base64Str })
+        });
+        const data = await response.json();
+
+        if (data.success && data.path) {
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Saved!';
+            btn.style.background = '#059669';
+
+            // Dynamically append into product gallery list!
+            const galGrid = document.querySelector('.gallery-grid') || document.getElementById('gallery_preview_grid');
+            if (galGrid) {
+                const newItem = document.createElement('div');
+                newItem.className = 'gallery-item';
+                newItem.id = 'gallery_item_' + data.id;
+                newItem.innerHTML = `
+                    <img src="${data.thumb_path || data.path}" alt="Gallery Image">
+                    <div class="gallery-item-delete" onclick="markGalleryImageForDeletion(${data.id})" title="Remove this image">
+                        <i class="fa-solid fa-xmark"></i>
+                    </div>
+                `;
+                galGrid.appendChild(newItem);
+            }
+        } else {
+            alert('Error saving image: ' + (data.error || 'Unknown error'));
+            btn.innerHTML = origHTML;
+            btn.disabled = false;
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Network error while saving AI image.');
+        btn.innerHTML = origHTML;
+        btn.disabled = false;
+    }
 }
 </script>
 

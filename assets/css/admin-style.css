@@ -744,16 +744,20 @@ textarea.form-control {
 .wp-editor-columns {
     display: flex;
     gap: 20px;
+    align-items: flex-start;
+    width: 100%;
 }
 
 .main-column {
-    flex: 3;
+    flex: 1 1 0%;
     min-width: 0;
 }
 
 .side-column {
-    flex: 1;
+    width: 280px;
     min-width: 280px;
+    max-width: 280px;
+    flex: 0 0 280px;
 }
 
 /* WP standard lists/tables */
@@ -1109,5 +1113,17 @@ tr:hover .column-actions {
 
     .sidebar-backdrop.active {
         display: block;
+    }
+}
+
+@media (max-width: 991px) {
+    .wp-editor-columns {
+        flex-direction: column;
+    }
+    .side-column {
+        width: 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+        flex: 1 1 auto !important;
     }
 }
