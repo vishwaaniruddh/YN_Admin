@@ -186,6 +186,98 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $message_type = "error";
             }
         }
+    } elseif ($action === 'add_shot_type') {
+        $name = trim($_POST['shot_name'] ?? '');
+        $prompt = trim($_POST['prompt_text'] ?? '');
+        $active_tab = 'models';
+        if (!empty($name)) {
+            try {
+                $stmtIns = $pdo->prepare("INSERT INTO ai_shot_types (name, prompt_text, is_active) VALUES (?, ?, 1)");
+                $stmtIns->execute([$name, $prompt]);
+                $message = "New Shot Type '$name' added to master!";
+                $message_type = "success";
+            } catch (Exception $e) {
+                $message = "Error adding Shot Type: " . $e->getMessage();
+                $message_type = "error";
+            }
+        }
+    } elseif ($action === 'edit_shot_type') {
+        $id = (int)($_POST['shot_id'] ?? 0);
+        $name = trim($_POST['shot_name'] ?? '');
+        $prompt = trim($_POST['prompt_text'] ?? '');
+        $is_active = isset($_POST['is_active']) ? 1 : 0;
+        $active_tab = 'models';
+        if ($id > 0 && !empty($name)) {
+            try {
+                $stmtUpd = $pdo->prepare("UPDATE ai_shot_types SET name = ?, prompt_text = ?, is_active = ? WHERE id = ?");
+                $stmtUpd->execute([$name, $prompt, $is_active, $id]);
+                $message = "Shot Type updated successfully!";
+                $message_type = "success";
+            } catch (Exception $e) {
+                $message = "Error updating Shot Type: " . $e->getMessage();
+                $message_type = "error";
+            }
+        }
+    } elseif ($action === 'delete_shot_type') {
+        $id = (int)($_POST['shot_id'] ?? 0);
+        $active_tab = 'models';
+        if ($id > 0) {
+            try {
+                $stmtDel = $pdo->prepare("DELETE FROM ai_shot_types WHERE id = ?");
+                $stmtDel->execute([$id]);
+                $message = "Shot Type deleted from master.";
+                $message_type = "success";
+            } catch (Exception $e) {
+                $message = "Error deleting Shot Type: " . $e->getMessage();
+                $message_type = "error";
+            }
+        }
+    } elseif ($action === 'add_hair_style') {
+        $name = trim($_POST['hair_name'] ?? '');
+        $prompt = trim($_POST['prompt_text'] ?? '');
+        $active_tab = 'models';
+        if (!empty($name)) {
+            try {
+                $stmtIns = $pdo->prepare("INSERT INTO ai_hair_styles (name, prompt_text, is_active) VALUES (?, ?, 1)");
+                $stmtIns->execute([$name, $prompt]);
+                $message = "New Hair Style '$name' added to master!";
+                $message_type = "success";
+            } catch (Exception $e) {
+                $message = "Error adding Hair Style: " . $e->getMessage();
+                $message_type = "error";
+            }
+        }
+    } elseif ($action === 'edit_hair_style') {
+        $id = (int)($_POST['hair_id'] ?? 0);
+        $name = trim($_POST['hair_name'] ?? '');
+        $prompt = trim($_POST['prompt_text'] ?? '');
+        $is_active = isset($_POST['is_active']) ? 1 : 0;
+        $active_tab = 'models';
+        if ($id > 0 && !empty($name)) {
+            try {
+                $stmtUpd = $pdo->prepare("UPDATE ai_hair_styles SET name = ?, prompt_text = ?, is_active = ? WHERE id = ?");
+                $stmtUpd->execute([$name, $prompt, $is_active, $id]);
+                $message = "Hair Style updated successfully!";
+                $message_type = "success";
+            } catch (Exception $e) {
+                $message = "Error updating Hair Style: " . $e->getMessage();
+                $message_type = "error";
+            }
+        }
+    } elseif ($action === 'delete_hair_style') {
+        $id = (int)($_POST['hair_id'] ?? 0);
+        $active_tab = 'models';
+        if ($id > 0) {
+            try {
+                $stmtDel = $pdo->prepare("DELETE FROM ai_hair_styles WHERE id = ?");
+                $stmtDel->execute([$id]);
+                $message = "Hair Style deleted from master.";
+                $message_type = "success";
+            } catch (Exception $e) {
+                $message = "Error deleting Hair Style: " . $e->getMessage();
+                $message_type = "error";
+            }
+        }
     }
 }
 
@@ -222,7 +314,6 @@ try {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )");
 
-    // Ensure columns exist if table was created previously
     try { $pdo->exec("ALTER TABLE ai_models ADD COLUMN shot_type VARCHAR(255) DEFAULT 'Full Body'"); } catch (Exception $ex) {}
     try { $pdo->exec("ALTER TABLE ai_models ADD COLUMN hair_style VARCHAR(255) DEFAULT 'As per product'"); } catch (Exception $ex) {}
 
@@ -237,7 +328,52 @@ try {
     }
 } catch (PDOException $e) {}
 
+// Auto-create and seed ai_shot_types table
+try {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS ai_shot_types (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        prompt_text TEXT NOT NULL,
+        is_active TINYINT(1) DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
+
+    $checkShots = $pdo->query("SELECT COUNT(*) FROM ai_shot_types")->fetchColumn();
+    if ($checkShots == 0) {
+        $seedShot = $pdo->prepare("INSERT INTO ai_shot_types (name, prompt_text, is_active) VALUES (?, ?, 1)");
+        $seedShot->execute(["Full Body", "full body head-to-toe shot showing the complete outfit/jewelry look"]);
+        $seedShot->execute(["Close-up Portrait", "close-up portrait shot focusing on the face and the jewelry"]);
+        $seedShot->execute(["Half Body", "half body shot from waist up, showing the model's torso and face"]);
+        $seedShot->execute(["Back View", "shot from behind showing the back design and details of the product"]);
+    }
+} catch (PDOException $e) {}
+
+// Auto-create and seed ai_hair_styles table
+try {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS ai_hair_styles (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        prompt_text TEXT DEFAULT '',
+        is_active TINYINT(1) DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
+
+    $checkHairs = $pdo->query("SELECT COUNT(*) FROM ai_hair_styles")->fetchColumn();
+    if ($checkHairs == 0) {
+        $seedHair = $pdo->prepare("INSERT INTO ai_hair_styles (name, prompt_text, is_active) VALUES (?, ?, 1)");
+        $seedHair->execute(["As per product", ""]);
+        $seedHair->execute(["Open Flowing", "open flowing hair with soft waves (khule baal)"]);
+        $seedHair->execute(["Tied Bun with Gajra", "neatly tied bun with gajra flowers"]);
+        $seedHair->execute(["Traditional Braid (Choti)", "traditional long braided hair (gajra choti)"]);
+        $seedHair->execute(["Half Up, Half Down", "elegant half-up half-down hairstyle"]);
+        $seedHair->execute(["Side Swept Waves", "glamorous side-swept waves"]);
+        $seedHair->execute(["Sleek Straight", "sleek straight hair with center part"]);
+    }
+} catch (PDOException $e) {}
+
 $ai_models = $pdo->query("SELECT * FROM ai_models ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+$ai_shot_types = $pdo->query("SELECT * FROM ai_shot_types ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+$ai_hair_styles = $pdo->query("SELECT * FROM ai_hair_styles ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
 
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
@@ -262,7 +398,7 @@ require_once __DIR__ . '/includes/sidebar.php';
         <i class="fa-solid fa-book-open" style="color: #16a34a;"></i> 2. Knowledge Base &amp; Custom Q&amp;A (<?php echo count($faqs); ?>)
     </a>
     <a href="chatbot-settings.php?tab=models" class="nav-tab <?php echo $active_tab === 'models' ? 'nav-tab-active' : ''; ?>" style="padding: 10px 20px; font-weight: 600; text-decoration: none; border: 1px solid #c3c4c7; border-bottom: none; border-radius: 4px 4px 0 0; background: <?php echo $active_tab === 'models' ? '#fff' : '#f0f0f1'; ?>; color: <?php echo $active_tab === 'models' ? '#1d2327' : '#50575e'; ?>;">
-        <i class="fa-solid fa-user-astronaut" style="color: #2271b1;"></i> 3. AI Face Reference Models (<?php echo count($ai_models); ?>)
+        <i class="fa-solid fa-layer-group" style="color: #2271b1;"></i> 3. AI Studio Masters (Models, Shot Types, Hair Styles)
     </a>
 </div>
 
@@ -471,23 +607,18 @@ require_once __DIR__ . '/includes/sidebar.php';
                     <div class="form-group" style="margin-bottom: 16px;">
                         <label style="font-weight: 600; display: block; margin-bottom: 4px;">Default Shot Type</label>
                         <select name="shot_type" class="form-control" style="width: 100%;">
-                            <option value="Full Body">Full Body</option>
-                            <option value="Close-up Portrait">Close-up Portrait</option>
-                            <option value="Half Body">Half Body</option>
-                            <option value="Back View">Back View</option>
+                            <?php foreach ($ai_shot_types as $st): ?>
+                                <option value="<?php echo sanitize_html($st['name']); ?>"><?php echo sanitize_html($st['name']); ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
 
                     <div class="form-group" style="margin-bottom: 16px;">
                         <label style="font-weight: 600; display: block; margin-bottom: 4px;">Default Hair Style</label>
                         <select name="hair_style" class="form-control" style="width: 100%;">
-                            <option value="As per product">As per product</option>
-                            <option value="Open Flowing Hair">Open Flowing Hair</option>
-                            <option value="Tied Bun with Gajra">Tied Bun with Gajra</option>
-                            <option value="Traditional Braid (Choti)">Traditional Braid (Choti)</option>
-                            <option value="Half Up, Half Down">Half Up, Half Down</option>
-                            <option value="Side Swept Waves">Side Swept Waves</option>
-                            <option value="Sleek Straight">Sleek Straight</option>
+                            <?php foreach ($ai_hair_styles as $hs): ?>
+                                <option value="<?php echo sanitize_html($hs['name']); ?>"><?php echo sanitize_html($hs['name']); ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
 
@@ -546,6 +677,111 @@ require_once __DIR__ . '/includes/sidebar.php';
             </div>
         </div>
     </div>
+
+    <!-- SECTIONS 2 & 3: SHOT TYPE MASTER & HAIR STYLE MASTER -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; margin-top: 30px; margin-bottom: 40px;">
+        
+        <!-- Shot Type Master -->
+        <div class="postbox">
+            <div class="postbox-header">
+                <h2><i class="fa-solid fa-camera" style="color: var(--wp-blue);"></i> Shot Type Master (<?php echo count($ai_shot_types); ?>)</h2>
+            </div>
+            <div class="postbox-body" style="padding: 20px;">
+                <form method="POST" action="chatbot-settings.php?tab=models" style="margin-bottom: 20px; padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
+                    <input type="hidden" name="action" value="add_shot_type">
+                    <h4 style="margin: 0 0 10px 0; font-size: 13px;">Add New Shot Type</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px;">
+                        <input type="text" name="shot_name" class="form-control" placeholder="Shot Name (e.g. Drone Top View)" required style="width: 100%; font-size: 12px;">
+                        <input type="text" name="prompt_text" class="form-control" placeholder="Prompt instruction text" required style="width: 100%; font-size: 12px;">
+                    </div>
+                    <button type="submit" class="button button-primary" style="font-size: 12px; width: 100%;">
+                        <i class="fa-solid fa-plus"></i> Add Shot Type
+                    </button>
+                </form>
+
+                <table class="wp-list-table widefat fixed striped" style="font-size: 12px;">
+                    <thead>
+                        <tr>
+                            <th style="width: 30%;">Shot Name</th>
+                            <th>Prompt Instruction</th>
+                            <th style="width: 70px; text-align: center;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($ai_shot_types as $st): ?>
+                            <tr>
+                                <td><strong><?php echo sanitize_html($st['name']); ?></strong></td>
+                                <td style="color: #64748b; font-size: 11px;"><?php echo sanitize_html($st['prompt_text']); ?></td>
+                                <td style="text-align: center;">
+                                    <button type="button" class="button" onclick="editShotType(<?php echo $st['id']; ?>, <?php echo htmlspecialchars(json_encode($st['name'])); ?>, <?php echo htmlspecialchars(json_encode($st['prompt_text'])); ?>, <?php echo $st['is_active']; ?>)" style="padding: 1px 5px; font-size: 10px;" title="Edit">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <form method="POST" action="chatbot-settings.php?tab=models" onsubmit="return confirm('Delete this Shot Type?');" style="display: inline;">
+                                        <input type="hidden" name="action" value="delete_shot_type">
+                                        <input type="hidden" name="shot_id" value="<?php echo $st['id']; ?>">
+                                        <button type="submit" class="button" style="color: #ef4444; padding: 1px 5px; font-size: 10px;" title="Delete">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Hair Style Master -->
+        <div class="postbox">
+            <div class="postbox-header">
+                <h2><i class="fa-solid fa-scissors" style="color: #ec4899;"></i> Hair Style Master (<?php echo count($ai_hair_styles); ?>)</h2>
+            </div>
+            <div class="postbox-body" style="padding: 20px;">
+                <form method="POST" action="chatbot-settings.php?tab=models" style="margin-bottom: 20px; padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
+                    <input type="hidden" name="action" value="add_hair_style">
+                    <h4 style="margin: 0 0 10px 0; font-size: 13px;">Add New Hair Style</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px;">
+                        <input type="text" name="hair_name" class="form-control" placeholder="Hair Style Name (e.g. Messy Bun)" required style="width: 100%; font-size: 12px;">
+                        <input type="text" name="prompt_text" class="form-control" placeholder="Prompt instruction text" style="width: 100%; font-size: 12px;">
+                    </div>
+                    <button type="submit" class="button button-primary" style="font-size: 12px; width: 100%;">
+                        <i class="fa-solid fa-plus"></i> Add Hair Style
+                    </button>
+                </form>
+
+                <table class="wp-list-table widefat fixed striped" style="font-size: 12px;">
+                    <thead>
+                        <tr>
+                            <th style="width: 35%;">Style Name</th>
+                            <th>Prompt Instruction</th>
+                            <th style="width: 70px; text-align: center;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($ai_hair_styles as $hs): ?>
+                            <tr>
+                                <td><strong><?php echo sanitize_html($hs['name']); ?></strong></td>
+                                <td style="color: #64748b; font-size: 11px;"><?php echo sanitize_html($hs['prompt_text'] ?: '(None / Default)'); ?></td>
+                                <td style="text-align: center;">
+                                    <button type="button" class="button" onclick="editHairStyle(<?php echo $hs['id']; ?>, <?php echo htmlspecialchars(json_encode($hs['name'])); ?>, <?php echo htmlspecialchars(json_encode($hs['prompt_text'])); ?>, <?php echo $hs['is_active']; ?>)" style="padding: 1px 5px; font-size: 10px;" title="Edit">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <form method="POST" action="chatbot-settings.php?tab=models" onsubmit="return confirm('Delete this Hair Style?');" style="display: inline;">
+                                        <input type="hidden" name="action" value="delete_hair_style">
+                                        <input type="hidden" name="hair_id" value="<?php echo $hs['id']; ?>">
+                                        <button type="submit" class="button" style="color: #ef4444; padding: 1px 5px; font-size: 10px;" title="Delete">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
 <?php endif; ?>
 
 <!-- Edit FAQ Modal -->
@@ -598,23 +834,18 @@ require_once __DIR__ . '/includes/sidebar.php';
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="font-weight: 600; display: block; margin-bottom: 4px;">Shot Type</label>
                 <select name="shot_type" id="edit_shot_type" class="form-control" style="width: 100%;">
-                    <option value="Full Body">Full Body</option>
-                    <option value="Close-up Portrait">Close-up Portrait</option>
-                    <option value="Half Body">Half Body</option>
-                    <option value="Back View">Back View</option>
+                    <?php foreach ($ai_shot_types as $st): ?>
+                        <option value="<?php echo sanitize_html($st['name']); ?>"><?php echo sanitize_html($st['name']); ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
 
             <div class="form-group" style="margin-bottom: 16px;">
                 <label style="font-weight: 600; display: block; margin-bottom: 4px;">Hair Style</label>
                 <select name="hair_style" id="edit_hair_style" class="form-control" style="width: 100%;">
-                    <option value="As per product">As per product</option>
-                    <option value="Open Flowing Hair">Open Flowing Hair</option>
-                    <option value="Tied Bun with Gajra">Tied Bun with Gajra</option>
-                    <option value="Traditional Braid (Choti)">Traditional Braid (Choti)</option>
-                    <option value="Half Up, Half Down">Half Up, Half Down</option>
-                    <option value="Side Swept Waves">Side Swept Waves</option>
-                    <option value="Sleek Straight">Sleek Straight</option>
+                    <?php foreach ($ai_hair_styles as $hs): ?>
+                        <option value="<?php echo sanitize_html($hs['name']); ?>"><?php echo sanitize_html($hs['name']); ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
 
@@ -637,6 +868,58 @@ require_once __DIR__ . '/includes/sidebar.php';
     </div>
 </div>
 
+<!-- Edit Shot Type Modal -->
+<div id="edit-shot-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99999; align-items: center; justify-content: center;">
+    <div style="background: #fff; border-radius: 8px; width: 450px; max-width: 90vw; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+        <h3 style="margin-top: 0; margin-bottom: 16px;"><i class="fa-solid fa-camera" style="color: var(--wp-blue);"></i> Edit Shot Type</h3>
+        <form method="POST" action="chatbot-settings.php?tab=models">
+            <input type="hidden" name="action" value="edit_shot_type">
+            <input type="hidden" name="shot_id" id="edit_shot_id">
+
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 4px;">Shot Name</label>
+                <input type="text" name="shot_name" id="edit_shot_name" class="form-control" required style="width: 100%;">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 4px;">Prompt Instruction Text</label>
+                <textarea name="prompt_text" id="edit_shot_prompt" rows="3" class="form-control" required style="width: 100%; font-size: 12px;"></textarea>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" onclick="document.getElementById('edit-shot-modal').style.display = 'none';" class="button">Cancel</button>
+                <button type="submit" class="button button-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Hair Style Modal -->
+<div id="edit-hair-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99999; align-items: center; justify-content: center;">
+    <div style="background: #fff; border-radius: 8px; width: 450px; max-width: 90vw; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+        <h3 style="margin-top: 0; margin-bottom: 16px;"><i class="fa-solid fa-scissors" style="color: #ec4899;"></i> Edit Hair Style</h3>
+        <form method="POST" action="chatbot-settings.php?tab=models">
+            <input type="hidden" name="action" value="edit_hair_style">
+            <input type="hidden" name="hair_id" id="edit_hair_id">
+
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 4px;">Hair Style Name</label>
+                <input type="text" name="hair_name" id="edit_hair_name" class="form-control" required style="width: 100%;">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 4px;">Prompt Instruction Text</label>
+                <textarea name="prompt_text" id="edit_hair_prompt" rows="3" class="form-control" style="width: 100%; font-size: 12px;"></textarea>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" onclick="document.getElementById('edit-hair-modal').style.display = 'none';" class="button">Cancel</button>
+                <button type="submit" class="button button-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
 function editFaq(id, keywords, answer) {
     document.getElementById('edit_faq_id').value = id;
@@ -653,6 +936,20 @@ function editModel(id, name, gender, shotType, hairStyle, isActive) {
     document.getElementById('edit_hair_style').value = hairStyle || 'As per product';
     document.getElementById('edit_model_active').checked = (isActive == 1);
     document.getElementById('edit-model-modal').style.display = 'flex';
+}
+
+function editShotType(id, name, prompt, isActive) {
+    document.getElementById('edit_shot_id').value = id;
+    document.getElementById('edit_shot_name').value = name;
+    document.getElementById('edit_shot_prompt').value = prompt;
+    document.getElementById('edit-shot-modal').style.display = 'flex';
+}
+
+function editHairStyle(id, name, prompt, isActive) {
+    document.getElementById('edit_hair_id').value = id;
+    document.getElementById('edit_hair_name').value = name;
+    document.getElementById('edit_hair_prompt').value = prompt;
+    document.getElementById('edit-hair-modal').style.display = 'flex';
 }
 </script>
 

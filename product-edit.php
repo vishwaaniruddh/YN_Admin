@@ -510,24 +510,62 @@ try {
                             <input type="text" id="ai_bg_custom" class="form-control" style="margin-top: 6px; width: 100%; font-size: 12px;" value="elegant royal palace with marble pillars and chandeliers" placeholder="Describe background and props...">
                         </div>
 
-                        <!-- Shot & Hair Controls -->
+                        <!-- Shot & Hair Controls (Dynamic from Masters DB) -->
+                        <?php
+                        $db_shot_types = [];
+                        $db_hair_styles = [];
+                        try {
+                            $db_shot_types = $pdo->query("SELECT * FROM ai_shot_types WHERE is_active = 1 ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+                            $db_hair_styles = $pdo->query("SELECT * FROM ai_hair_styles WHERE is_active = 1 ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+                        } catch (Exception $e) {}
+                        ?>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                             <div>
-                                <label style="font-size: 12px; font-weight: 600; color: var(--wp-text-dark); margin-bottom: 6px; display: block;">Shot Type</label>
+                                <label style="font-size: 12px; font-weight: 600; color: var(--wp-text-dark); margin-bottom: 6px; display: block;">Shot Type Master</label>
                                 <div style="display: flex; flex-direction: column; gap: 4px;">
-                                    <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_shot_type" value="close-up portrait shot focusing on the face and details"> Close-up Portrait</label>
-                                    <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_shot_type" value="half body shot from waist up, showing torso and face"> Half Body</label>
-                                    <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_shot_type" value="full body head-to-toe shot showing the complete outfit/jewelry look" checked> Full Body</label>
-                                    <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_shot_type" value="shot from behind showing the back design and details"> Back View</label>
+                                    <?php
+                                    if (!empty($db_shot_types)):
+                                        $sIdx = 0;
+                                        foreach ($db_shot_types as $st):
+                                    ?>
+                                        <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);" title="<?php echo sanitize_html($st['prompt_text']); ?>">
+                                            <input type="radio" name="ai_shot_type" value="<?php echo sanitize_html($st['prompt_text']); ?>" data-name="<?php echo sanitize_html($st['name']); ?>" <?php echo $sIdx === 0 ? 'checked' : ''; ?>>
+                                            <?php echo sanitize_html($st['name']); ?>
+                                        </label>
+                                    <?php
+                                        $sIdx++;
+                                        endforeach;
+                                    else:
+                                    ?>
+                                        <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_shot_type" value="close-up portrait shot focusing on the face and details" data-name="Close-up Portrait"> Close-up Portrait</label>
+                                        <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_shot_type" value="half body shot from waist up, showing torso and face" data-name="Half Body"> Half Body</label>
+                                        <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_shot_type" value="full body head-to-toe shot showing the complete outfit/jewelry look" data-name="Full Body" checked> Full Body</label>
+                                        <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_shot_type" value="shot from behind showing the back design and details" data-name="Back View"> Back View</label>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                             <div>
-                                <label style="font-size: 12px; font-weight: 600; color: var(--wp-text-dark); margin-bottom: 6px; display: block;">Hair Style</label>
+                                <label style="font-size: 12px; font-weight: 600; color: var(--wp-text-dark); margin-bottom: 6px; display: block;">Hair Style Master</label>
                                 <div style="display: flex; flex-direction: column; gap: 4px;">
-                                    <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_hair_style" value="open flowing hair with soft waves"> Open Flowing</label>
-                                    <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_hair_style" value="neatly tied bun with gajra flowers"> Tied / Bun</label>
-                                    <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_hair_style" value="traditional long braided hair"> Traditional Braid</label>
-                                    <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_hair_style" value="" checked> Default</label>
+                                    <?php
+                                    if (!empty($db_hair_styles)):
+                                        $hIdx = 0;
+                                        foreach ($db_hair_styles as $hs):
+                                    ?>
+                                        <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);" title="<?php echo sanitize_html($hs['prompt_text']); ?>">
+                                            <input type="radio" name="ai_hair_style" value="<?php echo sanitize_html($hs['prompt_text']); ?>" data-name="<?php echo sanitize_html($hs['name']); ?>" <?php echo $hIdx === 0 ? 'checked' : ''; ?>>
+                                            <?php echo sanitize_html($hs['name']); ?>
+                                        </label>
+                                    <?php
+                                        $hIdx++;
+                                        endforeach;
+                                    else:
+                                    ?>
+                                        <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_hair_style" value="open flowing hair with soft waves" data-name="Open Flowing"> Open Flowing</label>
+                                        <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_hair_style" value="neatly tied bun with gajra flowers" data-name="Tied / Bun"> Tied / Bun</label>
+                                        <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_hair_style" value="traditional long braided hair" data-name="Traditional Braid"> Traditional Braid</label>
+                                        <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_hair_style" value="" data-name="As per product" checked> Default</label>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
@@ -1371,11 +1409,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const shotVal = this.getAttribute('data-shot');
             const hairVal = this.getAttribute('data-hair');
             if (shotVal) {
-                const shotRadio = Array.from(document.querySelectorAll('input[name="ai_shot_type"]')).find(r => r.value.toLowerCase().includes(shotVal.toLowerCase()));
+                const shotRadio = Array.from(document.querySelectorAll('input[name="ai_shot_type"]')).find(r => (r.getAttribute('data-name') || r.value).toLowerCase().includes(shotVal.toLowerCase()));
                 if (shotRadio) shotRadio.checked = true;
             }
-            if (hairVal && hairVal !== 'As per product') {
-                const hairRadio = Array.from(document.querySelectorAll('input[name="ai_hair_style"]')).find(r => r.value.toLowerCase().includes(hairVal.toLowerCase()));
+            if (hairVal) {
+                const hairRadio = Array.from(document.querySelectorAll('input[name="ai_hair_style"]')).find(r => (r.getAttribute('data-name') || r.value).toLowerCase().includes(hairVal.toLowerCase()));
                 if (hairRadio) hairRadio.checked = true;
             }
             updateFinalPrompt();
