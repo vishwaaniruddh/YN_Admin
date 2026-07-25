@@ -166,10 +166,15 @@ try {
                 <i class="fa-solid fa-download"></i> Export
                 <i class="fa-solid fa-chevron-down" style="font-size: 10px;"></i>
             </button>
-            <ul id="export-menu" style="display:none; position: absolute; right: 0; top: calc(100% + 4px); background: #fff; border: 1px solid #c3c4c7; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); list-style: none; margin: 0; padding: 4px 0; z-index: 999; min-width: 180px;">
+            <ul id="export-menu" style="display:none; position: absolute; right: 0; top: calc(100% + 4px); background: #fff; border: 1px solid #c3c4c7; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); list-style: none; margin: 0; padding: 4px 0; z-index: 999; min-width: 220px;">
                 <li>
+                    <a href="generate-yn-products-excel.php?download=1" style="display: flex; align-items: center; gap: 10px; padding: 9px 16px; text-decoration: none; color: #1e293b; font-size: 13px; font-weight: 600;">
+                        <i class="fa-solid fa-file-excel" style="color: #16a34a;"></i> YN Products Excel (yn_products.xlsx)
+                    </a>
+                </li>
+                <li style="border-top: 1px solid #f0f0f1;">
                     <a href="export-products.php?format=excel<?php echo !empty($cat_filter) ? '&category_id=' . (int)$cat_filter : ''; ?>" style="display: flex; align-items: center; gap: 10px; padding: 9px 16px; text-decoration: none; color: #1e293b; font-size: 13px; font-weight: 500;">
-                        <i class="fa-solid fa-file-excel" style="color: #16a34a;"></i> Export as Excel (.xlsx)
+                        <i class="fa-solid fa-file-excel" style="color: #15803d;"></i> Standard Excel (.xlsx)
                     </a>
                 </li>
                 <li style="border-top: 1px solid #f0f0f1;">

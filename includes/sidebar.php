@@ -67,7 +67,7 @@ $current_script = basename($_SERVER['PHP_SELF']);
 
         <!-- Tools Group -->
         <?php 
-        $tools_active = in_array($current_script, ['desc-corrector.php', 'analytics.php', 'cache-manager.php']);
+        $tools_active = in_array($current_script, ['desc-corrector.php', 'analytics.php', 'cache-manager.php', 'generate-yn-products-excel.php']);
         ?>
         <li class="menu-item has-submenu <?php echo $tools_active ? 'open active-parent' : ''; ?>">
             <a href="javascript:void(0);" class="submenu-toggle">
@@ -76,6 +76,11 @@ $current_script = basename($_SERVER['PHP_SELF']);
                 <i class="fa-solid fa-chevron-right submenu-arrow"></i>
             </a>
             <ul class="submenu">
+                <li class="<?php echo ($current_script == 'generate-yn-products-excel.php') ? 'active' : ''; ?>">
+                    <a href="generate-yn-products-excel.php">
+                        <i class="fa-solid fa-file-excel"></i> YN Products Excel
+                    </a>
+                </li>
                 <li class="<?php echo ($current_script == 'desc-corrector.php') ? 'active' : ''; ?>">
                     <a href="desc-corrector.php">
                         <i class="fa-solid fa-wand-magic-sparkles"></i> Description Corrector
