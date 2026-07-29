@@ -8,18 +8,33 @@ require_once __DIR__ . '/includes/sidebar.php';
 // Fetch products (supports search by SKU, Name, or ID, or default formatting issues)
 $search = trim($_GET['search'] ?? '');
 
-// Base condition: descriptions that actually have formatting issues
-$formatFilter = "(description LIKE '%•%' OR description LIKE '%??%' OR description LIKE '%\\\\n%' OR description LIKE '?%')";
+// Helper: check if a description has formatting issues that need correction
+function has_format_issues($desc) {
+    if (empty($desc)) return false;
+    if (strpos($desc, '•') !== false) return true;
+    if (strpos($desc, '??') !== false) return true;
+    if (strpos($desc, '\n') !== false) return true;
+    if (strpos($desc, '\r') !== false) return true;
+    if (str_starts_with(trim($desc), '?')) return true;
+    return false;
+}
 
 if (!empty($search)) {
     $search_param = '%' . $search . '%';
     $search_id = is_numeric($search) ? (int)$search : 0;
-    $stmt = $pdo->prepare("SELECT id, name, sku, main_image, description FROM products WHERE deleted_at IS NULL AND (sku LIKE ? OR name LIKE ? OR id = ?) AND $formatFilter ORDER BY id DESC LIMIT 100");
+    $stmt = $pdo->prepare("SELECT id, name, sku, main_image, description FROM products WHERE deleted_at IS NULL AND (sku LIKE ? OR name LIKE ? OR id = ?) ORDER BY id DESC LIMIT 200");
     $stmt->execute([$search_param, $search_param, $search_id]);
 } else {
-    $stmt = $pdo->query("SELECT id, name, sku, main_image, description FROM products WHERE deleted_at IS NULL AND $formatFilter ORDER BY id DESC LIMIT 100");
+    $stmt = $pdo->query("SELECT id, name, sku, main_image, description FROM products WHERE deleted_at IS NULL ORDER BY id DESC LIMIT 500");
 }
-$products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$allProducts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Filter only products with actual formatting issues
+$products = array_filter($allProducts, function($p) {
+    return has_format_issues($p['description'] ?? '');
+});
+// Limit to 100
+$products = array_slice($products, 0, 100);
 
 $cleanedProducts = [];
 foreach ($products as $p) {
