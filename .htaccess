@@ -16,5 +16,6 @@ Options -Indexes
     Header set X-Robots-Tag "noindex, nofollow, noarchive, nosnippet"
     <FilesMatch "\.(jpg|jpeg|png|webp|gif|ico|svg)$">
         Header set Cache-Control "max-age=31536000, public, immutable"
+        Header unset X-Robots-Tag
     </FilesMatch>
 </IfModule>

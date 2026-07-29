@@ -12,14 +12,15 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 set_time_limit(300);
 ini_set('memory_limit', '512M');
 
-// Base URL calculation
+// Base URL calculation for Google Merchant Center feed
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || ($_SERVER['SERVER_PORT'] ?? 0) == 443) ? "https://" : "http://";
 $domainName = $_SERVER['HTTP_HOST'] ?? 'localhost';
 $dirName = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '')), '/\\');
-if ($dirName === '' || $dirName === '.') {
-    $baseUrl = $protocol . $domainName;
+
+if ($domainName === 'localhost' || str_contains($domainName, '127.0.0.1') || php_sapi_name() === 'cli' || str_contains($dirName, 'yn')) {
+    $baseUrl = 'https://yosshitaneha.com';
 } else {
-    $baseUrl = $protocol . $domainName . $dirName;
+    $baseUrl = $protocol . $domainName;
 }
 
 $templatePath = __DIR__ . '/../yn_products.xlsx';

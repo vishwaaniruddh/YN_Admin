@@ -67,7 +67,7 @@ $current_script = basename($_SERVER['PHP_SELF']);
 
         <!-- Tools Group -->
         <?php 
-        $tools_active = in_array($current_script, ['desc-corrector.php', 'analytics.php', 'cache-manager.php', 'generate-yn-products-excel.php']);
+        $tools_active = in_array($current_script, ['desc-corrector.php', 'analytics.php', 'cache-manager.php', 'generate-yn-products-excel.php', 'sku-lookup.php']);
         ?>
         <li class="menu-item has-submenu <?php echo $tools_active ? 'open active-parent' : ''; ?>">
             <a href="javascript:void(0);" class="submenu-toggle">
@@ -79,6 +79,11 @@ $current_script = basename($_SERVER['PHP_SELF']);
                 <li class="<?php echo ($current_script == 'generate-yn-products-excel.php') ? 'active' : ''; ?>">
                     <a href="generate-yn-products-excel.php">
                         <i class="fa-solid fa-file-excel"></i> YN Products Excel
+                    </a>
+                </li>
+                <li class="<?php echo ($current_script == 'sku-lookup.php') ? 'active' : ''; ?>">
+                    <a href="sku-lookup.php">
+                        <i class="fa-solid fa-magnifying-glass"></i> SKU Lookup
                     </a>
                 </li>
                 <li class="<?php echo ($current_script == 'desc-corrector.php') ? 'active' : ''; ?>">
