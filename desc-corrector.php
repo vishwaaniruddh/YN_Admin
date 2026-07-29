@@ -8,13 +8,16 @@ require_once __DIR__ . '/includes/sidebar.php';
 // Fetch products (supports search by SKU, Name, or ID, or default formatting issues)
 $search = trim($_GET['search'] ?? '');
 
+// Base condition: descriptions that actually have formatting issues
+$formatFilter = "(description LIKE '%•%' OR description LIKE '%??%' OR description LIKE '%\\\\n%' OR description LIKE '?%')";
+
 if (!empty($search)) {
     $search_param = '%' . $search . '%';
     $search_id = is_numeric($search) ? (int)$search : 0;
-    $stmt = $pdo->prepare("SELECT id, name, sku, main_image, description FROM products WHERE deleted_at IS NULL AND (sku LIKE ? OR name LIKE ? OR id = ?) ORDER BY id DESC LIMIT 100");
+    $stmt = $pdo->prepare("SELECT id, name, sku, main_image, description FROM products WHERE deleted_at IS NULL AND (sku LIKE ? OR name LIKE ? OR id = ?) AND $formatFilter ORDER BY id DESC LIMIT 100");
     $stmt->execute([$search_param, $search_param, $search_id]);
 } else {
-    $stmt = $pdo->query("SELECT id, name, sku, main_image, description FROM products WHERE deleted_at IS NULL AND (description LIKE '%•%' OR description LIKE '%??%' OR description LIKE '%\\\\n%' OR description LIKE '?%') ORDER BY id DESC LIMIT 100");
+    $stmt = $pdo->query("SELECT id, name, sku, main_image, description FROM products WHERE deleted_at IS NULL AND $formatFilter ORDER BY id DESC LIMIT 100");
 }
 $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -56,7 +59,15 @@ foreach ($products as $p) {
         }
     }
 
-    $p['corrected_description'] = implode("\n\n", $formattedLines);
+    $corrected = implode("\n\n", $formattedLines);
+    
+    // Skip products where the corrected description is identical to the original
+    // (i.e., no actual formatting issues to fix)
+    if (trim($corrected) === trim($desc)) {
+        continue;
+    }
+    
+    $p['corrected_description'] = $corrected;
     $cleanedProducts[] = $p;
 }
 ?>
