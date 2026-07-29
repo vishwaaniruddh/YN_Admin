@@ -1,7 +1,10 @@
 <?php
 // admin/sku-lookup.php
 $page_title = 'SKU Lookup';
-require_once __DIR__ . '/includes/header.php';
+
+// Load dependencies BEFORE any HTML output (needed for export)
+require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/vendor/autoload.php';
 
@@ -15,6 +18,104 @@ use PhpOffice\PhpSpreadsheet\Style\Font;
 
 set_time_limit(120);
 ini_set('memory_limit', '256M');
+
+// ------------------------------------------------------------------
+// Handle Export (MUST run before any HTML output)
+// ------------------------------------------------------------------
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['export_results'])) {
+    $exportData = json_decode($_POST['export_data'], true);
+
+    if (!empty($exportData)) {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('SKU Lookup Results');
+
+        // Header row
+        $sheet->setCellValue('A1', 'SKU');
+        $sheet->setCellValue('B1', 'Product Name');
+        $sheet->setCellValue('C1', 'Description');
+
+        // Style header
+        $headerStyle = [
+            'font' => [
+                'bold' => true,
+                'color' => ['rgb' => 'FFFFFF'],
+                'size' => 12,
+            ],
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '1A1A2E'],
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical'   => Alignment::VERTICAL_CENTER,
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['rgb' => '3A3A4E'],
+                ],
+            ],
+        ];
+        $sheet->getStyle('A1:C1')->applyFromArray($headerStyle);
+        $sheet->getRowDimension(1)->setRowHeight(30);
+
+        // Data rows
+        $row = 2;
+        foreach ($exportData as $item) {
+            $sheet->setCellValue('A' . $row, $item['sku']);
+            $sheet->setCellValue('B' . $row, $item['name']);
+            $sheet->setCellValue('C' . $row, $item['description']);
+
+            // Highlight not-found rows
+            if (empty($item['name'])) {
+                $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
+                    'fill' => [
+                        'fillType' => Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => 'FFF3CD'],
+                    ],
+                    'font' => [
+                        'color' => ['rgb' => '856404'],
+                    ],
+                ]);
+            }
+            $row++;
+        }
+
+        // Auto-size columns
+        $sheet->getColumnDimension('A')->setWidth(25);
+        $sheet->getColumnDimension('B')->setWidth(50);
+        $sheet->getColumnDimension('C')->setWidth(80);
+
+        // Apply borders to all data
+        $lastRow = $row - 1;
+        $sheet->getStyle('A1:C' . $lastRow)->applyFromArray([
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['rgb' => 'DDDDDD'],
+                ],
+            ],
+        ]);
+
+        // Set text wrapping for description column
+        $sheet->getStyle('C2:C' . $lastRow)->getAlignment()->setWrapText(true);
+
+        // Output as download
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="sku_lookup_' . date('Ymd_His') . '.xlsx"');
+        header('Cache-Control: max-age=0');
+
+        $writer = new Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
+    }
+}
+
+// ------------------------------------------------------------------
+// Now safe to output HTML — include header & sidebar
+// ------------------------------------------------------------------
+require_once __DIR__ . '/includes/header.php';
 
 $results = [];
 $error = '';
@@ -117,98 +218,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['sku_file'])) {
     }
 }
 
-// ------------------------------------------------------------------
-// Handle Export
-// ------------------------------------------------------------------
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['export_results'])) {
-    $exportData = json_decode($_POST['export_data'], true);
-
-    if (!empty($exportData)) {
-        $spreadsheet = new Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('SKU Lookup Results');
-
-        // Header row
-        $sheet->setCellValue('A1', 'SKU');
-        $sheet->setCellValue('B1', 'Product Name');
-        $sheet->setCellValue('C1', 'Description');
-
-        // Style header
-        $headerStyle = [
-            'font' => [
-                'bold' => true,
-                'color' => ['rgb' => 'FFFFFF'],
-                'size' => 12,
-            ],
-            'fill' => [
-                'fillType' => Fill::FILL_SOLID,
-                'startColor' => ['rgb' => '1A1A2E'],
-            ],
-            'alignment' => [
-                'horizontal' => Alignment::HORIZONTAL_CENTER,
-                'vertical'   => Alignment::VERTICAL_CENTER,
-            ],
-            'borders' => [
-                'allBorders' => [
-                    'borderStyle' => Border::BORDER_THIN,
-                    'color' => ['rgb' => '3A3A4E'],
-                ],
-            ],
-        ];
-        $sheet->getStyle('A1:C1')->applyFromArray($headerStyle);
-        $sheet->getRowDimension(1)->setRowHeight(30);
-
-        // Data rows
-        $row = 2;
-        foreach ($exportData as $item) {
-            $sheet->setCellValue('A' . $row, $item['sku']);
-            $sheet->setCellValue('B' . $row, $item['name']);
-            $sheet->setCellValue('C' . $row, $item['description']);
-
-            // Highlight not-found rows
-            if (empty($item['name'])) {
-                $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
-                    'fill' => [
-                        'fillType' => Fill::FILL_SOLID,
-                        'startColor' => ['rgb' => 'FFF3CD'],
-                    ],
-                    'font' => [
-                        'color' => ['rgb' => '856404'],
-                    ],
-                ]);
-            }
-            $row++;
-        }
-
-        // Auto-size columns
-        $sheet->getColumnDimension('A')->setWidth(25);
-        $sheet->getColumnDimension('B')->setWidth(50);
-        $sheet->getColumnDimension('C')->setWidth(80);
-
-        // Apply borders to all data
-        $lastRow = $row - 1;
-        $sheet->getStyle('A1:C' . $lastRow)->applyFromArray([
-            'borders' => [
-                'allBorders' => [
-                    'borderStyle' => Border::BORDER_THIN,
-                    'color' => ['rgb' => 'DDDDDD'],
-                ],
-            ],
-        ]);
-
-        // Set text wrapping for description column
-        $sheet->getStyle('C2:C' . $lastRow)->getAlignment()->setWrapText(true);
-
-        // Output as download
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="sku_lookup_' . date('Ymd_His') . '.xlsx"');
-        header('Cache-Control: max-age=0');
-
-        $writer = new Xlsx($spreadsheet);
-        $writer->save('php://output');
-        exit;
-    }
-}
 
 // Include sidebar
 require_once __DIR__ . '/includes/sidebar.php';
