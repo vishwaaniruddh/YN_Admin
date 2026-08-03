@@ -491,16 +491,16 @@ function getRowCount($conn, $table)
             <th style="width: 150px; text-align: right;">Action</th>
         </tr>
         <?php foreach ($uniqueToLocal as $table): ?>
-            <tr>
-                <td><?php echo $table; ?></td>
-                <td style="text-align: right;">
-                    <form method="POST"
-                        onsubmit="return confirm('Are you sure you want to create table `<?php echo $table; ?>` on the server?');">
-                        <input type="hidden" name="sync_table" value="<?php echo $table; ?>">
-                        <button type="submit" class="btn-sync">Sync to Server</button>
-                    </form>
-                </td>
-            </tr>
+                <tr>
+                    <td><?php echo $table; ?></td>
+                    <td style="text-align: right;">
+                        <form method="POST"
+                            onsubmit="return confirm('Are you sure you want to create table `<?php echo $table; ?>` on the server?');">
+                            <input type="hidden" name="sync_table" value="<?php echo $table; ?>">
+                            <button type="submit" class="btn-sync">Sync to Server</button>
+                        </form>
+                    </td>
+                </tr>
         <?php endforeach; ?>
     </table>
 
@@ -510,9 +510,9 @@ function getRowCount($conn, $table)
             <th>Table Name</th>
         </tr>
         <?php foreach ($uniqueToServer as $table): ?>
-            <tr>
-                <td><?php echo $table; ?></td>
-            </tr>
+                <tr>
+                    <td><?php echo $table; ?></td>
+                </tr>
         <?php endforeach; ?>
     </table>
 
@@ -526,71 +526,71 @@ function getRowCount($conn, $table)
             <th>Collation Mismatches</th>
         </tr>
         <?php foreach ($matchingTables as $table): ?>
-            <?php
-            $colDiff = compareColumns($table, $localConn, $serverConn);
-            if (empty($colDiff['onlyLocal']) && empty($colDiff['onlyServer']) && empty($colDiff['typeMismatch']) && empty($colDiff['collationMismatch'])) {
-                continue;
-            }
-            ?>
-            <tr class="highlight">
-                <td><?php echo $table; ?></td>
-                <td class="cell-warning">
-                    <?php if (!empty($colDiff['onlyLocal'])): ?>
-                        <?php if (count($colDiff['onlyLocal']) > 1): ?>
-                            <form method="POST"
-                                onsubmit="return confirm('Sync ALL <?php echo count($colDiff['onlyLocal']); ?> missing columns for `<?php echo $table; ?>`?');"
-                                style="margin-bottom: 10px; border-bottom: 1px dashed #ccc; padding-bottom: 5px;">
-                                <input type="hidden" name="sync_all_columns" value="1">
-                                <input type="hidden" name="table" value="<?php echo $table; ?>">
-                                <button type="submit" class="btn-sync btn-blue btn-sm" style="margin:0; width:100%;">Sync All
-                                    <?php echo count($colDiff['onlyLocal']); ?> Columns</button>
-                            </form>
-                        <?php endif; ?>
+                <?php
+                $colDiff = compareColumns($table, $localConn, $serverConn);
+                if (empty($colDiff['onlyLocal']) && empty($colDiff['onlyServer']) && empty($colDiff['typeMismatch']) && empty($colDiff['collationMismatch'])) {
+                    continue;
+                }
+                ?>
+                <tr class="highlight">
+                    <td><?php echo $table; ?></td>
+                    <td class="cell-warning">
+                        <?php if (!empty($colDiff['onlyLocal'])): ?>
+                                <?php if (count($colDiff['onlyLocal']) > 1): ?>
+                                        <form method="POST"
+                                            onsubmit="return confirm('Sync ALL <?php echo count($colDiff['onlyLocal']); ?> missing columns for `<?php echo $table; ?>`?');"
+                                            style="margin-bottom: 10px; border-bottom: 1px dashed #ccc; padding-bottom: 5px;">
+                                            <input type="hidden" name="sync_all_columns" value="1">
+                                            <input type="hidden" name="table" value="<?php echo $table; ?>">
+                                            <button type="submit" class="btn-sync btn-blue btn-sm" style="margin:0; width:100%;">Sync All
+                                                <?php echo count($colDiff['onlyLocal']); ?> Columns</button>
+                                        </form>
+                                <?php endif; ?>
 
-                        <ul style="margin: 0; padding-left: 20px;">
-                            <?php foreach ($colDiff['onlyLocal'] as $col => $details): ?>
-                                <li style="margin-bottom: 5px;">
-                                    <?php echo $col; ?> (<?php echo $details['Type']; ?>)
-                                    <form method="POST" style="display:inline;"
-                                        onsubmit="return confirm('Sync column `<?php echo $col; ?>` to server?');">
-                                        <input type="hidden" name="sync_column" value="1">
-                                        <input type="hidden" name="table" value="<?php echo $table; ?>">
-                                        <input type="hidden" name="column" value="<?php echo $col; ?>">
-                                        <button type="submit" class="btn-sync btn-sm">Sync</button>
-                                    </form>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
-                    <?php else: ?>
-                        None
-                    <?php endif; ?>
-                </td>
-                <td class="cell-danger">
-                    <?php echo implode('<br>', array_keys($colDiff['onlyServer'])) ?: 'None'; ?>
-                </td>
-                <td class="cell-warning">
-                    <?php
-                    if (!empty($colDiff['typeMismatch'])) {
-                        foreach ($colDiff['typeMismatch'] as $col => $types) {
-                            echo "$col (Local: {$types['Local']}, Server: {$types['Server']})<br>";
+                                <ul style="margin: 0; padding-left: 20px;">
+                                    <?php foreach ($colDiff['onlyLocal'] as $col => $details): ?>
+                                            <li style="margin-bottom: 5px;">
+                                                <?php echo $col; ?> (<?php echo $details['Type']; ?>)
+                                                <form method="POST" style="display:inline;"
+                                                    onsubmit="return confirm('Sync column `<?php echo $col; ?>` to server?');">
+                                                    <input type="hidden" name="sync_column" value="1">
+                                                    <input type="hidden" name="table" value="<?php echo $table; ?>">
+                                                    <input type="hidden" name="column" value="<?php echo $col; ?>">
+                                                    <button type="submit" class="btn-sync btn-sm">Sync</button>
+                                                </form>
+                                            </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                        <?php else: ?>
+                                None
+                        <?php endif; ?>
+                    </td>
+                    <td class="cell-danger">
+                        <?php echo implode('<br>', array_keys($colDiff['onlyServer'])) ?: 'None'; ?>
+                    </td>
+                    <td class="cell-warning">
+                        <?php
+                        if (!empty($colDiff['typeMismatch'])) {
+                            foreach ($colDiff['typeMismatch'] as $col => $types) {
+                                echo "$col (Local: {$types['Local']}, Server: {$types['Server']})<br>";
+                            }
+                        } else {
+                            echo "None";
                         }
-                    } else {
-                        echo "None";
-                    }
-                    ?>
-                </td>
-                <td class="cell-warning">
-                    <?php
-                    if (!empty($colDiff['collationMismatch'])) {
-                        foreach ($colDiff['collationMismatch'] as $col => $collations) {
-                            echo "$col (Local: {$collations['Local']}, Server: {$collations['Server']})<br>";
+                        ?>
+                    </td>
+                    <td class="cell-warning">
+                        <?php
+                        if (!empty($colDiff['collationMismatch'])) {
+                            foreach ($colDiff['collationMismatch'] as $col => $collations) {
+                                echo "$col (Local: {$collations['Local']}, Server: {$collations['Server']})<br>";
+                            }
+                        } else {
+                            echo "None";
                         }
-                    } else {
-                        echo "None";
-                    }
-                    ?>
-                </td>
-            </tr>
+                        ?>
+                    </td>
+                </tr>
         <?php endforeach; ?>
     </table>
 
@@ -610,64 +610,64 @@ function getRowCount($conn, $table)
                 continue;
             $anyIdxDiff = true;
             ?>
-            <tr class="highlight">
-                <td><strong><?php echo $table; ?></strong></td>
-                <td class="cell-warning">
-                    <?php if (!empty($idxDiff['onlyLocal'])): ?>
-                        <?php if (count($idxDiff['onlyLocal']) > 1): ?>
-                            <form method="POST"
-                                onsubmit="return confirm('Sync all <?php echo count($idxDiff['onlyLocal']); ?> missing indexes for `<?php echo $table; ?>`?');"
-                                style="margin-bottom:8px">
-                                <input type="hidden" name="sync_all_indexes" value="1">
-                                <input type="hidden" name="table" value="<?php echo $table; ?>">
-                                <button type="submit" class="btn-sync btn-blue btn-sm" style="width:100%">Sync All
-                                    <?php echo count($idxDiff['onlyLocal']); ?> Indexes</button>
-                            </form>
-                        <?php endif; ?>
-                        <ul style="margin:0;padding-left:18px">
-                            <?php foreach ($idxDiff['onlyLocal'] as $idxKey => $info): ?>
-                                <li style="margin-bottom:4px">
-                                    <code><?php echo $idxKey; ?></code>
-                                    (<?php echo $info['unique'] ? 'UNIQUE ' : ''; ?>on:
-                                    <?php echo implode(', ', $info['columns']); ?>)
-                                    <form method="POST" style="display:inline"
-                                        onsubmit="return confirm('Add index `<?php echo $idxKey; ?>` to server?');">
-                                        <input type="hidden" name="sync_index" value="1">
-                                        <input type="hidden" name="table" value="<?php echo $table; ?>">
-                                        <input type="hidden" name="index_key" value="<?php echo $idxKey; ?>">
-                                        <button type="submit" class="btn-sync btn-sm">Add</button>
-                                    </form>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
-                    <?php else: ?>None<?php endif; ?>
-                </td>
-                <td class="cell-danger">
-                    <?php if (!empty($idxDiff['onlyServer'])): ?>
-                        <ul style="margin:0;padding-left:18px">
-                            <?php foreach ($idxDiff['onlyServer'] as $idxKey => $info): ?>
-                                <li><code><?php echo $idxKey; ?></code> (<?php echo implode(', ', $info['columns']); ?>)</li>
-                            <?php endforeach; ?>
-                        </ul>
-                    <?php else: ?>None<?php endif; ?>
-                </td>
-                <td class="cell-warning">
-                    <?php if (!empty($idxDiff['mismatch'])): ?>
-                        <?php foreach ($idxDiff['mismatch'] as $idxKey => $diff): ?>
-                            <code><?php echo $idxKey; ?></code><br>
-                            &nbsp;Local: <?php echo $diff['local']; ?><br>
-                            &nbsp;Server: <?php echo $diff['server']; ?><br>
-                        <?php endforeach; ?>
-                    <?php else: ?>None<?php endif; ?>
-                </td>
-            </tr>
+                <tr class="highlight">
+                    <td><strong><?php echo $table; ?></strong></td>
+                    <td class="cell-warning">
+                        <?php if (!empty($idxDiff['onlyLocal'])): ?>
+                                <?php if (count($idxDiff['onlyLocal']) > 1): ?>
+                                        <form method="POST"
+                                            onsubmit="return confirm('Sync all <?php echo count($idxDiff['onlyLocal']); ?> missing indexes for `<?php echo $table; ?>`?');"
+                                            style="margin-bottom:8px">
+                                            <input type="hidden" name="sync_all_indexes" value="1">
+                                            <input type="hidden" name="table" value="<?php echo $table; ?>">
+                                            <button type="submit" class="btn-sync btn-blue btn-sm" style="width:100%">Sync All
+                                                <?php echo count($idxDiff['onlyLocal']); ?> Indexes</button>
+                                        </form>
+                                <?php endif; ?>
+                                <ul style="margin:0;padding-left:18px">
+                                    <?php foreach ($idxDiff['onlyLocal'] as $idxKey => $info): ?>
+                                            <li style="margin-bottom:4px">
+                                                <code><?php echo $idxKey; ?></code>
+                                                (<?php echo $info['unique'] ? 'UNIQUE ' : ''; ?>on:
+                                                <?php echo implode(', ', $info['columns']); ?>)
+                                                <form method="POST" style="display:inline"
+                                                    onsubmit="return confirm('Add index `<?php echo $idxKey; ?>` to server?');">
+                                                    <input type="hidden" name="sync_index" value="1">
+                                                    <input type="hidden" name="table" value="<?php echo $table; ?>">
+                                                    <input type="hidden" name="index_key" value="<?php echo $idxKey; ?>">
+                                                    <button type="submit" class="btn-sync btn-sm">Add</button>
+                                                </form>
+                                            </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                        <?php else: ?>None<?php endif; ?>
+                    </td>
+                    <td class="cell-danger">
+                        <?php if (!empty($idxDiff['onlyServer'])): ?>
+                                <ul style="margin:0;padding-left:18px">
+                                    <?php foreach ($idxDiff['onlyServer'] as $idxKey => $info): ?>
+                                            <li><code><?php echo $idxKey; ?></code> (<?php echo implode(', ', $info['columns']); ?>)</li>
+                                    <?php endforeach; ?>
+                                </ul>
+                        <?php else: ?>None<?php endif; ?>
+                    </td>
+                    <td class="cell-warning">
+                        <?php if (!empty($idxDiff['mismatch'])): ?>
+                                <?php foreach ($idxDiff['mismatch'] as $idxKey => $diff): ?>
+                                        <code><?php echo $idxKey; ?></code><br>
+                                        &nbsp;Local: <?php echo $diff['local']; ?><br>
+                                        &nbsp;Server: <?php echo $diff['server']; ?><br>
+                                <?php endforeach; ?>
+                        <?php else: ?>None<?php endif; ?>
+                    </td>
+                </tr>
         <?php endforeach; ?>
         <?php if (!$anyIdxDiff): ?>
-            <tr>
-                <td colspan="4" style="text-align:center;color:#155724;background:#d4edda;font-weight:bold;padding:14px">
-                    ✅ All indexes match between local and server!
-                </td>
-            </tr>
+                <tr>
+                    <td colspan="4" style="text-align:center;color:#155724;background:#d4edda;font-weight:bold;padding:14px">
+                        ✅ All indexes match between local and server!
+                    </td>
+                </tr>
         <?php endif; ?>
     </table>
 
@@ -690,25 +690,25 @@ function getRowCount($conn, $table)
             <th style="width: 200px; text-align: right;">Action</th>
         </tr>
         <?php foreach ($matchingTables as $table): ?>
-            <?php
-            $prodRows = getRowCount($serverConn, $table);
-            $localRows = getRowCount($localConn, $table);
-            $isDifferent = ($prodRows !== $localRows);
-            ?>
-            <tr <?php if ($isDifferent)
-                echo 'class="highlight"'; ?>>
-                <td><strong><?php echo $table; ?></strong></td>
-                <td style="text-align: right; font-weight: bold; color: #111;"><?php echo number_format($prodRows); ?></td>
-                <td style="text-align: right; font-weight: bold; color: #555;"><?php echo number_format($localRows); ?></td>
-                <td style="text-align: right;">
-                    <form method="POST"
-                        onsubmit="return confirm('Are you sure you want to overwrite local data for table `<?php echo $table; ?>` with production server data?');">
-                        <input type="hidden" name="sync_data_table" value="<?php echo $table; ?>">
-                        <button type="submit" class="btn-sync" style="font-size: 11px; padding: 4px 10px;">Sync to
-                            Local</button>
-                    </form>
-                </td>
-            </tr>
+                <?php
+                $prodRows = getRowCount($serverConn, $table);
+                $localRows = getRowCount($localConn, $table);
+                $isDifferent = ($prodRows !== $localRows);
+                ?>
+                <tr <?php if ($isDifferent)
+                    echo 'class="highlight"'; ?>>
+                    <td><strong><?php echo $table; ?></strong></td>
+                    <td style="text-align: right; font-weight: bold; color: #111;"><?php echo number_format($prodRows); ?></td>
+                    <td style="text-align: right; font-weight: bold; color: #555;"><?php echo number_format($localRows); ?></td>
+                    <td style="text-align: right;">
+                        <form method="POST"
+                            onsubmit="return confirm('Are you sure you want to overwrite local data for table `<?php echo $table; ?>` with production server data?');">
+                            <input type="hidden" name="sync_data_table" value="<?php echo $table; ?>">
+                            <button type="submit" class="btn-sync" style="font-size: 11px; padding: 4px 10px;">Sync to
+                                Local</button>
+                        </form>
+                    </td>
+                </tr>
         <?php endforeach; ?>
     </table>
 

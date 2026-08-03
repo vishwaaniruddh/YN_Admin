@@ -26,10 +26,12 @@ try {
     $count_sql = "SELECT COUNT(*) FROM products p 
                   LEFT JOIN categories c ON p.category_id = c.id 
                   WHERE p.status = 'published' AND p.deleted_at IS NULL 
-                  AND (p.name LIKE :q OR p.description LIKE :q OR c.name LIKE :q)";
+                  AND (p.name LIKE :q1 OR p.description LIKE :q2 OR c.name LIKE :q3)";
     
     $count_stmt = $pdo->prepare($count_sql);
-    $count_stmt->bindValue(':q', "%$query%");
+    $count_stmt->bindValue(':q1', "%$query%");
+    $count_stmt->bindValue(':q2', "%$query%");
+    $count_stmt->bindValue(':q3', "%$query%");
     $count_stmt->execute();
     $total_items = $count_stmt->fetchColumn();
     $total_pages = ceil($total_items / $limit);
@@ -44,12 +46,14 @@ try {
             FROM products p 
             LEFT JOIN categories c ON p.category_id = c.id 
             WHERE p.status = 'published' AND p.deleted_at IS NULL 
-            AND (p.name LIKE :q OR p.description LIKE :q OR c.name LIKE :q)
+            AND (p.name LIKE :q1 OR p.description LIKE :q2 OR c.name LIKE :q3)
             ORDER BY p.created_at DESC 
             LIMIT :limit OFFSET :offset";
             
     $stmt = $pdo->prepare($sql);
-    $stmt->bindValue(':q', "%$query%");
+    $stmt->bindValue(':q1', "%$query%");
+    $stmt->bindValue(':q2', "%$query%");
+    $stmt->bindValue(':q3', "%$query%");
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
     $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
     $stmt->execute();

@@ -6,17 +6,20 @@ require_once __DIR__ . '/../includes/cache.php';
 
 $category_id = isset($_GET['category']) ? (int)$_GET['category'] : null;
 $category_slug = isset($_GET['category_slug']) ? trim($_GET['category_slug']) : null;
+$category_slugs_raw = isset($_GET['category_slugs']) ? trim($_GET['category_slugs']) : null;
 $featured = isset($_GET['featured']) ? (bool)$_GET['featured'] : null;
 $search = isset($_GET['search']) ? trim($_GET['search']) : null;
 $sort = isset($_GET['sort']) ? trim($_GET['sort']) : 'newest';
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 12;
+$min_price = isset($_GET['min_price']) && $_GET['min_price'] !== '' ? (float)$_GET['min_price'] : null;
+$max_price = isset($_GET['max_price']) && $_GET['max_price'] !== '' ? (float)$_GET['max_price'] : null;
 
 $page = $page > 0 ? $page : 1;
 $limit = $limit > 0 ? $limit : 12;
 $offset = ($page - 1) * $limit;
 
-$cache_key = "products_c" . ($category_id ?: '0') . "_cs" . ($category_slug ?: 'none') . "_f" . ($featured ? '1' : '0') . "_sq" . ($search ?: 'none') . "_s" . $sort . "_p" . $page . "_l" . $limit;
+$cache_key = "products_c" . ($category_id ?: '0') . "_cs" . ($category_slug ?: 'none') . "_css" . ($category_slugs_raw ?: 'none') . "_f" . ($featured ? '1' : '0') . "_sq" . ($search ?: 'none') . "_s" . $sort . "_p" . $page . "_l" . $limit . "_min" . ($min_price !== null ? $min_price : 'none') . "_max" . ($max_price !== null ? $max_price : 'none');
 
 $cached_res = get_cache($cache_key, 3600, $pdo);
 if ($cached_res !== false) {
@@ -26,14 +29,29 @@ if ($cached_res !== false) {
 
 try {
     $category_info = null;
-    if ($category_slug) {
-        $stmtCat = $pdo->prepare("SELECT * FROM categories WHERE slug = ? AND deleted_at IS NULL");
-        $stmtCat->execute([$category_slug]);
-        $category_info = $stmtCat->fetch(PDO::FETCH_ASSOC);
-        if ($category_info) {
+    $category_slugs_array = [];
+    if ($category_slugs_raw) {
+        $category_slugs_array = array_filter(array_map('trim', explode(',', $category_slugs_raw)));
+    } elseif ($category_slug) {
+        $category_slugs_array = [$category_slug];
+    }
+
+    $category_ids_in = [];
+    if (!empty($category_slugs_array)) {
+        $slugs_placeholders = str_repeat('?,', count($category_slugs_array) - 1) . '?';
+        $stmtCats = $pdo->prepare("SELECT * FROM categories WHERE slug IN ($slugs_placeholders) AND deleted_at IS NULL");
+        $stmtCats->execute($category_slugs_array);
+        $cats = $stmtCats->fetchAll(PDO::FETCH_ASSOC);
+        
+        if (count($cats) > 0) {
+            $category_info = $cats[0];
             $category_id = $category_info['id'];
             
-            // Fetch related categories (children, or siblings if no children)
+            foreach ($cats as $cat) {
+                $category_ids_in = array_merge($category_ids_in, get_all_child_category_ids($pdo, $cat['id']));
+            }
+            $category_ids_in = array_unique($category_ids_in);
+
             $stmtChildren = $pdo->prepare("SELECT id, name, slug FROM categories WHERE parent_id = ? AND deleted_at IS NULL ORDER BY name ASC");
             $stmtChildren->execute([$category_id]);
             $children = $stmtChildren->fetchAll(PDO::FETCH_ASSOC);
@@ -47,10 +65,7 @@ try {
                 $category_info['related_categories'] = $stmtSiblings->fetchAll(PDO::FETCH_ASSOC);
             }
         }
-    }
-
-    $category_ids_in = [];
-    if ($category_id) {
+    } elseif ($category_id) {
         $category_ids_in = get_all_child_category_ids($pdo, $category_id);
     }
 
@@ -80,6 +95,16 @@ try {
         $params[] = $searchTerm;
     }
     
+    if ($min_price !== null) {
+        $sql .= " AND p.price >= ?";
+        $params[] = $min_price;
+    }
+    
+    if ($max_price !== null) {
+        $sql .= " AND p.price <= ?";
+        $params[] = $max_price;
+    }
+    
     // First count total for pagination
     $count_sql = "SELECT COUNT(*) FROM products p WHERE p.status = 'published' AND p.deleted_at IS NULL";
     $count_params = [];
@@ -97,6 +122,16 @@ try {
         $count_params[] = $searchTerm;
         $count_params[] = $searchTerm;
         $count_params[] = $searchTerm;
+    }
+    
+    if ($min_price !== null) {
+        $count_sql .= " AND p.price >= ?";
+        $count_params[] = $min_price;
+    }
+    
+    if ($max_price !== null) {
+        $count_sql .= " AND p.price <= ?";
+        $count_params[] = $max_price;
     }
     
     $count_stmt = $pdo->prepare($count_sql);
