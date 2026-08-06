@@ -9,11 +9,16 @@ $category_slug = isset($_GET['category_slug']) ? trim($_GET['category_slug']) : 
 $category_slugs_raw = isset($_GET['category_slugs']) ? trim($_GET['category_slugs']) : null;
 $featured = isset($_GET['featured']) ? (bool)$_GET['featured'] : null;
 $search = isset($_GET['search']) ? trim($_GET['search']) : null;
-$sort = isset($_GET['sort']) ? trim($_GET['sort']) : 'newest';
+$sort = isset($_GET['sort']) ? trim($_GET['sort']) : 'sku_desc';
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 12;
 $min_price = isset($_GET['min_price']) && $_GET['min_price'] !== '' ? (float)$_GET['min_price'] : null;
 $max_price = isset($_GET['max_price']) && $_GET['max_price'] !== '' ? (float)$_GET['max_price'] : null;
+
+$valid_sorts = ['sku_desc', 'sku_asc', 'price_asc', 'price_low', 'price_desc', 'price_high', 'name_asc', 'name_desc'];
+if (!in_array($sort, $valid_sorts, true)) {
+    $sort = 'sku_desc';
+}
 
 $page = $page > 0 ? $page : 1;
 $limit = $limit > 0 ? $limit : 12;
@@ -105,59 +110,23 @@ try {
         $params[] = $max_price;
     }
     
-    // First count total for pagination
-    $count_sql = "SELECT COUNT(*) FROM products p WHERE p.status = 'published' AND p.deleted_at IS NULL";
-    $count_params = [];
-    if (!empty($category_ids_in)) {
-        $in_placeholders = str_repeat('?,', count($category_ids_in) - 1) . '?';
-        $count_sql .= " AND (p.category_id IN ($in_placeholders) OR EXISTS (SELECT 1 FROM product_categories pc WHERE pc.product_id = p.id AND pc.category_id IN ($in_placeholders)))";
-        $count_params = array_merge($count_params, $category_ids_in, $category_ids_in);
-    }
-    if ($featured !== null) {
-        $count_sql .= " AND p.is_featured = ?";
-        $count_params[] = $featured ? 1 : 0;
-    }
-    if ($search) {
-        $count_sql .= " AND (p.name LIKE ? OR p.sku LIKE ? OR p.description LIKE ?)";
-        $count_params[] = $searchTerm;
-        $count_params[] = $searchTerm;
-        $count_params[] = $searchTerm;
-    }
-    
-    if ($min_price !== null) {
-        $count_sql .= " AND p.price >= ?";
-        $count_params[] = $min_price;
-    }
-    
-    if ($max_price !== null) {
-        $count_sql .= " AND p.price <= ?";
-        $count_params[] = $max_price;
-    }
-    
-    $count_stmt = $pdo->prepare($count_sql);
-    $count_stmt->execute($count_params);
-    $total_items = $count_stmt->fetchColumn();
-    $total_pages = ceil($total_items / $limit);
-    
-    if ($sort === 'price_asc') {
-        $sql .= " ORDER BY p.price ASC";
-    } elseif ($sort === 'price_desc') {
-        $sql .= " ORDER BY p.price DESC";
+    // Stage 1: Numeric SKU Sorting in SQL
+    if ($sort === 'sku_asc') {
+        $sql .= " ORDER BY CAST(REGEXP_REPLACE(p.sku, '[^0-9]', '') AS UNSIGNED) ASC, p.id ASC";
     } else {
-        $sql .= " ORDER BY p.created_at DESC";
+        // Default (sku_desc), or initial SQL order before in-memory price/name sorting
+        $sql .= " ORDER BY CAST(REGEXP_REPLACE(p.sku, '[^0-9]', '') AS UNSIGNED) DESC, p.id DESC";
     }
-    
-    $sql .= " LIMIT $limit OFFSET $offset";
     
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
-    $products = $stmt->fetchAll();
+    $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // Fetch images and calculate discounts for each product
     foreach ($products as &$product) {
         $imgStmt = $pdo->prepare("SELECT image_path, thumb_path FROM product_images WHERE product_id = ? ORDER BY sort_order ASC");
         $imgStmt->execute([$product['id']]);
-        $product['images'] = $imgStmt->fetchAll();
+        $product['images'] = $imgStmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Evaluate dynamic Discount Architect rules
         $discount = get_product_discount_info($pdo, $product['id'], $product['price']);
@@ -171,6 +140,37 @@ try {
             $product['has_discount'] = false;
         }
     }
+    unset($product);
+    
+    // Stage 2: In-Memory Price & Name Sorting in PHP
+    if ($sort === 'price_asc' || $sort === 'price_low') {
+        usort($products, function($a, $b) {
+            $priceA = (isset($a['sale_price']) && (float)$a['sale_price'] > 0) ? (float)$a['sale_price'] : (float)($a['price'] ?? 0);
+            $priceB = (isset($b['sale_price']) && (float)$b['sale_price'] > 0) ? (float)$b['sale_price'] : (float)($b['price'] ?? 0);
+            if ($priceA == $priceB) return 0;
+            return ($priceA < $priceB) ? -1 : 1;
+        });
+    } elseif ($sort === 'price_desc' || $sort === 'price_high') {
+        usort($products, function($a, $b) {
+            $priceA = (isset($a['sale_price']) && (float)$a['sale_price'] > 0) ? (float)$a['sale_price'] : (float)($a['price'] ?? 0);
+            $priceB = (isset($b['sale_price']) && (float)$b['sale_price'] > 0) ? (float)$b['sale_price'] : (float)($b['price'] ?? 0);
+            if ($priceA == $priceB) return 0;
+            return ($priceA > $priceB) ? -1 : 1;
+        });
+    } elseif ($sort === 'name_asc') {
+        usort($products, function($a, $b) {
+            return strcasecmp($a['name'] ?? '', $b['name'] ?? '');
+        });
+    } elseif ($sort === 'name_desc') {
+        usort($products, function($a, $b) {
+            return strcasecmp($b['name'] ?? '', $a['name'] ?? '');
+        });
+    }
+
+    // Stage 3 / Requirement 4: Pagination after sorting
+    $total_items = count($products);
+    $total_pages = $limit > 0 ? (int)ceil($total_items / $limit) : 1;
+    $paginated_products = array_slice($products, $offset, $limit);
     
     // Log activity
     log_activity($pdo, 'api_fetch_products', 'product', null, "Fetched products list (page $page)", null, 'guest');
@@ -178,7 +178,7 @@ try {
     $response_data = [
         'success' => true,
         'category' => $category_info,
-        'data' => $products,
+        'data' => $paginated_products,
         'pagination' => [
             'current_page' => $page,
             'total_pages' => $total_pages,
@@ -195,3 +195,4 @@ try {
         'message' => 'Failed to fetch products: ' . $e->getMessage()
     ]);
 }
+
