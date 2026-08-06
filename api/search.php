@@ -25,7 +25,7 @@ try {
     // Count total search results
     $count_sql = "SELECT COUNT(*) FROM products p 
                   LEFT JOIN categories c ON p.category_id = c.id 
-                  WHERE p.status = 'published' AND p.deleted_at IS NULL 
+                  WHERE p.status = 'published' AND p.deleted_at IS NULL AND p.stock_qty > 0 
                   AND (p.name LIKE :q1 OR p.description LIKE :q2 OR c.name LIKE :q3)";
     
     $count_stmt = $pdo->prepare($count_sql);
@@ -45,7 +45,7 @@ try {
     $sql = "SELECT p.*, c.name as category_name 
             FROM products p 
             LEFT JOIN categories c ON p.category_id = c.id 
-            WHERE p.status = 'published' AND p.deleted_at IS NULL 
+            WHERE p.status = 'published' AND p.deleted_at IS NULL AND p.stock_qty > 0 
             AND (p.name LIKE :q1 OR p.description LIKE :q2 OR c.name LIKE :q3)
             ORDER BY p.created_at DESC 
             LIMIT :limit OFFSET :offset";

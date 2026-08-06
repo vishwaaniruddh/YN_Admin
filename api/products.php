@@ -77,7 +77,7 @@ try {
     $sql = "SELECT p.*, 
             (SELECT GROUP_CONCAT(c.name SEPARATOR ', ') FROM product_categories pc JOIN categories c ON pc.category_id = c.id WHERE pc.product_id = p.id) as category_name 
             FROM products p 
-            WHERE p.status = 'published' AND p.deleted_at IS NULL";
+            WHERE p.status = 'published' AND p.deleted_at IS NULL AND p.stock_qty > 0";
     
     $params = [];
     
