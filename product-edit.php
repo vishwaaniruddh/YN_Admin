@@ -91,6 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // Handle Main Image replacement via file upload OR selected available image
                 $main_image_path = $product['main_image'];
+                $old_main_image_path = $product['main_image'];
                 if (isset($_FILES['main_image']) && $_FILES['main_image']['error'] === UPLOAD_ERR_OK) {
                     $upload = upload_image($_FILES['main_image'], 'uploads/products/' . $sku, 'main');
                     if (is_array($upload) && isset($upload['filepath'])) {
@@ -113,8 +114,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 } elseif (!empty($_POST['selected_main_image_path'])) {
                     $selected_path = trim($_POST['selected_main_image_path']);
-                    if ($selected_path !== '') {
+                    if ($selected_path !== '' && $selected_path !== $old_main_image_path) {
                         $main_image_path = $selected_path;
+
+                        // Exchange position: old main image moves to gallery slot of selected image
+                        if (!empty($old_main_image_path)) {
+                            // Find gallery image entry matching selected_path
+                            $chk_stmt = $pdo->prepare("SELECT id, image_path, thumb_path FROM product_images WHERE product_id = ? AND image_path = ?");
+                            $chk_stmt->execute([$product_id, $selected_path]);
+                            $existing_gal_img = $chk_stmt->fetch();
+
+                            // Determine thumbnail for old main image if available
+                            $old_thumb = $old_main_image_path;
+                            $path_parts = pathinfo($old_main_image_path);
+                            $possible_thumb = ($path_parts['dirname'] ?? '') . '/thumbs/thumb_' . ($path_parts['basename'] ?? '');
+                            if (file_exists(__DIR__ . '/../' . $possible_thumb)) {
+                                $old_thumb = $possible_thumb;
+                            }
+
+                            if ($existing_gal_img) {
+                                // Swap: update gallery image record to point to old main image
+                                $swap_stmt = $pdo->prepare("UPDATE product_images SET image_path = ?, thumb_path = ? WHERE id = ? AND product_id = ?");
+                                $swap_stmt->execute([$old_main_image_path, $old_thumb, $existing_gal_img['id'], $product_id]);
+                            } else {
+                                // If not found in product_images, insert old main image into product_images
+                                $sort_stmt = $pdo->prepare("SELECT COALESCE(MAX(sort_order), 0) FROM product_images WHERE product_id = ?");
+                                $sort_stmt->execute([$product_id]);
+                                $max_sort = (int)$sort_stmt->fetchColumn();
+
+                                $ins_stmt = $pdo->prepare("INSERT INTO product_images (product_id, image_path, thumb_path, sort_order) VALUES (?, ?, ?, ?)");
+                                $ins_stmt->execute([$product_id, $old_main_image_path, $old_thumb, $max_sort + 1]);
+                            }
+                        }
                     }
                 }
 
@@ -403,7 +434,7 @@ try {
                         <p style="font-weight: 500; margin-bottom: 8px;">Current Gallery Images:</p>
                         <div class="gallery-grid" style="margin-bottom: 20px;">
                             <?php foreach ($gallery_images as $gidx => $gimg): ?>
-                                <div class="gallery-item" id="gallery_item_<?php echo $gimg['id']; ?>" style="display: flex; flex-direction: column; align-items: center; background: #fff; padding: 6px; border: 1px solid var(--wp-border); border-radius: 4px;">
+                                <div class="gallery-item" id="gallery_item_<?php echo $gimg['id']; ?>" data-img-id="<?php echo $gimg['id']; ?>" data-img-path="<?php echo sanitize_html($gimg['image_path']); ?>" data-thumb-path="<?php echo sanitize_html($gimg['thumb_path'] ?: $gimg['image_path']); ?>" style="display: flex; flex-direction: column; align-items: center; background: #fff; padding: 6px; border: 1px solid var(--wp-border); border-radius: 4px;">
                                     <div style="position: relative; width: 100%; aspect-ratio: 1/1; overflow: hidden; border-radius: 3px;">
                                         <img src="<?php echo sanitize_html($gimg['thumb_path'] ?: $gimg['image_path']); ?>" alt="Gallery Image" style="width: 100%; height: 100%; object-fit: cover;">
                                         <div class="gallery-item-delete" onclick="markGalleryImageForDeletion(<?php echo $gimg['id']; ?>)" title="Remove this image">
@@ -684,10 +715,10 @@ try {
                 <div class="postbox-body">
                     <div class="main-image-preview-container" style="text-align: center; margin-bottom: 12px;">
                         <?php if ($product['main_image']): ?>
-                            <img id="main_image_preview" src="<?php echo sanitize_html($product['main_image']); ?>" alt="Main Image" style="max-width: 100%; max-height: 220px; border-radius: 4px; border: 1px solid var(--wp-border); object-fit: contain;">
+                            <img id="main_image_preview" src="<?php echo sanitize_html($product['main_image']); ?>" data-img-path="<?php echo sanitize_html($product['main_image']); ?>" alt="Main Image" style="max-width: 100%; max-height: 220px; border-radius: 4px; border: 1px solid var(--wp-border); object-fit: contain;">
                             <div id="main_image_placeholder" style="display: none;"></div>
                         <?php else: ?>
-                            <img id="main_image_preview" src="" alt="Main Image Preview" style="display: none; max-width: 100%; max-height: 220px; border-radius: 4px; border: 1px solid var(--wp-border); object-fit: contain;">
+                            <img id="main_image_preview" src="" data-img-path="" alt="Main Image Preview" style="display: none; max-width: 100%; max-height: 220px; border-radius: 4px; border: 1px solid var(--wp-border); object-fit: contain;">
                             <div id="main_image_placeholder" style="color: #8c8f94; padding: 20px 0;">
                                 <i class="fa-regular fa-image" style="font-size: 40px; margin-bottom: 8px;"></i>
                                 <p>No product image set</p>
@@ -1083,11 +1114,58 @@ function undoGalleryImageDeletion(imageId) {
 let pendingMainImagePath = '';
 
 function openSelectMainImageModal() {
+    renderAvailableImagesModal();
     document.getElementById('selectMainImageModal').style.display = 'flex';
 }
 
 function closeSelectMainImageModal() {
     document.getElementById('selectMainImageModal').style.display = 'none';
+    pendingMainImagePath = '';
+}
+
+function renderAvailableImagesModal() {
+    const grid = document.getElementById('available_images_grid');
+    if (!grid) return;
+
+    const mainImgEl = document.getElementById('main_image_preview');
+    const selectedInput = document.getElementById('selected_main_image_path');
+    const currentMainPath = selectedInput.value || (mainImgEl ? mainImgEl.getAttribute('data-img-path') || mainImgEl.src : '');
+
+    let html = '';
+
+    // Render Current Main Image card
+    if (currentMainPath) {
+        let cleanMain = currentMainPath;
+        if (cleanMain.includes(window.location.origin)) {
+            cleanMain = cleanMain.replace(window.location.origin + '/', '');
+        }
+        let displaySrc = mainImgEl ? mainImgEl.src : currentMainPath;
+        html += `
+            <div class="available-img-card" onclick="chooseMainImage('${cleanMain}', this)" style="position: relative; aspect-ratio: 1/1; border: 2px solid var(--wp-border); border-radius: 4px; overflow: hidden; cursor: pointer; transition: all 0.15s ease;">
+                <img src="${displaySrc}" style="width: 100%; height: 100%; object-fit: cover;">
+                <span style="position: absolute; top: 4px; left: 4px; background: #2271b1; color: #fff; font-size: 9px; font-weight: 700; padding: 2px 5px; border-radius: 3px;">CURRENT MAIN</span>
+            </div>
+        `;
+    }
+
+    // Render Gallery Images cards
+    document.querySelectorAll('.gallery-item').forEach(item => {
+        const imgPath = item.getAttribute('data-img-path');
+        const thumbPath = item.getAttribute('data-thumb-path') || imgPath;
+        const imgEl = item.querySelector('img');
+        const imgSrc = imgEl ? imgEl.src : thumbPath;
+
+        if (imgPath && imgPath !== currentMainPath) {
+            html += `
+                <div class="available-img-card" onclick="chooseMainImage('${imgPath}', this)" style="position: relative; aspect-ratio: 1/1; border: 2px solid var(--wp-border); border-radius: 4px; overflow: hidden; cursor: pointer; transition: all 0.15s ease;">
+                    <img src="${imgSrc}" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+            `;
+        }
+    });
+
+    grid.innerHTML = html;
+    document.getElementById('confirmMainImgBtn').disabled = true;
     pendingMainImagePath = '';
 }
 
@@ -1104,19 +1182,54 @@ function chooseMainImage(imgPath, cardEl) {
 
 function confirmSelectedMainImage() {
     if (!pendingMainImagePath) return;
-    
-    document.getElementById('selected_main_image_path').value = pendingMainImagePath;
-    
-    const preview = document.getElementById('main_image_preview');
+
+    const mainImgPreview = document.getElementById('main_image_preview');
     const placeholder = document.getElementById('main_image_placeholder');
-    if (preview) {
-        preview.src = pendingMainImagePath;
-        preview.style.display = 'inline-block';
+    const selectedInput = document.getElementById('selected_main_image_path');
+
+    const currentMainPath = selectedInput.value || (mainImgPreview ? mainImgPreview.getAttribute('data-img-path') : '');
+
+    if (pendingMainImagePath !== currentMainPath) {
+        // Find gallery item for pendingMainImagePath
+        let targetGalleryItem = null;
+        document.querySelectorAll('.gallery-item').forEach(item => {
+            if (item.getAttribute('data-img-path') === pendingMainImagePath) {
+                targetGalleryItem = item;
+            }
+        });
+
+        if (targetGalleryItem && mainImgPreview) {
+            const oldMainSrc = mainImgPreview.src;
+            const oldMainPath = mainImgPreview.getAttribute('data-img-path') || currentMainPath;
+
+            const targetImgEl = targetGalleryItem.querySelector('img');
+            const targetImgSrc = targetImgEl ? targetImgEl.src : pendingMainImagePath;
+
+            // 1. Swap main preview image to selected target
+            mainImgPreview.src = targetImgSrc;
+            mainImgPreview.setAttribute('data-img-path', pendingMainImagePath);
+
+            // 2. Swap target gallery item image to old main image
+            if (targetImgEl) {
+                targetImgEl.src = oldMainSrc;
+            }
+            targetGalleryItem.setAttribute('data-img-path', oldMainPath);
+            targetGalleryItem.setAttribute('data-thumb-path', oldMainSrc);
+        } else if (mainImgPreview) {
+            mainImgPreview.src = pendingMainImagePath;
+            mainImgPreview.setAttribute('data-img-path', pendingMainImagePath);
+        }
+
+        selectedInput.value = pendingMainImagePath;
+    }
+
+    if (mainImgPreview) {
+        mainImgPreview.style.display = 'inline-block';
     }
     if (placeholder) {
         placeholder.style.display = 'none';
     }
-    
+
     closeSelectMainImageModal();
 }
 
