@@ -2,6 +2,7 @@
 // admin/product-edit.php
 $page_title = "Edit Product";
 require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/includes/cache.php';
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 
@@ -253,6 +254,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $pdo->commit();
+
+                // Automatically invalidate cache on product update
+                if (function_exists('purge_cache')) {
+                    purge_cache();
+                }
 
                 // Reload the page with success message
                 redirect("product-edit.php?id=$product_id&message=updated");

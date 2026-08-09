@@ -96,6 +96,49 @@ function getProductImageData($pdo, $productId) {
     ];
 }
 
+/**
+ * Helper to log AI usage to parent DB (u464193275_srishrinjewels)
+ */
+function log_ai_analytics_to_parent_db($productId, $productType, $operationType, $promptText, $generatedOutput, $numImages, $promptTokens, $candidateTokens, $totalTokens, $costEstimate, $website = 'yosshitaneha') {
+    $httpHost = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';
+    $docRoot = $_SERVER['DOCUMENT_ROOT'] ?? '';
+    $isProduction = (
+        str_contains($httpHost, 'yosshitaneha.com') || 
+        str_contains($httpHost, 'srishringarr.com') ||
+        str_contains($docRoot, 'u464193275') ||
+        (!str_contains($httpHost, 'localhost') && !str_contains($httpHost, '127.0.0.1') && !empty($httpHost))
+    );
+
+    if ($isProduction) {
+        $host = 'localhost';
+        $user = 'u464193275_srishrinjuser';
+        $pass = '9b@hMgk!=zI';
+        $dbname = 'u464193275_srishrinjewels';
+    } else {
+        $host = 'localhost';
+        $user = 'root';
+        $pass = '';
+        $dbname = 'u464193275_srishrinjewels';
+    }
+
+    @mysqli_report(MYSQLI_REPORT_OFF);
+    $con = @mysqli_connect($host, $user, $pass, $dbname);
+    if ($con && !mysqli_connect_errno()) {
+        @mysqli_set_charset($con, 'utf8mb4');
+        @mysqli_query($con, "ALTER TABLE ai_analytics ADD COLUMN operation_type VARCHAR(50) DEFAULT 'image'");
+        @mysqli_query($con, "ALTER TABLE ai_analytics ADD COLUMN generated_output TEXT NULL");
+        @mysqli_query($con, "ALTER TABLE ai_analytics ADD COLUMN website VARCHAR(100) DEFAULT 'srishringarr'");
+
+        $stmt = $con->prepare("INSERT INTO ai_analytics (product_id, product_type, operation_type, prompt_text, generated_output, num_images, prompt_tokens, candidate_tokens, total_tokens, cost_estimate, website) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        if ($stmt) {
+            $stmt->bind_param("issssiiiids", $productId, $productType, $operationType, $promptText, $generatedOutput, $numImages, $promptTokens, $candidateTokens, $totalTokens, $costEstimate, $website);
+            $stmt->execute();
+            $stmt->close();
+        }
+        @mysqli_close($con);
+    }
+}
+
 // Handler Dispatcher
 switch ($action) {
     case 'ai_suggest_names':
@@ -165,6 +208,15 @@ switch ($action) {
             preg_match_all('/"(.*?)"/', $text, $matches);
             $names = !empty($matches[1]) ? array_slice($matches[1], 0, 5) : [];
         }
+
+        // Log Title Generation to parent ai_analytics DB
+        $promptTokens = (int)($decoded['usageMetadata']['promptTokenCount'] ?? 0);
+        $candidateTokens = (int)($decoded['usageMetadata']['candidatesTokenCount'] ?? 0);
+        $totalTokens = (int)($decoded['usageMetadata']['totalTokenCount'] ?? 0);
+        $costEstimate = max(0.01, (($promptTokens * 0.000000075) + ($candidateTokens * 0.0000003)) * 86);
+        $genOutput = json_encode($names);
+
+        log_ai_analytics_to_parent_db($productId, 'fashion', 'title', $prompt, $genOutput, 0, $promptTokens, $candidateTokens, $totalTokens, $costEstimate, 'yosshitaneha');
 
         echo json_encode(['success' => true, 'names' => $names]);
         break;
@@ -236,6 +288,14 @@ switch ($action) {
         $decoded = json_decode($response, true);
         $description = $decoded['candidates'][0]['content']['parts'][0]['text'] ?? '';
 
+        // Log Description Generation to parent ai_analytics DB
+        $promptTokens = (int)($decoded['usageMetadata']['promptTokenCount'] ?? 0);
+        $candidateTokens = (int)($decoded['usageMetadata']['candidatesTokenCount'] ?? 0);
+        $totalTokens = (int)($decoded['usageMetadata']['totalTokenCount'] ?? 0);
+        $costEstimate = max(0.01, (($promptTokens * 0.000000075) + ($candidateTokens * 0.0000003)) * 86);
+
+        log_ai_analytics_to_parent_db($productId, 'fashion', 'description', $prompt, trim($description), 0, $promptTokens, $candidateTokens, $totalTokens, $costEstimate, 'yosshitaneha');
+
         echo json_encode(['success' => true, 'description' => trim($description)]);
         break;
 
@@ -285,6 +345,9 @@ switch ($action) {
         $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent?key=' . $apiKey;
         $generatedImages = [];
         $errors = [];
+        $totalPromptTokens = 0;
+        $totalCandidateTokens = 0;
+        $totalTokensSum = 0;
 
         $variations = [
             '', 
@@ -326,6 +389,13 @@ switch ($action) {
 
             if ($httpCode === 200) {
                 $decoded = json_decode($response, true);
+                $promptTokens = (int)($decoded['usageMetadata']['promptTokenCount'] ?? 0);
+                $candidateTokens = (int)($decoded['usageMetadata']['candidatesTokenCount'] ?? 0);
+                $totalTokens = (int)($decoded['usageMetadata']['totalTokenCount'] ?? 0);
+                $totalPromptTokens += $promptTokens;
+                $totalCandidateTokens += $candidateTokens;
+                $totalTokensSum += $totalTokens;
+
                 $b64 = $decoded['candidates'][0]['content']['parts'][0]['inlineData']['data'] ?? null;
                 if ($b64) {
                     $generatedImages[] = $b64;
@@ -338,6 +408,13 @@ switch ($action) {
                 $errors[] = 'API Error variation ' . ($i + 1) . ': ' . $errMsg;
             }
         }
+
+        $actualGeneratedCount = count($generatedImages);
+        $costEstimate = $actualGeneratedCount * 0.03 * 86;
+        $opType = 'image';
+        $genOutput = $actualGeneratedCount . " image(s) generated";
+
+        log_ai_analytics_to_parent_db($productId, 'fashion', $opType, $basePrompt, $genOutput, $actualGeneratedCount, $totalPromptTokens, $totalCandidateTokens, $totalTokensSum, $costEstimate, 'yosshitaneha');
 
         if (count($generatedImages) > 0) {
             echo json_encode(['success' => true, 'images_base64' => $generatedImages, 'partial_errors' => $errors]);

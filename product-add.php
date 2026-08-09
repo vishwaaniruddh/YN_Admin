@@ -2,6 +2,7 @@
 // admin/product-add.php
 $page_title = "Add New Product";
 require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/includes/cache.php';
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 
@@ -138,6 +139,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
 
                     $pdo->commit();
+
+                    if (function_exists('purge_cache')) {
+                        purge_cache();
+                    }
+
                     redirect('products.php?message=added');
                 }
             }

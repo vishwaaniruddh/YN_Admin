@@ -75,6 +75,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         set_cache($cache_key_prod, $prodResponse, $pdo);
 
         $_SESSION['flash_msg'] = ['text' => "Cache successfully warmed up! Pre-generated valid Category Tree and Product catalog endpoints.", 'type' => 'success'];
+    } elseif ($action === 'toggle_caching') {
+        $currentState = is_caching_enabled($pdo);
+        $newState = $currentState ? '0' : '1';
+
+        try {
+            $stmt = $pdo->prepare("INSERT INTO site_settings (setting_key, setting_value) VALUES ('enable_api_caching', ?) ON DUPLICATE KEY UPDATE setting_value = ?");
+            $stmt->execute([$newState, $newState]);
+
+            if ($newState === '0') {
+                @file_put_contents(CACHE_DIR . 'disabled.flag', 'disabled');
+                purge_cache();
+                $_SESSION['flash_msg'] = ['text' => "API Caching is now DISABLED. All product edits (titles, descriptions, images, prices) will now reflect LIVE instantly on the website!", 'type' => 'warning'];
+            } else {
+                if (file_exists(CACHE_DIR . 'disabled.flag')) {
+                    @unlink(CACHE_DIR . 'disabled.flag');
+                }
+                purge_cache();
+                $_SESSION['flash_msg'] = ['text' => "API Caching is now ENABLED for fast response speed.", 'type' => 'success'];
+            }
+        } catch (Exception $e) {
+            $_SESSION['flash_msg'] = ['text' => "Error toggling cache: " . $e->getMessage(), 'type' => 'error'];
+        }
     } elseif ($action === 'save_settings') {
         $enable_caching = isset($_POST['enable_caching']) ? '1' : '0';
         $cache_ttl = (int)($_POST['cache_ttl'] ?? 3600);
@@ -85,6 +107,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $stmt2 = $pdo->prepare("INSERT INTO site_settings (setting_key, setting_value) VALUES ('api_cache_ttl', ?) ON DUPLICATE KEY UPDATE setting_value = ?");
             $stmt2->execute([$cache_ttl, $cache_ttl]);
+
+            if ($enable_caching === '0') {
+                @file_put_contents(CACHE_DIR . 'disabled.flag', 'disabled');
+            } else {
+                if (file_exists(CACHE_DIR . 'disabled.flag')) {
+                    @unlink(CACHE_DIR . 'disabled.flag');
+                }
+            }
 
             // Flush cache on settings change
             purge_cache();
@@ -122,7 +152,7 @@ try {
     <div style="display: flex; gap: 8px; align-items: center;">
         <form method="POST" style="display: inline-block;">
             <input type="hidden" name="action" value="warmup">
-            <button type="submit" class="button button-primary"><i class="fa-solid fa-fire-flame-curved"></i> Warm Up Cache</button>
+            <button type="submit" class="button button-primary" <?php echo !$cachingEnabled ? 'disabled title="Enable Caching first to warm up"' : ''; ?>><i class="fa-solid fa-fire-flame-curved"></i> Warm Up Cache</button>
         </form>
         <form method="POST" style="display: inline-block;" onsubmit="return confirm('Are you sure you want to purge all cached files?');">
             <input type="hidden" name="action" value="purge_all">
@@ -136,6 +166,40 @@ try {
         <p><i class="fa-solid fa-circle-check"></i> <?php echo sanitize_html($message); ?></p>
     </div>
 <?php endif; ?>
+
+<!-- Prominent Cache Enable / Disable Toggle Banner -->
+<div class="card" style="margin-bottom: 25px; padding: 20px; border-radius: 8px; background: <?php echo $cachingEnabled ? '#f0fdf4' : '#fff1f2'; ?>; border: 2px solid <?php echo $cachingEnabled ? '#16a34a' : '#e11d48'; ?>;">
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <div style="width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; background: <?php echo $cachingEnabled ? '#16a34a' : '#e11d48'; ?>; color: #fff; shrink-0: 0;">
+                <i class="fa-solid <?php echo $cachingEnabled ? 'fa-bolt' : 'fa-power-off'; ?>"></i>
+            </div>
+            <div>
+                <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: <?php echo $cachingEnabled ? '#15803d' : '#9f1239'; ?>;">
+                    API Caching Status: <?php echo $cachingEnabled ? 'ENABLED (High Speed Mode)' : 'DISABLED (Live Data Mode Active)'; ?>
+                </h3>
+                <p style="margin: 4px 0 0 0; font-size: 13px; color: #475569;">
+                    <?php if ($cachingEnabled): ?>
+                        API responses are currently being cached. If your client is making continuous changes to titles, descriptions, or images, click <strong>Disable Caching</strong> so edits show up live instantly without purging!
+                    <?php else: ?>
+                        <strong>Live Data Mode is ON!</strong> All edits to product titles, descriptions, images, prices, or categories will appear on the website instantly without needing to purge cache.
+                    <?php endif; ?>
+                </p>
+            </div>
+        </div>
+
+        <form method="POST" style="margin: 0;">
+            <input type="hidden" name="action" value="toggle_caching">
+            <button type="submit" class="button" style="padding: 10px 20px; font-size: 14px; font-weight: 700; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; <?php echo $cachingEnabled ? 'background: #dc2626; color: #ffffff; border: 1px solid #b91c1c;' : 'background: #16a34a; color: #ffffff; border: 1px solid #15803d;'; ?>">
+                <?php if ($cachingEnabled): ?>
+                    <i class="fa-solid fa-circle-pause"></i> Disable Caching (Live Data Mode)
+                <?php else: ?>
+                    <i class="fa-solid fa-circle-play"></i> Enable Caching (Fast Speed Mode)
+                <?php endif; ?>
+            </button>
+        </form>
+    </div>
+</div>
 
 <!-- Stats Overview Grid -->
 <div class="dashboard-grid" style="margin-bottom: 25px;">

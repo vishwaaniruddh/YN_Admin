@@ -27,15 +27,29 @@ function get_cache_filepath($key) {
  * Check if caching is enabled globally in site_settings
  */
 function is_caching_enabled($pdo = null) {
+    init_cache_dir();
+    // 1. Instant check: flag file on disk overrides DB
+    if (file_exists(CACHE_DIR . 'disabled.flag')) {
+        return false;
+    }
+
     static $enabled = null;
     if ($enabled !== null) return $enabled;
+
+    if (!$pdo && isset($GLOBALS['pdo'])) {
+        $pdo = $GLOBALS['pdo'];
+    }
 
     if ($pdo) {
         try {
             $stmt = $pdo->query("SELECT setting_value FROM site_settings WHERE setting_key = 'enable_api_caching'");
-            $val = $stmt ? $stmt->fetchColumn() : '1';
-            $enabled = ($val !== '0');
-            return $enabled;
+            if ($stmt) {
+                $val = $stmt->fetchColumn();
+                if ($val !== false) {
+                    $enabled = ($val !== '0');
+                    return $enabled;
+                }
+            }
         } catch (Exception $e) {}
     }
     $enabled = true;
