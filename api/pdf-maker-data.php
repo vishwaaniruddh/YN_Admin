@@ -231,6 +231,7 @@ try {
             SELECT 
                 p.id, 
                 p.name, 
+                p.slug,
                 p.sku, 
                 p.price, 
                 p.sale_price, 
@@ -325,7 +326,8 @@ try {
             $p['sale_price_formatted'] = $p['sale_price'] ? '₹' . number_format($p['sale_price'], 0) : null;
             $p['effective_price'] = (float)($p['sale_price'] > 0 ? $p['sale_price'] : $p['price']);
             $p['effective_price_formatted'] = '₹' . number_format($p['effective_price'], 0);
-            $p['main_image'] = $imagesList[0]['path'];
+            $prodSlug = !empty($p['slug']) ? $p['slug'] : $p['sku'];
+            $p['product_url'] = 'https://yosshitaneha.com/product/' . urlencode($prodSlug);
 
             $lookup[$pId] = $p;
         }
