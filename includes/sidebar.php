@@ -65,6 +65,26 @@ $current_script = basename($_SERVER['PHP_SELF']);
             </a>
         </li>
 
+        <!-- Modules Group -->
+        <li class="menu-section-label">Modules</li>
+        <?php 
+        $modules_active = in_array($current_script, ['pdf-maker.php']);
+        ?>
+        <li class="menu-item has-submenu <?php echo $modules_active ? 'open active-parent' : ''; ?>">
+            <a href="javascript:void(0);" class="submenu-toggle">
+                <i class="fa-solid fa-cubes"></i> 
+                <span>Modules</span>
+                <i class="fa-solid fa-chevron-right submenu-arrow"></i>
+            </a>
+            <ul class="submenu">
+                <li class="<?php echo ($current_script == 'pdf-maker.php') ? 'active' : ''; ?>">
+                    <a href="pdf-maker.php">
+                        <i class="fa-solid fa-file-pdf"></i> PDF Maker
+                    </a>
+                </li>
+            </ul>
+        </li>
+
         <!-- Tools Group -->
         <?php 
         $tools_active = in_array($current_script, ['desc-corrector.php', 'analytics.php', 'cache-manager.php', 'generate-yn-products-excel.php', 'sku-lookup.php']);

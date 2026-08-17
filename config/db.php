@@ -60,6 +60,10 @@ try {
     }
 }
 
+// Skip DDL on every request — only run table creation once
+$tables_flag = __DIR__ . '/../cache/.tables_initialized';
+if (!file_exists($tables_flag)) {
+
 try {
 
     // 4. Create Tables
@@ -207,6 +211,20 @@ try {
         FOREIGN KEY (blog_id) REFERENCES blogs(id) ON DELETE CASCADE
     ) ENGINE=InnoDB");
 
+    // Product Reviews Table
+    $pdo->exec("CREATE TABLE IF NOT EXISTS product_reviews (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        product_id INT NOT NULL,
+        reviewer_name VARCHAR(100) NOT NULL,
+        reviewer_email VARCHAR(150) DEFAULT NULL,
+        rating INT NOT NULL DEFAULT 5,
+        title VARCHAR(255) DEFAULT NULL,
+        comment TEXT NOT NULL,
+        status ENUM('approved', 'pending') DEFAULT 'approved',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB");
+
     // Seed default settings
     $pdo->exec("INSERT IGNORE INTO site_settings (setting_key, setting_value) VALUES ('theme_mode', 'dark')");
 
@@ -226,4 +244,13 @@ try {
 } catch (PDOException $e) {
     die("Database Connection failed: " . $e->getMessage());
 }
+
+    // Mark tables as initialized — DDL won't run again
+    $cache_dir = __DIR__ . '/../cache/';
+    if (!is_dir($cache_dir)) {
+        @mkdir($cache_dir, 0755, true);
+    }
+    @file_put_contents($tables_flag, date('Y-m-d H:i:s'));
+
+} // end if (!file_exists($tables_flag))
 ?>

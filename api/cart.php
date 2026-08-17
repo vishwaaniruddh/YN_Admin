@@ -28,13 +28,30 @@ try {
         $stmt->execute([$session_token]);
         $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
+        // Pre-fetch discount rules ONCE and batch-fetch category mappings
+        $rules = get_cached_discount_rules($pdo);
+        $categoryMap = [];
+        if (!empty($items) && !empty($rules)) {
+            $itemProductIds = array_column($items, 'product_id');
+            $placeholders = implode(',', array_fill(0, count($itemProductIds), '?'));
+            try {
+                $catStmt = $pdo->prepare("SELECT product_id, category_id FROM product_categories WHERE product_id IN ($placeholders)");
+                $catStmt->execute($itemProductIds);
+                $catRows = $catStmt->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($catRows as $row) {
+                    $categoryMap[$row['product_id']][] = $row['category_id'];
+                }
+            } catch (Exception $e) {}
+        }
+
         $total = 0;
         foreach($items as &$item) {
             // Ensure product_id is explicitly set
             $item['product_id'] = (int)$item['product_id'];
             $item['stock_qty'] = ($item['stock_qty'] !== null && $item['stock_qty'] !== '') ? (int)$item['stock_qty'] : 99;
 
-            $discount = get_product_discount_info($pdo, $item['product_id'], $item['price']);
+            $catIds = $categoryMap[$item['product_id']] ?? [];
+            $discount = get_product_discount_from_rules($rules, $item['product_id'], $item['price'], $catIds);
             if ($discount) {
                 $item['original_price'] = (float)$item['price'];
                 $item['discount_info'] = $discount;

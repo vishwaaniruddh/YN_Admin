@@ -50,7 +50,7 @@ require_once __DIR__ . '/functions.php';
             
             <div class="adminbar-user">
                 <span style="color: #c3c4c7;">
-                    Howdy, <strong><?php echo sanitize_html($_SESSION['admin_name']); ?></strong>
+                    Howdy, <strong><?php echo sanitize_html($_SESSION['admin_name'] ?? $_SESSION['username'] ?? 'Admin'); ?></strong>
                 </span>
                 <a href="logout.php">
                     <i class="fa-solid fa-right-from-bracket"></i> Log Out

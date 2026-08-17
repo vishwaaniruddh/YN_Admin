@@ -15,9 +15,9 @@ $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 12;
 $min_price = isset($_GET['min_price']) && $_GET['min_price'] !== '' ? (float)$_GET['min_price'] : null;
 $max_price = isset($_GET['max_price']) && $_GET['max_price'] !== '' ? (float)$_GET['max_price'] : null;
 
-$valid_sorts = ['sku_desc', 'sku_asc', 'price_asc', 'price_low', 'price_desc', 'price_high', 'name_asc', 'name_desc'];
+$valid_sorts = ['default', 'sku_desc', 'sku_asc', 'newest', 'created_desc', 'oldest', 'price_asc', 'price_low', 'price_desc', 'price_high', 'name_asc', 'name_desc'];
 if (!in_array($sort, $valid_sorts, true)) {
-    $sort = 'sku_desc';
+    $sort = 'default';
 }
 
 $page = $page > 0 ? $page : 1;
@@ -74,26 +74,23 @@ try {
         $category_ids_in = get_all_child_category_ids($pdo, $category_id);
     }
 
-    $sql = "SELECT p.*, 
-            (SELECT GROUP_CONCAT(c.name SEPARATOR ', ') FROM product_categories pc JOIN categories c ON pc.category_id = c.id WHERE pc.product_id = p.id) as category_name 
-            FROM products p 
-            WHERE p.status = 'published' AND p.deleted_at IS NULL AND p.stock_qty > 0";
-    
+    // Build WHERE clause (shared between count and data queries)
+    $where_sql = "WHERE p.status = 'published' AND p.deleted_at IS NULL AND p.stock_qty > 0";
     $params = [];
     
     if (!empty($category_ids_in)) {
         $in_placeholders = str_repeat('?,', count($category_ids_in) - 1) . '?';
-        $sql .= " AND (p.category_id IN ($in_placeholders) OR EXISTS (SELECT 1 FROM product_categories pc WHERE pc.product_id = p.id AND pc.category_id IN ($in_placeholders)))";
+        $where_sql .= " AND (p.category_id IN ($in_placeholders) OR EXISTS (SELECT 1 FROM product_categories pc WHERE pc.product_id = p.id AND pc.category_id IN ($in_placeholders)))";
         $params = array_merge($params, $category_ids_in, $category_ids_in);
     }
     
     if ($featured !== null) {
-        $sql .= " AND p.is_featured = ?";
+        $where_sql .= " AND p.is_featured = ?";
         $params[] = $featured ? 1 : 0;
     }
 
     if ($search) {
-        $sql .= " AND (p.name LIKE ? OR p.sku LIKE ? OR p.description LIKE ?)";
+        $where_sql .= " AND (p.name LIKE ? OR p.sku LIKE ? OR p.description LIKE ?)";
         $searchTerm = "%{$search}%";
         $params[] = $searchTerm;
         $params[] = $searchTerm;
@@ -101,76 +98,122 @@ try {
     }
     
     if ($min_price !== null) {
-        $sql .= " AND p.price >= ?";
+        $where_sql .= " AND p.price >= ?";
         $params[] = $min_price;
     }
     
     if ($max_price !== null) {
-        $sql .= " AND p.price <= ?";
+        $where_sql .= " AND p.price <= ?";
         $params[] = $max_price;
     }
-    
-    // Stage 1: Numeric SKU Sorting in SQL
-    if ($sort === 'sku_asc') {
-        $sql .= " ORDER BY CAST(REGEXP_REPLACE(p.sku, '[^0-9]', '') AS UNSIGNED) ASC, p.id ASC";
-    } else {
-        // Default (sku_desc), or initial SQL order before in-memory price/name sorting
-        $sql .= " ORDER BY CAST(REGEXP_REPLACE(p.sku, '[^0-9]', '') AS UNSIGNED) DESC, p.id DESC";
-    }
-    
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
-    $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Fetch images and calculate discounts for each product
-    foreach ($products as &$product) {
-        $imgStmt = $pdo->prepare("SELECT image_path, thumb_path FROM product_images WHERE product_id = ? ORDER BY sort_order ASC");
-        $imgStmt->execute([$product['id']]);
-        $product['images'] = $imgStmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Evaluate dynamic Discount Architect rules
-        $discount = get_product_discount_info($pdo, $product['id'], $product['price']);
-        if ($discount) {
-            $product['original_price'] = (float)$product['price'];
-            $product['discount_info'] = $discount;
-            $product['sale_price'] = $discount['discounted_price'];
-            $product['has_discount'] = true;
-        } else {
-            $product['original_price'] = (float)$product['price'];
-            $product['has_discount'] = false;
+    // Determine if sort requires computed discounts (price/name sorts need all products)
+    $needs_php_sort = in_array($sort, ['price_asc', 'price_low', 'price_desc', 'price_high', 'name_asc', 'name_desc']);
+
+    if ($needs_php_sort) {
+        // --- PRICE/NAME SORT PATH: fetch all products, compute discounts, sort in PHP, then paginate ---
+        $sql = "SELECT p.*, 
+                (SELECT GROUP_CONCAT(c.name SEPARATOR ', ') FROM product_categories pc JOIN categories c ON pc.category_id = c.id WHERE pc.product_id = p.id) as category_name 
+                FROM products p $where_sql ORDER BY p.id DESC";
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Batch-fetch images and discounts (2 queries instead of 2N)
+        $productIds = array_column($products, 'id');
+        $imageMap = get_bulk_product_images($pdo, $productIds);
+        $discountMap = get_bulk_product_discounts($pdo, $products);
+
+        foreach ($products as &$product) {
+            $product['images'] = $imageMap[$product['id']] ?? [];
+            $discount = $discountMap[$product['id']] ?? false;
+            if ($discount) {
+                $product['original_price'] = (float)$product['price'];
+                $product['discount_info'] = $discount;
+                $product['sale_price'] = $discount['discounted_price'];
+                $product['has_discount'] = true;
+            } else {
+                $product['original_price'] = (float)$product['price'];
+                $product['has_discount'] = false;
+            }
         }
-    }
-    unset($product);
-    
-    // Stage 2: In-Memory Price & Name Sorting in PHP
-    if ($sort === 'price_asc' || $sort === 'price_low') {
-        usort($products, function($a, $b) {
-            $priceA = (isset($a['sale_price']) && (float)$a['sale_price'] > 0) ? (float)$a['sale_price'] : (float)($a['price'] ?? 0);
-            $priceB = (isset($b['sale_price']) && (float)$b['sale_price'] > 0) ? (float)$b['sale_price'] : (float)($b['price'] ?? 0);
-            if ($priceA == $priceB) return 0;
-            return ($priceA < $priceB) ? -1 : 1;
-        });
-    } elseif ($sort === 'price_desc' || $sort === 'price_high') {
-        usort($products, function($a, $b) {
-            $priceA = (isset($a['sale_price']) && (float)$a['sale_price'] > 0) ? (float)$a['sale_price'] : (float)($a['price'] ?? 0);
-            $priceB = (isset($b['sale_price']) && (float)$b['sale_price'] > 0) ? (float)$b['sale_price'] : (float)($b['price'] ?? 0);
-            if ($priceA == $priceB) return 0;
-            return ($priceA > $priceB) ? -1 : 1;
-        });
-    } elseif ($sort === 'name_asc') {
-        usort($products, function($a, $b) {
-            return strcasecmp($a['name'] ?? '', $b['name'] ?? '');
-        });
-    } elseif ($sort === 'name_desc') {
-        usort($products, function($a, $b) {
-            return strcasecmp($b['name'] ?? '', $a['name'] ?? '');
-        });
-    }
+        unset($product);
 
-    // Stage 3 / Requirement 4: Pagination after sorting
-    $total_items = count($products);
-    $total_pages = $limit > 0 ? (int)ceil($total_items / $limit) : 1;
-    $paginated_products = array_slice($products, $offset, $limit);
+        // PHP in-memory sort
+        if ($sort === 'price_asc' || $sort === 'price_low') {
+            usort($products, function($a, $b) {
+                $priceA = (isset($a['sale_price']) && (float)$a['sale_price'] > 0) ? (float)$a['sale_price'] : (float)($a['price'] ?? 0);
+                $priceB = (isset($b['sale_price']) && (float)$b['sale_price'] > 0) ? (float)$b['sale_price'] : (float)($b['price'] ?? 0);
+                if ($priceA == $priceB) return 0;
+                return ($priceA < $priceB) ? -1 : 1;
+            });
+        } elseif ($sort === 'price_desc' || $sort === 'price_high') {
+            usort($products, function($a, $b) {
+                $priceA = (isset($a['sale_price']) && (float)$a['sale_price'] > 0) ? (float)$a['sale_price'] : (float)($a['price'] ?? 0);
+                $priceB = (isset($b['sale_price']) && (float)$b['sale_price'] > 0) ? (float)$b['sale_price'] : (float)($b['price'] ?? 0);
+                if ($priceA == $priceB) return 0;
+                return ($priceA > $priceB) ? -1 : 1;
+            });
+        } elseif ($sort === 'name_asc') {
+            usort($products, function($a, $b) { return strcasecmp($a['name'] ?? '', $b['name'] ?? ''); });
+        } elseif ($sort === 'name_desc') {
+            usort($products, function($a, $b) { return strcasecmp($b['name'] ?? '', $a['name'] ?? ''); });
+        }
+
+        $total_items = count($products);
+        $total_pages = $limit > 0 ? (int)ceil($total_items / $limit) : 1;
+        $paginated_products = array_slice($products, $offset, $limit);
+
+    } else {
+        // --- DEFAULT/SKU/NEWEST SORT PATH: Use SQL LIMIT/OFFSET (fast path) ---
+        
+        // 1. Get total count
+        $count_sql = "SELECT COUNT(*) FROM products p $where_sql";
+        $countStmt = $pdo->prepare($count_sql);
+        $countStmt->execute($params);
+        $total_items = (int)$countStmt->fetchColumn();
+        $total_pages = $limit > 0 ? (int)ceil($total_items / $limit) : 1;
+
+        // 2. Fetch only the page we need
+        $order_clause = "";
+        if ($sort === 'newest' || $sort === 'created_desc') {
+            $order_clause = "ORDER BY p.id DESC, p.created_at DESC";
+        } elseif ($sort === 'sku_asc' || $sort === 'oldest') {
+            $order_clause = "ORDER BY CAST(REGEXP_REPLACE(p.sku, '[^0-9]', '') AS UNSIGNED) ASC, p.id ASC";
+        } else {
+            $order_clause = "ORDER BY CAST(REGEXP_REPLACE(p.sku, '[^0-9]', '') AS UNSIGNED) DESC, p.id DESC";
+        }
+
+        $sql = "SELECT p.*, 
+                (SELECT GROUP_CONCAT(c.name SEPARATOR ', ') FROM product_categories pc JOIN categories c ON pc.category_id = c.id WHERE pc.product_id = p.id) as category_name 
+                FROM products p $where_sql $order_clause LIMIT ? OFFSET ?";
+        
+        $page_params = array_merge($params, [$limit, $offset]);
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($page_params);
+        $paginated_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // 3. Batch-fetch images and discounts for ONLY the page (2 queries instead of 2N)
+        $pageProductIds = array_column($paginated_products, 'id');
+        $imageMap = get_bulk_product_images($pdo, $pageProductIds);
+        $discountMap = get_bulk_product_discounts($pdo, $paginated_products);
+
+        foreach ($paginated_products as &$product) {
+            $product['images'] = $imageMap[$product['id']] ?? [];
+            $discount = $discountMap[$product['id']] ?? false;
+            if ($discount) {
+                $product['original_price'] = (float)$product['price'];
+                $product['discount_info'] = $discount;
+                $product['sale_price'] = $discount['discounted_price'];
+                $product['has_discount'] = true;
+            } else {
+                $product['original_price'] = (float)$product['price'];
+                $product['has_discount'] = false;
+            }
+        }
+        unset($product);
+    }
     
     // Log activity
     log_activity($pdo, 'api_fetch_products', 'product', null, "Fetched products list (page $page)", null, 'guest');

@@ -46,7 +46,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         $stmt = $pdo->prepare("UPDATE customers SET first_name = ?, last_name = ?, phone = ?, gender = ? WHERE id = ?");
         if ($stmt->execute([$firstName, $lastName, $phone, $gender, $userId])) {
-            echo json_encode(['success' => true, 'message' => 'Profile updated successfully.']);
+            $userStmt = $pdo->prepare("SELECT id, first_name, last_name, email, phone, gender FROM customers WHERE id = ?");
+            $userStmt->execute([$userId]);
+            $updatedUser = $userStmt->fetch(PDO::FETCH_ASSOC);
+
+            echo json_encode([
+                'success' => true, 
+                'message' => 'Profile updated successfully.',
+                'user' => $updatedUser
+            ]);
         } else {
             echo json_encode(['success' => false, 'message' => 'Failed to update profile.']);
         }

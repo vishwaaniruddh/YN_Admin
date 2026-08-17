@@ -753,7 +753,7 @@ function send_order_email($pdo, $orderId, $statusType = 'success') {
         foreach ($items as $idx => $item) {
             $imgHtml = '';
             if (!empty($item['main_image'])) {
-                $cleanPath = ltrim(str_replace('http://localhost/yn/admin/', '', $item['main_image']), '/');
+                $cleanPath = ltrim(str_replace(['http://localhost/yn/admin/', 'https://yosshitaneha.com/admin/', 'http://yosshitaneha.com/admin/'], '', $item['main_image']), '/');
                 $localFile = __DIR__ . '/' . $cleanPath;
                 if (file_exists($localFile)) {
                     $cid = 'item_img_' . $item['id'] . '_' . $idx;
@@ -1136,6 +1136,153 @@ function get_product_discount_info($pdo, $productId, $regularPrice, $categoryIds
     } catch (Exception $e) {}
 
     return false;
+}
+
+/**
+ * Fetch all active discount rules (cached per-request via static variable)
+ */
+function get_cached_discount_rules($pdo) {
+    static $rules = null;
+    if ($rules !== null) return $rules;
+    
+    try {
+        $stmt = $pdo->query("SELECT * FROM discount_rules WHERE status = 'active' ORDER BY weight DESC, id DESC");
+        $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        $rules = [];
+    }
+    return $rules;
+}
+
+/**
+ * Compute discount for a single product using pre-fetched rules and category map
+ * (No DB queries — pure in-memory computation)
+ */
+function get_product_discount_from_rules($rules, $productId, $regularPrice, $categoryIds = []) {
+    $regularPrice = (float)$regularPrice;
+    if ($regularPrice <= 0 || empty($rules)) return false;
+
+    foreach ($rules as $rule) {
+        $scope = $rule['scope'];
+        $applied = false;
+        $targets = !empty($rule['target']) ? array_filter(array_map('trim', explode(',', $rule['target']))) : [];
+
+        if ($scope === 'global') {
+            $applied = true;
+        } elseif ($scope === 'product') {
+            if (in_array((string)$productId, $targets)) $applied = true;
+        } elseif ($scope === 'category') {
+            if (!empty(array_intersect($categoryIds, $targets))) $applied = true;
+        } elseif ($scope === 'price_gt') {
+            if ($regularPrice > (float)$rule['threshold']) $applied = true;
+        } elseif ($scope === 'price_lt') {
+            if ($regularPrice < (float)$rule['threshold']) $applied = true;
+        } elseif ($scope === 'price_between') {
+            if ($regularPrice >= (float)$rule['threshold'] && $regularPrice <= (float)$rule['threshold_max']) $applied = true;
+        } elseif (strpos($scope, 'cat_price') !== false) {
+            if (!empty(array_intersect($categoryIds, $targets))) {
+                if ($scope === 'cat_price_gt' && $regularPrice > (float)$rule['threshold']) $applied = true;
+                elseif ($scope === 'cat_price_lt' && $regularPrice < (float)$rule['threshold']) $applied = true;
+                elseif ($scope === 'cat_price_between' && $regularPrice >= (float)$rule['threshold'] && $regularPrice <= (float)$rule['threshold_max']) $applied = true;
+            }
+        }
+
+        if ($applied) {
+            $val = (float)$rule['value'];
+            if ($rule['type'] === 'percentage') {
+                $finalPrice = $regularPrice - ($regularPrice * ($val / 100));
+                $label = $val . '% OFF';
+            } else {
+                $finalPrice = $regularPrice - $val;
+                $label = '₹' . number_format($val, 0) . ' OFF';
+            }
+            $finalPrice = max(0, $finalPrice);
+            return [
+                'rule_id' => $rule['id'],
+                'rule_name' => $rule['name'],
+                'type' => $rule['type'],
+                'value' => $val,
+                'label' => $label,
+                'original_price' => $regularPrice,
+                'discounted_price' => $finalPrice,
+                'savings' => $regularPrice - $finalPrice
+            ];
+        }
+    }
+    return false;
+}
+
+/**
+ * Batch-compute discounts for an array of products.
+ * Fetches discount rules ONCE + all category mappings in ONE query.
+ * Returns associative array: product_id => discount_info (or false).
+ */
+function get_bulk_product_discounts($pdo, $products) {
+    if (empty($products)) return [];
+
+    $rules = get_cached_discount_rules($pdo);
+    if (empty($rules)) {
+        $result = [];
+        foreach ($products as $p) {
+            $result[$p['id']] = false;
+        }
+        return $result;
+    }
+
+    // Batch-fetch category IDs for all products in one query
+    $productIds = array_column($products, 'id');
+    $categoryMap = [];
+    if (!empty($productIds)) {
+        $placeholders = implode(',', array_fill(0, count($productIds), '?'));
+        try {
+            $catStmt = $pdo->prepare("SELECT product_id, category_id FROM product_categories WHERE product_id IN ($placeholders)");
+            $catStmt->execute($productIds);
+            $catRows = $catStmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($catRows as $row) {
+                $categoryMap[$row['product_id']][] = $row['category_id'];
+            }
+        } catch (Exception $e) {}
+    }
+
+    // Compute discounts in-memory
+    $result = [];
+    foreach ($products as $p) {
+        $catIds = $categoryMap[$p['id']] ?? [];
+        $result[$p['id']] = get_product_discount_from_rules($rules, $p['id'], $p['price'], $catIds);
+    }
+    return $result;
+}
+
+/**
+ * Batch-fetch images for an array of product IDs.
+ * Returns associative array: product_id => [images]
+ */
+function get_bulk_product_images($pdo, $productIds, $limit_per_product = 0) {
+    if (empty($productIds)) return [];
+
+    $placeholders = implode(',', array_fill(0, count($productIds), '?'));
+    $sql = "SELECT product_id, image_path, thumb_path FROM product_images WHERE product_id IN ($placeholders) ORDER BY sort_order ASC";
+    
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($productIds);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        return [];
+    }
+
+    $imageMap = [];
+    foreach ($rows as $row) {
+        $pid = $row['product_id'];
+        if ($limit_per_product > 0 && isset($imageMap[$pid]) && count($imageMap[$pid]) >= $limit_per_product) {
+            continue;
+        }
+        $imageMap[$pid][] = [
+            'image_path' => $row['image_path'],
+            'thumb_path' => $row['thumb_path']
+        ];
+    }
+    return $imageMap;
 }
 
 /**

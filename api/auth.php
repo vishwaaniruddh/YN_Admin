@@ -91,6 +91,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo json_encode(['success' => false, 'message' => 'Invalid email or password.']);
         }
     }
+    elseif ($action === 'social_login') {
+        $email = sanitize_html($data['email'] ?? '');
+        $firstName = sanitize_html($data['first_name'] ?? 'User');
+        $lastName = sanitize_html($data['last_name'] ?? '');
+        $provider = sanitize_html($data['provider'] ?? 'google');
+
+        if (empty($email)) {
+            echo json_encode(['success' => false, 'message' => 'Email is required.']);
+            exit;
+        }
+
+        $stmt = $pdo->prepare("SELECT id, first_name, last_name, email, phone, gender FROM customers WHERE email = ?");
+        $stmt->execute([$email]);
+        $user = $stmt->fetch();
+
+        if (!$user) {
+            $dummyPass = password_hash(bin2hex(random_bytes(8)), PASSWORD_DEFAULT);
+            $stmt = $pdo->prepare("INSERT INTO customers (first_name, last_name, email, password_hash) VALUES (?, ?, ?, ?)");
+            if ($stmt->execute([$firstName, $lastName, $email, $dummyPass])) {
+                $userId = $pdo->lastInsertId();
+                $user = [
+                    'id' => $userId,
+                    'first_name' => $firstName,
+                    'last_name' => $lastName,
+                    'email' => $email
+                ];
+            }
+        }
+
+        if ($user) {
+            $_SESSION['customer_id'] = $user['id'];
+            $token = base64_encode(json_encode(['id' => $user['id'], 'time' => time()]));
+            echo json_encode([
+                'success' => true,
+                'message' => 'Social login successful.',
+                'user' => $user,
+                'token' => $token
+            ]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Social login failed.']);
+        }
+    }
 } elseif ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if ($action === 'me') {
         // Read token from Authorization header

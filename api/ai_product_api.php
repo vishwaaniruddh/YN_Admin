@@ -76,7 +76,7 @@ function getProductImageData($pdo, $productId) {
             if ($mime) $mimeType = $mime;
         } else {
             // Try fetching via HTTP/HTTPS URL
-            $remoteUrl = (str_starts_with($imagePath, 'http')) ? $imagePath : 'http://localhost/yn/admin/' . ltrim($imagePath, '/');
+            $remoteUrl = (str_starts_with($imagePath, 'http')) ? $imagePath : 'http://yosshitaneha.com/admin/' . ltrim($imagePath, '/');
             $imgContent = @file_get_contents($remoteUrl);
             $ext = strtolower(pathinfo($imagePath, PATHINFO_EXTENSION));
             if ($ext === 'png') $mimeType = 'image/png';
