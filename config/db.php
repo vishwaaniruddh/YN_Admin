@@ -225,6 +225,35 @@ try {
         FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
     ) ENGINE=InnoDB");
 
+    // Collections Master Table
+    $pdo->exec("CREATE TABLE IF NOT EXISTS collections (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        slug VARCHAR(255) NOT NULL UNIQUE,
+        subtitle VARCHAR(255) DEFAULT NULL,
+        category VARCHAR(100) NOT NULL DEFAULT 'Client Diaries',
+        description TEXT DEFAULT NULL,
+        cover_image VARCHAR(255) DEFAULT NULL,
+        is_featured TINYINT(1) DEFAULT 0,
+        sort_order INT DEFAULT 0,
+        status ENUM('draft', 'published') DEFAULT 'published',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB");
+
+    // Collection Images Table
+    $pdo->exec("CREATE TABLE IF NOT EXISTS collection_images (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        collection_id INT NOT NULL,
+        image_path VARCHAR(255) NOT NULL,
+        thumb_path VARCHAR(255) DEFAULT NULL,
+        caption VARCHAR(255) DEFAULT NULL,
+        outfit_type VARCHAR(100) DEFAULT NULL,
+        sort_order INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (collection_id) REFERENCES collections(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB");
+
     // Seed default settings
     $pdo->exec("INSERT IGNORE INTO site_settings (setting_key, setting_value) VALUES ('theme_mode', 'dark')");
 

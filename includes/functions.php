@@ -1126,6 +1126,7 @@ function get_product_discount_info($pdo, $productId, $regularPrice, $categoryIds
                     'rule_name' => $rule['name'],
                     'type' => $rule['type'],
                     'value' => $val,
+                    'discount_value' => $val,
                     'label' => $label,
                     'original_price' => $regularPrice,
                     'discounted_price' => $finalPrice,
@@ -1202,6 +1203,7 @@ function get_product_discount_from_rules($rules, $productId, $regularPrice, $cat
                 'rule_name' => $rule['name'],
                 'type' => $rule['type'],
                 'value' => $val,
+                'discount_value' => $val,
                 'label' => $label,
                 'original_price' => $regularPrice,
                 'discounted_price' => $finalPrice,
@@ -1352,4 +1354,23 @@ function validate_and_apply_coupon($pdo, $code, $cartSubtotal) {
         return ['valid' => false, 'message' => $e->getMessage()];
     }
 }
+
+/**
+ * Format relative upload image paths for admin views (with URL encoding for spaces and special chars)
+ */
+function get_collection_image_url($path) {
+    if (empty($path)) return 'assets/images/placeholder.svg';
+    if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, 'data:')) {
+        return $path;
+    }
+    $clean = ltrim($path, '/');
+    // Ensure not prepending extra admin/ or ../
+    if (str_starts_with($clean, 'admin/')) {
+        $clean = substr($clean, 6);
+    }
+    $parts = explode('/', $clean);
+    $encoded = array_map('rawurlencode', $parts);
+    return implode('/', $encoded);
+}
+
 ?>

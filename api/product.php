@@ -72,8 +72,14 @@ try {
             
     $params = [];
     if ($slug) {
-        $sql .= " AND p.slug = ?";
-        $params[] = $slug;
+        if (is_numeric($slug)) {
+            $sql .= " AND (p.slug = ? OR p.id = ?)";
+            $params[] = $slug;
+            $params[] = (int)$slug;
+        } else {
+            $sql .= " AND p.slug = ?";
+            $params[] = $slug;
+        }
     } else {
         $sql .= " AND p.id = ?";
         $params[] = $id;

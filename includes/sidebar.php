@@ -65,6 +65,13 @@ $current_script = basename($_SERVER['PHP_SELF']);
             </a>
         </li>
 
+        <li class="menu-item <?php echo ($current_script == 'collections.php' || $current_script == 'collection-add.php' || $current_script == 'collection-edit.php') ? 'active' : ''; ?>">
+            <a href="collections.php">
+                <i class="fa-solid fa-camera-retro"></i>
+                <span>Collections &amp; Diaries</span>
+            </a>
+        </li>
+
         <!-- Modules Group -->
         <li class="menu-section-label">Modules</li>
         <?php 

@@ -62,12 +62,12 @@ function fetch_wishlist_with_discounts($pdo, $session_token) {
             $item['discount_info'] = $discount;
             $item['sale_price'] = $discount['discounted_price'];
             $item['has_discount'] = true;
-            $item['discount_percent'] = $discount['discount_value'];
+            $item['discount_percent'] = $discount['value'] ?? ($discount['discount_value'] ?? 0);
         } else {
-            $item['original_price'] = (float)$item['price'] * 2;
+            $item['original_price'] = (float)$item['price'];
             $item['sale_price'] = (float)$item['price'];
-            $item['has_discount'] = true;
-            $item['discount_percent'] = 50;
+            $item['has_discount'] = false;
+            $item['discount_percent'] = 0;
         }
     }
     return $items;
