@@ -1,7 +1,9 @@
 <?php
 // admin/invoice-pdf.php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 require_once __DIR__ . '/config/db.php';
-require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/vendor/autoload.php';
 
@@ -21,6 +23,39 @@ if ($orderId <= 0) {
     die("Invalid Order ID.");
 }
 
+// Check admin authentication
+$isAdmin = (isset($_SESSION['admin_id']) && isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true);
+
+// If not admin, check customer authentication
+$authCustomerId = null;
+if (!$isAdmin) {
+    $token = $_GET['token'] ?? '';
+    if (empty($token)) {
+        $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+        if (empty($authHeader) && function_exists('apache_request_headers')) {
+            $headers = apache_request_headers();
+            foreach ($headers as $k => $v) {
+                if (strtolower($k) === 'authorization') { $authHeader = $v; break; }
+            }
+        }
+        if (preg_match('/Bearer\s(\S+)/i', $authHeader, $m)) {
+            $token = $m[1];
+        }
+    }
+    if (empty($token) && !empty($_COOKIE['yn_token'])) {
+        $token = $_COOKIE['yn_token'];
+    }
+    if (!empty($token)) {
+        $decoded = json_decode(base64_decode($token), true);
+        if ($decoded && isset($decoded['id'])) {
+            $authCustomerId = (int)$decoded['id'];
+        }
+    }
+    if (!$authCustomerId && !empty($_SESSION['customer_id'])) {
+        $authCustomerId = (int)$_SESSION['customer_id'];
+    }
+}
+
 // Fetch Order Details
 $stmt = $pdo->prepare("
     SELECT o.*, c.first_name, c.last_name, c.email, c.phone, c.created_at as customer_since
@@ -33,6 +68,13 @@ $order = $stmt->fetch();
 
 if (!$order) {
     die("Order not found.");
+}
+
+// Authorize access
+if (!$isAdmin) {
+    if (!$authCustomerId || (int)$order['customer_id'] !== (int)$authCustomerId) {
+        die("Unauthorized. Please log in to view your order invoice.");
+    }
 }
 
 // Fetch Order Items

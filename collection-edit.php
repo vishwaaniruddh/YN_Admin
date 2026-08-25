@@ -6,21 +6,13 @@ require_once __DIR__ . '/includes/functions.php';
 $message = '';
 $message_type = 'success';
 
-if (isset($_GET['msg'])) {
-    if ($_GET['msg'] === 'img_deleted') {
-        $message = "Photo removed from collection.";
-    } elseif ($_GET['msg'] === 'cover_updated') {
-        $message = "Cover photo updated successfully.";
-    }
-}
-
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 if (!$id) {
     header("Location: collections.php");
     exit();
 }
 
-// Fetch Collection
+// Fetch Collection Data
 $stmt = $pdo->prepare("SELECT * FROM collections WHERE id = ?");
 $stmt->execute([$id]);
 $collection = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -30,29 +22,8 @@ if (!$collection) {
     exit();
 }
 
-// Handle Photo Deletion
-if (isset($_GET['delete_image']) && is_numeric($_GET['delete_image'])) {
-    $del_img_id = (int)$_GET['delete_image'];
-    $pdo->prepare("DELETE FROM collection_images WHERE id = ? AND collection_id = ?")->execute([$del_img_id, $id]);
-    header("Location: collection-edit.php?id=$id&msg=img_deleted");
-    exit();
-}
-
-// Handle Set as Cover
-if (isset($_GET['set_cover']) && is_numeric($_GET['set_cover'])) {
-    $img_id = (int)$_GET['set_cover'];
-    $stmt = $pdo->prepare("SELECT image_path FROM collection_images WHERE id = ? AND collection_id = ?");
-    $stmt->execute([$img_id, $id]);
-    $img = $stmt->fetch();
-    if ($img) {
-        $pdo->prepare("UPDATE collections SET cover_image = ? WHERE id = ?")->execute([$img['image_path'], $id]);
-        header("Location: collection-edit.php?id=$id&msg=cover_updated");
-        exit();
-    }
-}
-
-// Handle Form Submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// Handle Form Submission for Collection Metadata
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_collection_meta'])) {
     $title = trim($_POST['title'] ?? '');
     $subtitle = trim($_POST['subtitle'] ?? '');
     $category = trim($_POST['category'] ?? 'Client Diaries');
@@ -60,18 +31,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $status = $_POST['status'] ?? 'published';
     $is_featured = isset($_POST['is_featured']) ? 1 : 0;
     $sort_order = (int)($_POST['sort_order'] ?? 0);
-    $selected_library_images = $_POST['library_images'] ?? [];
 
     if (empty($title)) {
         $message = "Collection Title is required.";
         $message_type = "error";
     } else {
         try {
-            $pdo->beginTransaction();
-
             $cover_image_path = $collection['cover_image'];
 
-            // 1. Handle New Cover Upload
+            // Handle New Cover Upload if uploaded via file input
             if (isset($_FILES['cover_file']) && $_FILES['cover_file']['error'] === UPLOAD_ERR_OK) {
                 $upload = upload_image($_FILES['cover_file'], 'uploads/collections/custom', $collection['slug'] . '-cover-' . time());
                 if (is_array($upload) && isset($upload['filepath'])) {
@@ -79,56 +47,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            // 2. Update Collection Info
-            $stmt = $pdo->prepare("UPDATE collections SET title = ?, subtitle = ?, category = ?, description = ?, cover_image = ?, is_featured = ?, sort_order = ?, status = ? WHERE id = ?");
-            $stmt->execute([$title, $subtitle, $category, $description, $cover_image_path, $is_featured, $sort_order, $status, $id]);
+            $updStmt = $pdo->prepare("UPDATE collections SET title = ?, subtitle = ?, category = ?, description = ?, cover_image = ?, is_featured = ?, sort_order = ?, status = ? WHERE id = ?");
+            $updStmt->execute([$title, $subtitle, $category, $description, $cover_image_path, $is_featured, $sort_order, $status, $id]);
 
-            // 3. Attach additional library images if selected
-            if (!empty($selected_library_images) && is_array($selected_library_images)) {
-                $ins_img = $pdo->prepare("INSERT INTO collection_images (collection_id, image_path, caption, outfit_type, sort_order) VALUES (?, ?, ?, ?, ?)");
-                $maxOrder = $pdo->query("SELECT IFNULL(MAX(sort_order), 0) FROM collection_images WHERE collection_id = $id")->fetchColumn();
-                foreach ($selected_library_images as $lib_img) {
-                    $caption = pathinfo($lib_img, PATHINFO_FILENAME);
-                    $ins_img->execute([$id, $lib_img, $caption, $category, ++$maxOrder]);
-                }
-            }
-
-            // 4. Handle Direct New Photos Multi-Upload
-            if (isset($_FILES['gallery_files']) && !empty($_FILES['gallery_files']['name'][0])) {
-                $files = $_FILES['gallery_files'];
-                $count = count($files['name']);
-                $ins_img = $pdo->prepare("INSERT INTO collection_images (collection_id, image_path, caption, outfit_type, sort_order) VALUES (?, ?, ?, ?, ?)");
-                $maxOrder = $pdo->query("SELECT IFNULL(MAX(sort_order), 0) FROM collection_images WHERE collection_id = $id")->fetchColumn();
-                
-                for ($i = 0; $i < $count; $i++) {
-                    if ($files['error'][$i] === UPLOAD_ERR_OK) {
-                        $single_file = [
-                            'name' => $files['name'][$i],
-                            'type' => $files['type'][$i],
-                            'tmp_name' => $files['tmp_name'][$i],
-                            'error' => $files['error'][$i],
-                            'size' => $files['size'][$i]
-                        ];
-                        $upload = upload_image($single_file, 'uploads/collections/' . $collection['slug'], 'photo_' . time() . '_' . $i);
-                        if (is_array($upload) && isset($upload['filepath'])) {
-                            $caption = pathinfo($files['name'][$i], PATHINFO_FILENAME);
-                            $ins_img->execute([$id, $upload['filepath'], $caption, $category, ++$maxOrder]);
-                        }
-                    }
-                }
-            }
-
-            // 5. Update individual image captions & sort orders if sent
-            if (isset($_POST['captions']) && is_array($_POST['captions'])) {
-                $updCaption = $pdo->prepare("UPDATE collection_images SET caption = ? WHERE id = ? AND collection_id = ?");
-                foreach ($_POST['captions'] as $imgId => $cap) {
-                    $updCaption->execute([trim($cap), (int)$imgId, $id]);
-                }
-            }
-
-            $pdo->commit();
             log_activity($pdo, 'update_collection', 'collection', $id, "Updated collection '$title'");
-            $message = "Collection updated successfully!";
+            $message = "Collection details saved successfully!";
             $message_type = "success";
 
             // Refresh collection data
@@ -137,175 +60,228 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $collection = $stmt->fetch(PDO::FETCH_ASSOC);
 
         } catch (Exception $e) {
-            if ($pdo->inTransaction()) {
-                $pdo->rollBack();
-            }
             $message = "Error updating collection: " . $e->getMessage();
             $message_type = "error";
         }
     }
 }
 
-// Fetch all gallery images for this collection
-$img_stmt = $pdo->prepare("SELECT * FROM collection_images WHERE collection_id = ? ORDER BY sort_order ASC, id ASC");
-$img_stmt->execute([$id]);
-$gallery_images = $img_stmt->fetchAll(PDO::FETCH_ASSOC);
+// Total Photos in this collection
+$totalPhotosCount = (int)$pdo->query("SELECT COUNT(*) FROM collection_images WHERE collection_id = $id")->fetchColumn();
 
-// Scan server library
-$available_images = [];
-$collections_dir = __DIR__ . '/uploads/collections';
-function scan_collection_images_recursive2($dir, $base_dir, &$results) {
-    if (!is_dir($dir)) return;
-    $items = scandir($dir);
-    foreach ($items as $item) {
-        if ($item === '.' || $item === '..') continue;
-        $path = $dir . '/' . $item;
-        if (is_dir($path)) {
-            scan_collection_images_recursive2($path, $base_dir, $results);
-        } elseif (preg_match('/\.(jpg|jpeg|png|webp|gif)$/i', $item)) {
-            $rel = str_replace($base_dir . '/', '', $path);
-            $results[] = 'uploads/collections/' . $rel;
-        }
-    }
-}
-scan_collection_images_recursive2($collections_dir, $collections_dir, $available_images);
+// Fetch distinct categories for dropdown
+$categoriesList = $pdo->query("SELECT DISTINCT category FROM collections WHERE category IS NOT NULL AND category != '' ORDER BY category ASC")->fetchAll(PDO::FETCH_COLUMN);
 
-$page_title = "Edit Collection";
+$page_title = "Manage Collection Photos - " . htmlspecialchars($collection['title']);
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 ?>
 
 <style>
-/* WordPress Poststuff & Full Image Masonry Styling */
-.wp-gallery-masonry {
+/* Progressive Masonry Gallery Layout */
+.gallery-masonry-container {
     column-count: 2;
     column-gap: 16px;
-    margin-top: 15px;
+    margin-top: 14px;
 }
-@media (min-width: 768px) {
-    .wp-gallery-masonry { column-count: 3; }
+@media (min-width: 640px) {
+    .gallery-masonry-container { column-count: 3; }
 }
-@media (min-width: 1200px) {
-    .wp-gallery-masonry { column-count: 4; }
+@media (min-width: 1100px) {
+    .gallery-masonry-container { column-count: 4; }
+}
+@media (min-width: 1440px) {
+    .gallery-masonry-container { column-count: 5; }
 }
 
-.wp-photo-card {
+.masonry-photo-item {
     break-inside: avoid;
     margin-bottom: 16px;
     background: #ffffff;
     border: 1px solid #c3c4c7;
-    border-radius: 4px;
+    border-radius: 6px;
     overflow: hidden;
     position: relative;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
-    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    transition: transform 0.2s, box-shadow 0.2s, opacity 0.3s;
 }
-.wp-photo-card:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+.masonry-photo-item:hover {
+    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
     border-color: #2271b1;
+    transform: translateY(-2px);
 }
 
-.wp-photo-img-wrap {
+.masonry-img-wrap {
     position: relative;
     background: #f0f0f1;
     overflow: hidden;
+    min-height: 140px;
 }
-.wp-photo-img {
+.masonry-img {
     width: 100%;
     height: auto;
     display: block;
     opacity: 0;
-    transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: opacity 0.35s ease;
 }
-.wp-photo-img.loaded {
+.masonry-img.loaded {
     opacity: 1;
 }
 
-.wp-photo-overlay {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 40%, rgba(0,0,0,0.4) 100%);
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 8px;
-}
-.wp-photo-card:hover .wp-photo-overlay {
-    opacity: 1;
-}
-
-.wp-cover-tag {
+.photo-badge-cover {
     position: absolute;
     top: 8px;
     left: 8px;
     background: #dba617;
-    color: #000000;
+    color: #1a1a1a;
     font-size: 10px;
     font-weight: 800;
-    padding: 2px 6px;
+    padding: 2px 7px;
     border-radius: 3px;
     letter-spacing: 0.5px;
+    text-transform: uppercase;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     z-index: 2;
 }
 
-.wp-btn-trash {
-    background: #d63638;
-    color: #ffffff;
-    border-radius: 3px;
-    padding: 3px 6px;
-    font-size: 11px;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
+.photo-overlay-actions {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 40%, rgba(0,0,0,0.4) 100%);
+    opacity: 0;
+    transition: opacity 0.2s;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 8px;
+    z-index: 3;
 }
-.wp-btn-trash:hover {
-    background: #b32d2e;
-    color: #ffffff;
-}
-
-.wp-btn-cover {
-    background: #ffffff;
-    color: #1d2327;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 3px 8px;
-    border-radius: 3px;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-.wp-btn-cover:hover {
-    background: #f0f0f1;
-    color: #2271b1;
+.masonry-photo-item:hover .photo-overlay-actions {
+    opacity: 1;
 }
 
-.wp-photo-caption-input {
-    width: 100%;
-    padding: 6px 8px;
-    font-size: 11px;
+.btn-cover-star {
+    align-self: flex-end;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.9);
     border: none;
-    border-top: 1px solid #dcdcde;
-    background: #f6f7f7;
-    box-sizing: border-box;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #8c8f94;
+    transition: transform 0.2s, color 0.2s;
 }
-.wp-photo-caption-input:focus {
+.btn-cover-star.active, .btn-cover-star:hover {
+    color: #dba617;
+    transform: scale(1.15);
+}
+
+.photo-caption-bar {
+    padding: 8px 10px;
     background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    border-top: 1px solid #f0f0f1;
+}
+.photo-caption-input {
+    flex: 1;
+    font-size: 11px;
+    padding: 3px 6px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    background: transparent;
+    color: #1d2327;
     outline: none;
+}
+.photo-caption-input:hover {
+    border-color: #dcdcde;
+    background: #f6f7f7;
+}
+.photo-caption-input:focus {
+    border-color: #2271b1;
+    background: #ffffff;
+}
+
+.btn-delete-photo {
+    background: none;
+    border: none;
+    color: #b32d2e;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 3px;
+    transition: background 0.15s;
+}
+.btn-delete-photo:hover {
+    background: #fbeaea;
+}
+
+/* Upload Dropzone */
+.ajax-dropzone {
+    border: 2px dashed #c3c4c7;
+    background: #ffffff;
+    padding: 24px;
+    text-align: center;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+}
+.ajax-dropzone.dragover {
+    border-color: #2271b1;
+    background: #f0f6fc;
+}
+
+/* Toast */
+.ajax-toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #1d2327;
+    color: #ffffff;
+    padding: 12px 20px;
+    border-radius: 6px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    font-size: 13px;
+    font-weight: 600;
+    z-index: 99999;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.3s, transform 0.3s;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.ajax-toast.show {
+    opacity: 1;
+    transform: translateY(0);
 }
 </style>
 
 <div class="wrap">
     
-    <!-- WordPress Standard Header -->
-    <h1 class="wp-heading-inline">
-        Edit Collection: <?php echo htmlspecialchars($collection['title']); ?>
-    </h1>
-    <a href="collections.php" class="page-title-action">&larr; Back to Collections</a>
-    <a href="collection-add.php" class="page-title-action">Add New Collection</a>
+    <!-- Top Nav Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+        <div>
+            <h1 class="wp-heading-inline" style="margin-bottom: 4px;">
+                <a href="collections.php" style="text-decoration: none; color: #646970;"><i class="fa-solid fa-arrow-left"></i></a>
+                Edit Collection: <?php echo htmlspecialchars($collection['title']); ?>
+            </h1>
+            <span class="count" style="color: #646970; font-size: 13px;">(ID #<?php echo $collection['id']; ?> &bull; <strong id="livePhotoCount"><?php echo $totalPhotosCount; ?></strong> Photos linked)</span>
+        </div>
+
+        <div>
+            <a href="../our-work?category=<?php echo urlencode($collection['category']); ?>" target="_blank" class="button" title="View in Client Diaries Frontend">
+                <i class="fa-solid fa-arrow-up-right-from-square"></i> View Live Lookbook
+            </a>
+            <a href="collections.php" class="button">Back to All Collections</a>
+        </div>
+    </div>
     <hr class="wp-header-end">
 
     <?php if ($message): ?>
@@ -314,265 +290,522 @@ require_once __DIR__ . '/includes/sidebar.php';
         </div>
     <?php endif; ?>
 
-    <form method="POST" action="collection-edit.php?id=<?php echo $id; ?>" enctype="multipart/form-data" id="post">
-        
-        <!-- WordPress #poststuff 2-Column Layout -->
-        <div id="poststuff">
-            <div id="post-body" class="metabox-holder columns-2">
+    <!-- Two-Column WordPress Layout (Photos Gallery Left, Settings Right) -->
+    <div id="poststuff">
+        <div id="post-body" class="metabox-holder columns-2" style="display: grid; grid-template-columns: 1fr 340px; gap: 20px;">
+            
+            <!-- MAIN LEFT COLUMN: Progressive Masonry Gallery -->
+            <div id="post-body-content" style="min-width: 0;">
                 
-                <!-- Main Left Column -->
-                <div id="post-body-content">
-                    
-                    <!-- Title Input -->
-                    <div id="titlediv" style="margin-bottom: 20px;">
-                        <div id="titlewrap">
-                            <label class="screen-reader-text" id="title-prompt-text" for="title">Enter collection title here</label>
-                            <input type="text" name="title" size="30" value="<?php echo htmlspecialchars($collection['title']); ?>" id="title" placeholder="Collection Title (e.g. Royal Rajputana Bridal Diaries)" required style="width: 100%; font-size: 1.7em; height: 1.7em; line-height: 100%; padding: 3px 8px;">
-                        </div>
+                <!-- Instant Multi-Upload Box -->
+                <div class="postbox" style="margin-bottom: 20px;">
+                    <div class="postbox-header">
+                        <h2 class="hndle"><i class="fa-solid fa-cloud-arrow-up" style="color: #2271b1; margin-right: 6px;"></i> Upload Shoot Photos (Instant Dropzone)</h2>
                     </div>
-
-                    <!-- Postbox: Basic Information -->
-                    <div class="postbox">
-                        <div class="postbox-header">
-                            <h2><strong>Collection Overview &amp; Story</strong></h2>
+                    <div class="inside" style="padding: 16px;">
+                        <div class="ajax-dropzone" id="uploadDropzone" onclick="document.getElementById('galleryFileInput').click()">
+                            <i class="fa-solid fa-images" style="font-size: 32px; color: #2271b1; margin-bottom: 8px;"></i>
+                            <h3 style="margin: 4px 0; font-size: 15px;">Drag &amp; Drop photos here, or click to browse</h3>
+                            <p style="color: #646970; font-size: 12px; margin: 4px 0 0 0;">Upload multiple JPG, PNG, or WebP images. They will be added instantly to this lookbook.</p>
+                            <input type="file" id="galleryFileInput" multiple accept="image/*" style="display: none;" onchange="handleFileSelect(this.files)">
                         </div>
-                        <div class="inside" style="padding: 15px;">
-                            
-                            <p>
-                                <label for="coll_subtitle"><strong>Subtitle / Tagline:</strong></label><br>
-                                <input type="text" id="coll_subtitle" name="subtitle" value="<?php echo htmlspecialchars($collection['subtitle'] ?? ''); ?>" style="width: 100%;" placeholder="e.g. Handcrafted crimson velvet lehengas & uncut Polki jewels">
-                            </p>
 
-                            <p>
-                                <label for="coll_category"><strong>Category:</strong></label><br>
-                                <select id="coll_category" name="category" style="width: 100%; max-width: 350px;">
-                                    <?php 
-                                    $cats = ['Real Brides', 'Bridal Couture', 'Designer Blouses', 'Menswear Couture', 'Fine Jewellery', 'Editorial Shoots', 'Celebrity Styling'];
-                                    foreach ($cats as $c): ?>
-                                        <option value="<?php echo $c; ?>" <?php echo ($collection['category'] === $c) ? 'selected' : ''; ?>>
-                                            <?php echo $c; ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </p>
-
-                            <p>
-                                <label for="coll_description"><strong>Editorial Narrative / Description:</strong></label><br>
-                                <textarea id="coll_description" name="description" rows="5" style="width: 100%; font-size: 13px;" placeholder="Write about the inspiration, fabrics, embroidery, karigari, or client story..."><?php echo htmlspecialchars($collection['description'] ?? ''); ?></textarea>
-                            </p>
-
-                        </div>
-                    </div>
-
-                    <!-- Postbox: Attached Shoot Photos (FULL IMAGE MASONRY) -->
-                    <div class="postbox">
-                        <div class="postbox-header" style="display: flex; justify-content: space-between; align-items: center; padding-right: 15px;">
-                            <h2>
-                                <strong>Attached Shoot Photos (<span style="color: #2271b1;"><?php echo count($gallery_images); ?> Photos</span>)</strong>
-                            </h2>
-                            <span style="font-size: 12px; color: #646970;">
-                                <i class="fa-solid fa-eye"></i> Full Image Progressive Masonry
-                            </span>
-                        </div>
-                        <div class="inside" style="padding: 15px;">
-                            
-                            <?php if (empty($gallery_images)): ?>
-                                <div style="text-align: center; padding: 40px; color: #646970; background: #f6f7f7; border: 1px dashed #c3c4c7; border-radius: 4px;">
-                                    <i class="fa-solid fa-images" style="font-size: 32px; margin-bottom: 8px;"></i>
-                                    <p>No photos attached to this collection yet. Add photos below!</p>
-                                </div>
-                            <?php else: ?>
-                                <p style="font-size: 12px; color: #646970; margin-top: 0;">
-                                    Hover on any photo to set it as Cover or remove it. All images are displayed in full natural aspect ratio.
-                                </p>
-
-                                <!-- PROGRESSIVE FULL-IMAGE MASONRY GRID -->
-                                <div class="wp-gallery-masonry">
-                                    <?php foreach ($gallery_images as $g): 
-                                        $isCover = ($collection['cover_image'] === $g['image_path']);
-                                        $imgSrc = get_collection_image_url($g['image_path']);
-                                    ?>
-                                    <div class="wp-photo-card" id="photo-<?php echo $g['id']; ?>">
-                                        
-                                        <div class="wp-photo-img-wrap">
-                                            <!-- Full Natural Height Progressive Image -->
-                                            <img 
-                                                src="<?php echo htmlspecialchars($imgSrc); ?>" 
-                                                alt="Photo" 
-                                                class="wp-photo-img" 
-                                                loading="lazy"
-                                                onload="this.classList.add('loaded')"
-                                            >
-
-                                            <?php if ($isCover): ?>
-                                                <span class="wp-cover-tag">★ COVER</span>
-                                            <?php endif; ?>
-
-                                            <!-- Hover Action Overlay -->
-                                            <div class="wp-photo-overlay">
-                                                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                                                    <div>
-                                                        <?php if (!$isCover): ?>
-                                                            <a href="collection-edit.php?id=<?php echo $id; ?>&set_cover=<?php echo $g['id']; ?>" class="wp-btn-cover" title="Set as Collection Cover Photo">
-                                                                <i class="fa-solid fa-star"></i> Set Cover
-                                                            </a>
-                                                        <?php endif; ?>
-                                                    </div>
-
-                                                    <a href="collection-edit.php?id=<?php echo $id; ?>&delete_image=<?php echo $g['id']; ?>" class="wp-btn-trash" onclick="return confirm('Remove this photo from the collection?');" title="Remove Photo">
-                                                        <i class="fa-solid fa-trash"></i>
-                                                    </a>
-                                                </div>
-
-                                                <div style="text-align: right;">
-                                                    <a href="<?php echo htmlspecialchars($imgSrc); ?>" target="_blank" class="wp-btn-cover" style="font-size: 10px; padding: 2px 6px;" title="View Full Original">
-                                                        <i class="fa-solid fa-magnifying-glass-plus"></i> Zoom
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- Caption / Tag Input -->
-                                        <input 
-                                            type="text" 
-                                            name="captions[<?php echo $g['id']; ?>]" 
-                                            value="<?php echo htmlspecialchars($g['caption'] ?? ''); ?>" 
-                                            placeholder="Caption / Tag..."
-                                            class="wp-photo-caption-input"
-                                        >
-                                    </div>
-                                    <?php endforeach; ?>
-                                </div>
-                            <?php endif; ?>
-
-                        </div>
-                    </div>
-
-                    <!-- Postbox: Add More Photos -->
-                    <div class="postbox">
-                        <div class="postbox-header">
-                            <h2><strong>Add Photos to this Collection</strong></h2>
-                        </div>
-                        <div class="inside" style="padding: 15px;">
-                            
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                                <!-- Direct Upload -->
-                                <div style="background: #f6f7f7; border: 1px dashed #c3c4c7; border-radius: 4px; padding: 15px;">
-                                    <h4 style="margin: 0 0 8px 0;"><i class="fa-solid fa-cloud-arrow-up"></i> Upload from Computer:</h4>
-                                    <input type="file" name="gallery_files[]" multiple accept="image/*" style="width: 100%;">
-                                    <p class="description" style="margin-top: 6px;">Select one or multiple image files (JPG, PNG, WEBP).</p>
-                                </div>
-
-                                <!-- Library Selector -->
-                                <div style="background: #f6f7f7; border: 1px solid #c3c4c7; border-radius: 4px; padding: 15px;">
-                                    <h4 style="margin: 0 0 8px 0;"><i class="fa-solid fa-folder-open"></i> Pick from Server Library (<?php echo count($available_images); ?> photos):</h4>
-                                    <details>
-                                        <summary style="color: #2271b1; cursor: pointer; font-weight: 600; font-size: 13px;">Browse Library Photos</summary>
-                                        <div style="max-height: 250px; overflow-y: auto; margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 6px; padding: 6px; background: #ffffff; border: 1px solid #dcdcde; border-radius: 3px;">
-                                            <?php foreach ($available_images as $imgPath): 
-                                                $thumb = get_collection_image_url($imgPath);
-                                            ?>
-                                            <label style="position: relative; aspect-ratio: 1; border-radius: 3px; overflow: hidden; display: block; cursor: pointer; border: 1px solid #dcdcde;">
-                                                <input type="checkbox" name="library_images[]" value="<?php echo htmlspecialchars($imgPath); ?>" style="position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; z-index: 2;">
-                                                <img src="<?php echo htmlspecialchars($thumb); ?>" alt="Photo" style="width: 100%; height: 100%; object-fit: cover;" loading="lazy">
-                                            </label>
-                                            <?php endforeach; ?>
-                                        </div>
-                                    </details>
-                                </div>
+                        <!-- Upload Progress Bar -->
+                        <div id="uploadProgressContainer" style="display: none; margin-top: 12px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                                <span id="uploadStatusText">Uploading photos...</span>
+                                <span id="uploadPercentText">0%</span>
                             </div>
-
+                            <div style="height: 6px; background: #f0f0f1; border-radius: 3px; overflow: hidden;">
+                                <div id="uploadProgressBar" style="width: 0%; height: 100%; background: #2271b1; transition: width 0.2s;"></div>
+                            </div>
                         </div>
                     </div>
-
                 </div>
 
-                <!-- Right Sidebar Column (WordPress Standard Sidebar) -->
-                <div id="postbox-container-1" class="postbox-container">
-                    
-                    <!-- Postbox: Publish Options -->
-                    <div class="postbox">
-                        <div class="postbox-header">
-                            <h2><strong>Publish &amp; Visibility</strong></h2>
-                        </div>
-                        <div class="inside" style="padding: 12px 15px;">
-                            
-                            <div class="misc-pub-section" style="padding: 8px 0; border-bottom: 1px solid #f0f0f1;">
-                                <label for="coll_status"><strong>Status:</strong></label>
-                                <select id="coll_status" name="status" style="width: 100%; margin-top: 4px;">
-                                    <option value="published" <?php echo ($collection['status'] === 'published') ? 'selected' : ''; ?>>Published (Live on Website)</option>
-                                    <option value="draft" <?php echo ($collection['status'] === 'draft') ? 'selected' : ''; ?>>Draft (Hidden)</option>
-                                </select>
-                            </div>
-
-                            <div class="misc-pub-section" style="padding: 10px 0; border-bottom: 1px solid #f0f0f1;">
-                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                                    <input type="checkbox" name="is_featured" value="1" <?php echo ($collection['is_featured'] == 1) ? 'checked' : ''; ?>>
-                                    <strong>Feature on Homepage</strong>
-                                </label>
-                            </div>
-
-                            <div class="misc-pub-section" style="padding: 8px 0;">
-                                <label for="coll_sort_order"><strong>Display Order:</strong></label>
-                                <input type="number" id="coll_sort_order" name="sort_order" value="<?php echo (int)$collection['sort_order']; ?>" style="width: 80px; margin-top: 4px;">
-                            </div>
-
-                            <div id="major-publishing-actions" style="margin-top: 15px; padding-top: 12px; border-top: 1px solid #dcdcde; display: flex; justify-content: space-between; align-items: center;">
-                                <a href="collections.php?delete=<?php echo $id; ?>" onclick="return confirm('Are you sure you want to delete this collection?');" style="color: #b32d2e; text-decoration: underline; font-size: 12px;">Delete</a>
-                                <button type="submit" class="button button-primary button-large">
-                                    <i class="fa-solid fa-floppy-disk"></i> Update Collection
-                                </button>
-                            </div>
-
+                <!-- Gallery Manager & Search Filter Toolbar -->
+                <div class="postbox">
+                    <div class="postbox-header" style="display: flex; justify-content: space-between; align-items: center; padding-right: 12px;">
+                        <h2 class="hndle"><i class="fa-solid fa-camera-retro" style="color: #2271b1; margin-right: 6px;"></i> Gallery Photos (<span id="galleryCounter"><?php echo $totalPhotosCount; ?></span>)</h2>
+                        
+                        <!-- Search input within collection photos -->
+                        <div style="position: relative;">
+                            <input type="search" id="photoSearchInput" placeholder="Filter photos..." style="padding-left: 24px; font-size: 12px; height: 28px; width: 160px;">
+                            <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 8px; top: 8px; color: #8c8f94; font-size: 11px;"></i>
                         </div>
                     </div>
 
-                    <!-- Postbox: Cover Image -->
-                    <div class="postbox">
-                        <div class="postbox-header">
-                            <h2><strong>Featured Cover Image</strong></h2>
+                    <div class="inside" style="padding: 16px;">
+                        
+                        <!-- Dynamic Progressive Masonry Grid -->
+                        <div class="gallery-masonry-container" id="galleryMasonry">
+                            <!-- Populated progressively via API -->
                         </div>
-                        <div class="inside" style="padding: 15px;">
-                            
-                            <?php if ($collection['cover_image']): 
-                                $coverSrc = get_collection_image_url($collection['cover_image']);
-                            ?>
-                                <div style="border-radius: 4px; overflow: hidden; border: 1px solid #dcdcde; margin-bottom: 10px; background: #f0f0f1;">
-                                    <img 
-                                        src="<?php echo htmlspecialchars($coverSrc); ?>" 
-                                        alt="Cover" 
-                                        style="width: 100%; height: auto; display: block;"
-                                        loading="lazy"
-                                        onload="this.style.opacity=1"
-                                    >
-                                </div>
-                            <?php endif; ?>
 
-                            <label for="cover_file"><strong>Replace Cover:</strong></label>
-                            <input type="file" id="cover_file" name="cover_file" accept="image/*" style="width: 100%; margin-top: 4px;">
-                            <p class="description" style="margin-top: 4px;">Or click "Set Cover" on any photo in the gallery on the left.</p>
-
+                        <!-- Load More Trigger / Loader -->
+                        <div id="galleryLoader" style="text-align: center; padding: 20px 0;">
+                            <button id="btnLoadMore" onclick="loadNextPhotoBatch()" class="button button-secondary" style="font-weight: 600; padding: 6px 18px;">
+                                <i class="fa-solid fa-plus"></i> Load More Photos
+                            </button>
                         </div>
+
+                        <div id="noPhotosNotice" style="display: none; text-align: center; padding: 40px 0; color: #646970;">
+                            <i class="fa-regular fa-image" style="font-size: 32px; color: #c3c4c7; margin-bottom: 8px;"></i>
+                            <p>No photos found in this collection.</p>
+                        </div>
+
                     </div>
-
                 </div>
 
             </div>
-        </div>
 
-    </form>
+            <!-- RIGHT SIDEBAR: Collection Details & Cover Photo Form -->
+            <div id="postbox-container-1" class="postbox-container">
+                <form method="POST" action="collection-edit.php?id=<?php echo $id; ?>" enctype="multipart/form-data">
+                    <input type="hidden" name="update_collection_meta" value="1">
+
+                    <!-- Save Actions Box -->
+                    <div class="postbox">
+                        <div class="postbox-header">
+                            <h2 class="hndle">Publish Settings</h2>
+                        </div>
+                        <div class="inside" style="padding: 14px;">
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <label style="display: block; font-weight: 600; font-size: 12px; margin-bottom: 4px;">Status</label>
+                                <select name="status" class="form-control">
+                                    <option value="published" <?php echo $collection['status'] === 'published' ? 'selected' : ''; ?>>Published</option>
+                                    <option value="draft" <?php echo $collection['status'] === 'draft' ? 'selected' : ''; ?>>Draft</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; cursor: pointer;">
+                                    <input type="checkbox" name="is_featured" value="1" <?php echo $collection['is_featured'] ? 'checked' : ''; ?>>
+                                    <span>Feature on Homepage ⭐</span>
+                                </label>
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 14px;">
+                                <label style="display: block; font-weight: 600; font-size: 12px; margin-bottom: 4px;">Sort Priority</label>
+                                <input type="number" name="sort_order" value="<?php echo htmlspecialchars($collection['sort_order']); ?>" class="form-control" style="width: 100px;">
+                            </div>
+
+                            <button type="submit" class="button button-primary button-large" style="width: 100%; font-weight: 700;">
+                                <i class="fa-solid fa-floppy-disk"></i> Save Collection Details
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Details Box -->
+                    <div class="postbox">
+                        <div class="postbox-header">
+                            <h2 class="hndle">Collection Details</h2>
+                        </div>
+                        <div class="inside" style="padding: 14px;">
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <label style="display: block; font-weight: 600; font-size: 12px; margin-bottom: 4px;">Title *</label>
+                                <input type="text" name="title" value="<?php echo htmlspecialchars($collection['title']); ?>" required class="form-control">
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <label style="display: block; font-weight: 600; font-size: 12px; margin-bottom: 4px;">Subtitle / Tagline</label>
+                                <input type="text" name="subtitle" value="<?php echo htmlspecialchars($collection['subtitle'] ?? ''); ?>" class="form-control">
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <label style="display: block; font-weight: 600; font-size: 12px; margin-bottom: 4px;">Category</label>
+                                <input type="text" name="category" list="catSuggestions" value="<?php echo htmlspecialchars($collection['category']); ?>" class="form-control">
+                                <datalist id="catSuggestions">
+                                    <?php foreach ($categoriesList as $cat): ?>
+                                        <option value="<?php echo htmlspecialchars($cat); ?>">
+                                    <?php endforeach; ?>
+                                    <option value="Editorial Shoots">
+                                    <option value="Real Brides">
+                                    <option value="Bridal Couture">
+                                    <option value="Custom Studio">
+                                </datalist>
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <label style="display: block; font-weight: 600; font-size: 12px; margin-bottom: 4px;">Story Description</label>
+                                <textarea name="description" rows="4" class="form-control" style="font-size: 12px;"><?php echo htmlspecialchars($collection['description'] ?? ''); ?></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Current Cover Photo Preview Box -->
+                    <div class="postbox">
+                        <div class="postbox-header">
+                            <h2 class="hndle">Cover Photo</h2>
+                        </div>
+                        <div class="inside" style="padding: 14px; text-align: center;">
+                            <div style="aspect-ratio: 16/10; background: #f0f0f1; border-radius: 4px; overflow: hidden; margin-bottom: 10px; border: 1px solid #dcdcde;">
+                                <img id="coverPreviewImg" src="<?php echo htmlspecialchars(get_collection_image_url($collection['cover_image'])); ?>" alt="Cover" style="width: 100%; height: 100%; object-fit: cover;">
+                            </div>
+                            <p style="font-size: 11px; color: #646970; margin-bottom: 10px;">
+                                Tip: You can click the <strong>⭐ star</strong> on any gallery photo on the left to set it as the cover instantly!
+                            </p>
+                            <label class="button button-small" style="cursor: pointer;">
+                                Upload New Cover
+                                <input type="file" name="cover_file" accept="image/*" style="display: none;" onchange="previewCoverFile(this)">
+                            </label>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+
+        </div>
+    </div>
 
 </div>
 
+<!-- Ajax Toast Alert -->
+<div id="ajaxToast" class="ajax-toast">
+    <i class="fa-solid fa-circle-check" style="color: #46b450;"></i>
+    <span id="toastMessage">Saved</span>
+</div>
+
 <script>
-// Auto progressive image load fallback
-document.addEventListener("DOMContentLoaded", function() {
-    document.querySelectorAll('.wp-photo-img').forEach(function(img) {
-        if (img.complete) {
-            img.classList.add('loaded');
+const collectionId = <?php echo $id; ?>;
+let currentPhotoPage = 1;
+let currentCoverPath = "<?php echo addslashes($collection['cover_image']); ?>";
+let totalPhotos = <?php echo $totalPhotosCount; ?>;
+let currentSearch = '';
+let hasMorePhotos = true;
+let isLoadingPhotos = false;
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadPhotoBatch(1, true);
+
+    // Filter photos input
+    let searchTimer = null;
+    document.getElementById('photoSearchInput').addEventListener('input', (e) => {
+        clearTimeout(searchTimer);
+        currentSearch = e.target.value.trim();
+        searchTimer = setTimeout(() => {
+            currentPhotoPage = 1;
+            loadPhotoBatch(1, true);
+        }, 250);
+    });
+
+    // Setup drag and drop events
+    const dropzone = document.getElementById('uploadDropzone');
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropzone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.add('dragover');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.remove('dragover');
+        }, false);
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files.length > 0) {
+            handleFileSelect(files);
         }
     });
 });
+
+function showToast(msg) {
+    const toast = document.getElementById('ajaxToast');
+    document.getElementById('toastMessage').innerText = msg;
+    toast.className = 'ajax-toast show';
+    setTimeout(() => { toast.className = 'ajax-toast'; }, 2500);
+}
+
+// Progressive Masonry Batch Fetcher
+function loadPhotoBatch(page = 1, isReset = false) {
+    if (isLoadingPhotos) return;
+    isLoadingPhotos = true;
+
+    const btn = document.getElementById('btnLoadMore');
+    if (btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading...';
+
+    const params = new URLSearchParams({
+        collection_id: collectionId,
+        page: page,
+        per_page: 24,
+        s: currentSearch
+    });
+
+    fetch(`api/admin_collection_photos.php?${params.toString()}`)
+        .then(res => res.json())
+        .then(json => {
+            if (json.success) {
+                const container = document.getElementById('galleryMasonry');
+                if (isReset) container.innerHTML = '';
+
+                if (json.cover_image) {
+                    currentCoverPath = json.cover_image;
+                }
+
+                if (json.data && json.data.length > 0) {
+                    document.getElementById('noPhotosNotice').style.display = 'none';
+                    appendPhotosToMasonry(json.data);
+                } else if (isReset) {
+                    document.getElementById('noPhotosNotice').style.display = 'block';
+                }
+
+                currentPhotoPage = json.pagination.page;
+                hasMorePhotos = json.pagination.has_more;
+
+                const loader = document.getElementById('galleryLoader');
+                if (hasMorePhotos) {
+                    loader.style.display = 'block';
+                    if (btn) btn.innerHTML = `<i class="fa-solid fa-plus"></i> Load More Photos (${json.pagination.total - (currentPhotoPage * json.pagination.per_page)} remaining)`;
+                } else {
+                    loader.style.display = 'none';
+                }
+
+                document.getElementById('galleryCounter').innerText = json.pagination.total;
+                document.getElementById('livePhotoCount').innerText = json.pagination.total;
+            }
+        })
+        .catch(err => {
+            console.error("Error loading photos:", err);
+            if (btn) btn.innerText = 'Retry Loading';
+        })
+        .finally(() => {
+            isLoadingPhotos = false;
+        });
+}
+
+function loadNextPhotoBatch() {
+    if (hasMorePhotos && !isLoadingPhotos) {
+        loadPhotoBatch(currentPhotoPage + 1, false);
+    }
+}
+
+// Render Photos progressively in Masonry
+function appendPhotosToMasonry(photos) {
+    const container = document.getElementById('galleryMasonry');
+    
+    photos.forEach(p => {
+        const isCover = p.is_cover || (p.image_path === currentCoverPath);
+        
+        const card = document.createElement('div');
+        card.className = 'masonry-photo-item';
+        card.id = `photo-card-${p.id}`;
+
+        card.innerHTML = `
+            <div class="masonry-img-wrap">
+                <img 
+                    src="${escapeHtml(p.image_url)}" 
+                    alt="${escapeHtml(p.caption || 'Shoot photo')}" 
+                    class="masonry-img" 
+                    loading="lazy"
+                    onload="this.classList.add('loaded')"
+                >
+
+                ${isCover ? '<span class="photo-badge-cover" id="badge-cover-' + p.id + '">Cover Photo</span>' : '<span class="photo-badge-cover" id="badge-cover-' + p.id + '" style="display:none;">Cover Photo</span>'}
+
+                <div class="photo-overlay-actions">
+                    <button class="btn-cover-star ${isCover ? 'active' : ''}" id="star-${p.id}" onclick="setPhotoAsCover(${p.id}, '${escapeHtml(p.image_url)}')" title="Set as Cover Photo">
+                        <i class="fa-solid fa-star"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="photo-caption-bar">
+                <input 
+                    type="text" 
+                    class="photo-caption-input" 
+                    value="${escapeHtml(p.caption || '')}" 
+                    placeholder="Add caption..." 
+                    onchange="savePhotoCaption(${p.id}, this.value)"
+                    title="Click to edit caption"
+                >
+                <button class="btn-delete-photo" onclick="deletePhoto(${p.id})" title="Delete Photo">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            </div>
+        `;
+
+        container.appendChild(card);
+    });
+}
+
+// Set Cover via AJAX
+function setPhotoAsCover(photoId, newCoverUrl) {
+    const fd = new FormData();
+    fd.append('photo_id', photoId);
+    fd.append('collection_id', collectionId);
+
+    fetch('api/admin_collection_photos.php?action=set_cover', {
+        method: 'POST',
+        body: fd
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Cover photo updated!');
+            document.querySelectorAll('.photo-badge-cover').forEach(b => b.style.display = 'none');
+            document.querySelectorAll('.btn-cover-star').forEach(s => s.classList.remove('active'));
+
+            const badge = document.getElementById(`badge-cover-${photoId}`);
+            if (badge) badge.style.display = 'inline-block';
+
+            const star = document.getElementById(`star-${photoId}`);
+            if (star) star.classList.add('active');
+
+            const coverPrev = document.getElementById('coverPreviewImg');
+            if (coverPrev) coverPrev.src = newCoverUrl;
+        } else {
+            alert(data.message || 'Failed to update cover');
+        }
+    })
+    .catch(err => alert('Network error: ' + err.message));
+}
+
+// Delete Photo via AJAX
+function deletePhoto(photoId) {
+    if (!confirm('Remove this photo from collection?')) return;
+
+    const card = document.getElementById(`photo-card-${photoId}`);
+    if (card) card.style.opacity = '0.3';
+
+    const fd = new FormData();
+    fd.append('photo_id', photoId);
+    fd.append('collection_id', collectionId);
+
+    fetch('api/admin_collection_photos.php?action=delete_photo', {
+        method: 'POST',
+        body: fd
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Photo removed');
+            if (card) card.remove();
+            
+            document.getElementById('galleryCounter').innerText = data.remaining_count;
+            document.getElementById('livePhotoCount').innerText = data.remaining_count;
+        } else {
+            if (card) card.style.opacity = '1';
+            alert(data.message || 'Failed to delete photo');
+        }
+    })
+    .catch(err => {
+        if (card) card.style.opacity = '1';
+        alert('Network error: ' + err.message);
+    });
+}
+
+// Save Caption via AJAX
+function savePhotoCaption(photoId, caption) {
+    const fd = new FormData();
+    fd.append('photo_id', photoId);
+    fd.append('collection_id', collectionId);
+    fd.append('caption', caption);
+
+    fetch('api/admin_collection_photos.php?action=update_caption', {
+        method: 'POST',
+        body: fd
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Caption saved');
+        }
+    })
+    .catch(err => console.error("Caption save error:", err));
+}
+
+// Multi-File Drag & Drop Upload via AJAX
+function handleFileSelect(files) {
+    if (!files || files.length === 0) return;
+
+    const fd = new FormData();
+    fd.append('collection_id', collectionId);
+    for (let i = 0; i < files.length; i++) {
+        fd.append('files[]', files[i]);
+    }
+
+    const progressContainer = document.getElementById('uploadProgressContainer');
+    const progressBar = document.getElementById('uploadProgressBar');
+    const percentText = document.getElementById('uploadPercentText');
+    const statusText = document.getElementById('uploadStatusText');
+
+    progressContainer.style.display = 'block';
+    progressBar.style.width = '10%';
+    percentText.innerText = '10%';
+    statusText.innerText = `Uploading ${files.length} photo(s)...`;
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', 'api/admin_collection_photos.php?action=upload_photos', true);
+
+    xhr.upload.onprogress = function(e) {
+        if (e.lengthComputable) {
+            const percent = Math.round((e.loaded / e.total) * 100);
+            progressBar.style.width = percent + '%';
+            percentText.innerText = percent + '%';
+        }
+    };
+
+    xhr.onload = function() {
+        progressContainer.style.display = 'none';
+        progressBar.style.width = '0%';
+
+        if (xhr.status === 200) {
+            try {
+                const json = JSON.parse(xhr.responseText);
+                if (json.success) {
+                    showToast(json.message);
+                    // Prepend newly uploaded photos
+                    if (json.uploaded && json.uploaded.length > 0) {
+                        appendPhotosToMasonry(json.uploaded);
+                        loadPhotoBatch(1, true); // reload fresh
+                    }
+                } else {
+                    alert(json.message || 'Upload failed');
+                }
+            } catch (e) {
+                alert('Invalid response from server');
+            }
+        } else {
+            alert('Upload error (status ' + xhr.status + ')');
+        }
+    };
+
+    xhr.onerror = function() {
+        progressContainer.style.display = 'none';
+        alert('Network upload error');
+    };
+
+    xhr.send(fd);
+}
+
+// Preview locally chosen cover file
+function previewCoverFile(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('coverPreviewImg').src = e.target.result;
+            showToast('New cover chosen (click Save Details to persist)');
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
 </script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

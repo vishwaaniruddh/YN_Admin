@@ -129,9 +129,9 @@ textarea.form-control {
 #wpwrap {
     display: flex;
     flex-direction: column;
-    height: 100vh;
-    overflow: hidden;
+    min-height: 100vh;
     background-color: var(--wp-bg);
+    position: relative;
 }
 
 /* Header / Top Bar */
@@ -358,8 +358,7 @@ textarea.form-control {
     display: flex;
     flex: 1;
     margin-top: 46px;
-    height: calc(100vh - 46px);
-    overflow: hidden;
+    min-height: calc(100vh - 46px);
     padding-left: 200px; /* Offset the fixed sidebar on desktop */
 }
 
@@ -570,8 +569,10 @@ textarea.form-control {
 /* Main Content Area */
 #wpcontent {
     flex: 1;
-    padding: 24px;
-    overflow-y: auto;
+    padding: 24px 32px 60px 32px;
+    min-height: 100%;
+    width: 100%;
+    background-color: var(--wp-bg);
 }
 
 /* Common UI Elements */

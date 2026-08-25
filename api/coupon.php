@@ -15,9 +15,9 @@ require_once __DIR__ . '/../includes/functions.php';
 $rawInput = file_get_contents('php://input');
 $data = json_decode($rawInput, true) ?? $_POST;
 
-$action = $_GET['action'] ?? ($data['action'] ?? 'validate');
+$action = strtolower(trim($_GET['action'] ?? ($data['action'] ?? 'validate')));
 
-if ($action === 'validate') {
+if ($action === 'validate' || $action === 'apply' || $action === 'apply_coupon' || $action === 'check' || empty($action)) {
     $code = trim($data['code'] ?? ($_GET['code'] ?? ''));
     $subtotal = (float)($data['subtotal'] ?? ($_GET['subtotal'] ?? 0));
 

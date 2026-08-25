@@ -143,7 +143,7 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $addrStmt->execute([$userId]);
         $address = $addrStmt->fetch() ?: [];
 
-        $stmt = $pdo->prepare("SELECT * FROM orders WHERE customer_id = ? ORDER BY id DESC");
+        $stmt = $pdo->prepare("SELECT * FROM orders WHERE customer_id = ? AND status != 'Pending' ORDER BY id DESC");
         $stmt->execute([$userId]);
         $orders = $stmt->fetchAll();
         

@@ -87,6 +87,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $shipping = get_shipping_charge($pdo, $afterCouponSubtotal);
         $totalAmount = max(0, $afterCouponSubtotal + $shipping);
 
+        // Clean up any stale unpaid pending orders for this customer to prevent duplicates
+        try {
+            $pdo->prepare("DELETE FROM orders WHERE customer_id = ? AND status = 'Pending'")->execute([$userId]);
+        } catch (Exception $ex) {}
+
         // Create local DB Order first as Pending
         $stmt = $pdo->prepare("INSERT INTO orders (customer_id, subtotal_amount, shipping_charge, coupon_code, discount_amount, total_amount, status) VALUES (?, ?, ?, ?, ?, ?, 'Pending')");
         if (!$stmt->execute([$userId, $subtotal, $shipping, $couponCode, $couponDiscount, $totalAmount])) {
