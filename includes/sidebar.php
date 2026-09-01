@@ -65,11 +65,33 @@ $current_script = basename($_SERVER['PHP_SELF']);
             </a>
         </li>
 
-        <li class="menu-item <?php echo ($current_script == 'collections.php' || $current_script == 'collection-add.php' || $current_script == 'collection-edit.php') ? 'active' : ''; ?>">
-            <a href="collections.php">
-                <i class="fa-solid fa-camera-retro"></i>
-                <span>Collections &amp; Diaries</span>
+        <!-- Collections & Lookbook Group -->
+        <?php 
+        $collections_active = in_array($current_script, ['collections.php', 'collection-add.php', 'collection-edit.php', 'collection-ai-sorter.php']);
+        ?>
+        <li class="menu-item has-submenu <?php echo $collections_active ? 'open active-parent' : ''; ?>">
+            <a href="javascript:void(0);" class="submenu-toggle">
+                <i class="fa-solid fa-camera-retro"></i> 
+                <span>Collections &amp; Lookbook</span>
+                <i class="fa-solid fa-chevron-right submenu-arrow"></i>
             </a>
+            <ul class="submenu">
+                <li class="<?php echo ($current_script == 'collections.php' || $current_script == 'collection-edit.php') ? 'active' : ''; ?>">
+                    <a href="collections.php">
+                        <i class="fa-solid fa-vest-patches"></i> Outfit Styles
+                    </a>
+                </li>
+                <li class="<?php echo ($current_script == 'collection-add.php') ? 'active' : ''; ?>">
+                    <a href="collection-add.php">
+                        <i class="fa-solid fa-circle-plus"></i> Add Outfit Style
+                    </a>
+                </li>
+                <li class="<?php echo ($current_script == 'collection-ai-sorter.php') ? 'active' : ''; ?>">
+                    <a href="collection-ai-sorter.php">
+                        <i class="fa-solid fa-wand-magic-sparkles" style="color:#a855f7;"></i> AI Outfit Sorter <span class="badge" style="background:#6366f1;color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;margin-left:4px;">Gemini</span>
+                    </a>
+                </li>
+            </ul>
         </li>
 
         <!-- Modules Group -->

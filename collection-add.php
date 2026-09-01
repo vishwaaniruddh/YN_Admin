@@ -19,19 +19,39 @@ function scan_collection_images_recursive($dir, $base_dir, &$results) {
         if (is_dir($path)) {
             scan_collection_images_recursive($path, $base_dir, $results);
         } elseif (preg_match('/\.(jpg|jpeg|png|webp|gif)$/i', $item)) {
-            $rel = str_replace($base_dir . '/', '', $path);
+            $rel = str_replace($base_dir . DIRECTORY_SEPARATOR, '', $path);
+            $rel = str_replace(DIRECTORY_SEPARATOR, '/', $rel);
             $results[] = 'uploads/collections/' . $rel;
         }
     }
 }
 scan_collection_images_recursive($collections_dir, $collections_dir, $available_images);
 
+// Categories list
+$knownCategories = ['Blouse', 'Anarkali', 'Lehenga', 'Gown', 'Suit', 'Indo western', 'Kids wear', 'Sari', 'Sari Makeover', 'Family Twinning', 'Mens wear', 'Home furnishing'];
+if (is_dir($collections_dir)) {
+    foreach (scandir($collections_dir) as $d) {
+        if ($d === '.' || $d === '..') continue;
+        if (is_dir($collections_dir . '/' . $d)) {
+            $cName = ucfirst($d);
+            if (!in_array($cName, $knownCategories)) {
+                $knownCategories[] = $cName;
+            }
+        }
+    }
+}
+
 // Handle Form Submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title = trim($_POST['title'] ?? '');
+    $sku = trim($_POST['sku'] ?? '');
+    $category = trim($_POST['category'] ?? 'Blouse');
+    $fabric = trim($_POST['fabric'] ?? '');
+    $work_type = trim($_POST['work_type'] ?? '');
+    $color = trim($_POST['color'] ?? '');
     $subtitle = trim($_POST['subtitle'] ?? '');
-    $category = trim($_POST['category'] ?? 'Client Diaries');
     $description = trim($_POST['description'] ?? '');
+    $video_url = trim($_POST['video_url'] ?? '');
     $status = $_POST['status'] ?? 'published';
     $is_featured = isset($_POST['is_featured']) ? 1 : 0;
     $sort_order = (int)($_POST['sort_order'] ?? 0);
@@ -39,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $cover_choice = $_POST['cover_choice'] ?? '';
 
     if (empty($title)) {
-        $message = "Collection Title is required.";
+        $message = "Outfit Title is required.";
     } else {
         $slug = generate_slug($title);
         // Ensure unique slug
@@ -56,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // 1. Handle Direct Upload Cover
             if (isset($_FILES['cover_file']) && $_FILES['cover_file']['error'] === UPLOAD_ERR_OK) {
-                $upload = upload_image($_FILES['cover_file'], 'uploads/collections/custom', $slug . '-cover');
+                $upload = upload_image($_FILES['cover_file'], 'uploads/collections/' . $category . '/' . $slug, $slug . '-cover');
                 if (is_array($upload) && isset($upload['filepath'])) {
                     $cover_image_path = $upload['filepath'];
                 }
@@ -65,18 +85,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             // 2. Insert Collection record
-            $stmt = $pdo->prepare("INSERT INTO collections (title, slug, subtitle, category, description, cover_image, is_featured, sort_order, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$title, $slug, $subtitle, $category, $description, $cover_image_path, $is_featured, $sort_order, $status]);
+            $stmt = $pdo->prepare("INSERT INTO collections 
+                (title, slug, sku, category, subtitle, description, fabric, work_type, color, cover_image, video_url, is_featured, sort_order, status) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$title, $slug, $sku, $category, $subtitle, $description, $fabric, $work_type, $color, $cover_image_path, $video_url, $is_featured, $sort_order, $status]);
             $collection_id = $pdo->lastInsertId();
 
-            $ins_img = $pdo->prepare("INSERT INTO collection_images (collection_id, image_path, caption, outfit_type, sort_order) VALUES (?, ?, ?, ?, ?)");
+            $ins_img = $pdo->prepare("INSERT INTO collection_images 
+                (collection_id, image_path, caption, angle_type, media_type, is_cover, sort_order) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)");
             $img_order = 1;
 
             // 3. Attach selected library images
             if (!empty($selected_library_images) && is_array($selected_library_images)) {
                 foreach ($selected_library_images as $lib_img) {
                     $caption = pathinfo($lib_img, PATHINFO_FILENAME);
-                    $ins_img->execute([$collection_id, $lib_img, $caption, $category, $img_order++]);
+                    $isCover = ($lib_img === $cover_image_path) ? 1 : 0;
+                    $ins_img->execute([$collection_id, $lib_img, $caption, 'Front View', 'image', $isCover, $img_order++]);
                     if (!$cover_image_path) {
                         $cover_image_path = $lib_img;
                     }
@@ -96,10 +121,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             'error' => $files['error'][$i],
                             'size' => $files['size'][$i]
                         ];
-                        $upload = upload_image($single_file, 'uploads/collections/' . $slug, 'photo_' . time() . '_' . $i);
+                        $upload = upload_image($single_file, 'uploads/collections/' . $category . '/' . $slug, 'photo_' . time() . '_' . $i);
                         if (is_array($upload) && isset($upload['filepath'])) {
                             $caption = pathinfo($files['name'][$i], PATHINFO_FILENAME);
-                            $ins_img->execute([$collection_id, $upload['filepath'], $caption, $category, $img_order++]);
+                            $isCover = ($upload['filepath'] === $cover_image_path) ? 1 : 0;
+                            $ins_img->execute([$collection_id, $upload['filepath'], $caption, 'Angle View', 'image', $isCover, $img_order++]);
                             if (!$cover_image_path) {
                                 $cover_image_path = $upload['filepath'];
                             }
@@ -114,194 +140,178 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             $pdo->commit();
-            log_activity($pdo, 'add_collection', 'collection', $collection_id, "Created collection '$title'");
+            log_activity($pdo, 'add_collection', 'collection', $collection_id, "Created outfit style '$title'");
             header("Location: collections.php?msg=created");
             exit();
 
         } catch (Exception $e) {
-            if ($pdo->inTransaction()) {
-                $pdo->rollBack();
-            }
-            $message = "Error creating collection: " . $e->getMessage();
+            $pdo->rollBack();
+            $message = "Database Error: " . $e->getMessage();
         }
     }
 }
 
-$page_title = "Add New Collection";
+$page_title = "Add Outfit Style";
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 ?>
 
 <div class="wrap">
-    
-    <!-- WordPress Standard Header -->
-    <h1 class="wp-heading-inline">Add New Collection</h1>
-    <a href="collections.php" class="page-title-action">&larr; Back to Collections</a>
-    <hr class="wp-header-end">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+        <div>
+            <h1 style="font-size: 24px; font-weight: 800; color: #0f172a; margin: 0 0 4px 0;">
+                <i class="fa-solid fa-circle-plus" style="color: #6366f1;"></i> Add Outfit Style
+            </h1>
+            <p style="font-size: 13px; color: #64748b; margin: 0;">Add a new designer outfit with category, fabric details, multiple photoshoot angles, and video.</p>
+        </div>
+        <div>
+            <a href="collections.php" class="button"><i class="fa-solid fa-arrow-left"></i> Back to Outfits</a>
+        </div>
+    </div>
 
     <?php if ($message): ?>
-        <div class="notice notice-error is-dismissible" style="margin: 15px 0;">
-            <p><?php echo htmlspecialchars($message); ?></p>
-        </div>
+    <div class="notice notice-error" style="padding: 12px 16px; border-radius: 6px; margin-bottom: 20px;">
+        <p><strong>Error:</strong> <?php echo htmlspecialchars($message); ?></p>
+    </div>
     <?php endif; ?>
 
-    <form method="POST" action="collection-add.php" enctype="multipart/form-data" id="post">
-        
-        <!-- WordPress #poststuff 2-Column Layout -->
-        <div id="poststuff">
-            <div id="post-body" class="metabox-holder columns-2">
-                
-                <!-- Main Left Column -->
-                <div id="post-body-content">
-                    
-                    <!-- Title Input -->
-                    <div id="titlediv" style="margin-bottom: 20px;">
-                        <div id="titlewrap">
-                            <label class="screen-reader-text" id="title-prompt-text" for="title">Enter collection title here</label>
-                            <input type="text" name="title" size="30" value="" id="title" placeholder="Collection Title (e.g. Royal Rajputana Bridal Diaries)" required style="width: 100%; font-size: 1.7em; height: 1.7em; line-height: 100%; padding: 3px 8px;">
+    <form method="POST" action="" enctype="multipart/form-data">
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+            <!-- Left Main Column -->
+            <div>
+                <!-- Primary Outfit Details Card -->
+                <div class="card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                    <h3 style="font-size: 16px; font-weight: 700; color: #0f172a; margin-top: 0; margin-bottom: 16px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">
+                        <i class="fa-solid fa-vest-patches" style="color: #6366f1;"></i> Outfit Information
+                    </h3>
+
+                    <div style="margin-bottom: 16px;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 6px; color: #334155;">Outfit Title <span style="color: #ef4444;">*</span></label>
+                        <input type="text" name="title" class="form-control" style="width: 100%; font-size: 15px; font-weight: 600; padding: 8px 12px; border-radius: 6px;" placeholder="e.g. Royal Wine Raw Silk Zardozi Embroidered Bridal Blouse" required>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                        <div>
+                            <label style="font-weight: 600; display: block; margin-bottom: 6px; color: #334155;">Collection Category <span style="color: #ef4444;">*</span></label>
+                            <select name="category" class="form-control" style="width: 100%; padding: 8px; border-radius: 6px;" required>
+                                <?php foreach ($knownCategories as $cat): ?>
+                                    <option value="<?php echo htmlspecialchars($cat); ?>" <?php echo ($cat === 'Blouse') ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($cat); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; display: block; margin-bottom: 6px; color: #334155;">Style Code / SKU</label>
+                            <input type="text" name="sku" class="form-control" style="width: 100%; padding: 8px 12px; border-radius: 6px;" placeholder="e.g. BLS-001">
                         </div>
                     </div>
 
-                    <!-- Postbox: Basic Information -->
-                    <div class="postbox">
-                        <div class="postbox-header">
-                            <h2><strong>Collection Overview &amp; Story</strong></h2>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                        <div>
+                            <label style="font-weight: 600; display: block; margin-bottom: 6px; color: #334155;">Fabric</label>
+                            <input type="text" name="fabric" class="form-control" style="width: 100%; padding: 8px 12px; border-radius: 6px;" placeholder="e.g. Pure Raw Silk, Velvet">
                         </div>
-                        <div class="inside" style="padding: 15px;">
-                            
-                            <p>
-                                <label for="coll_subtitle"><strong>Subtitle / Tagline:</strong></label><br>
-                                <input type="text" id="coll_subtitle" name="subtitle" value="" style="width: 100%;" placeholder="e.g. Handcrafted crimson velvet lehengas & uncut Polki jewels">
-                            </p>
-
-                            <p>
-                                <label for="coll_category"><strong>Category:</strong></label><br>
-                                <select id="coll_category" name="category" style="width: 100%; max-width: 350px;">
-                                    <option value="Real Brides">Real Brides &amp; Client Celebrations</option>
-                                    <option value="Bridal Couture">Bridal Couture &amp; Lehengas</option>
-                                    <option value="Designer Blouses">Designer Blouses &amp; Cholis</option>
-                                    <option value="Menswear Couture">Menswear &amp; Groom Sherwanis</option>
-                                    <option value="Fine Jewellery">Fine Jewellery &amp; Heritage Sets</option>
-                                    <option value="Editorial Shoots">Editorial &amp; Indoor Studio Shoots</option>
-                                    <option value="Celebrity Styling">Celebrity &amp; VIP Styling</option>
-                                </select>
-                            </p>
-
-                            <p>
-                                <label for="coll_description"><strong>Editorial Narrative / Description:</strong></label><br>
-                                <textarea id="coll_description" name="description" rows="5" style="width: 100%; font-size: 13px;" placeholder="Write about the inspiration, fabrics, embroidery, karigari, or client story..."></textarea>
-                            </p>
-
+                        <div>
+                            <label style="font-weight: 600; display: block; margin-bottom: 6px; color: #334155;">Work / Embroidery</label>
+                            <input type="text" name="work_type" class="form-control" style="width: 100%; padding: 8px 12px; border-radius: 6px;" placeholder="e.g. Hand Zardozi &amp; Pearl">
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; display: block; margin-bottom: 6px; color: #334155;">Color</label>
+                            <input type="text" name="color" class="form-control" style="width: 100%; padding: 8px 12px; border-radius: 6px;" placeholder="e.g. Wine / Antique Gold">
                         </div>
                     </div>
 
-                    <!-- Postbox: Attach Shoot Photos -->
-                    <div class="postbox">
-                        <div class="postbox-header">
-                            <h2><strong>Attach Shoot Photos</strong></h2>
-                        </div>
-                        <div class="inside" style="padding: 15px;">
-                            
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                                <!-- Direct Upload -->
-                                <div style="background: #f6f7f7; border: 1px dashed #c3c4c7; border-radius: 4px; padding: 15px;">
-                                    <h4 style="margin: 0 0 8px 0;"><i class="fa-solid fa-cloud-arrow-up"></i> Upload from Computer:</h4>
-                                    <input type="file" name="gallery_files[]" multiple accept="image/*" style="width: 100%;">
-                                    <p class="description" style="margin-top: 6px;">Select one or multiple image files (JPG, PNG, WEBP).</p>
-                                </div>
-
-                                <!-- Library Selector -->
-                                <div style="background: #f6f7f7; border: 1px solid #c3c4c7; border-radius: 4px; padding: 15px;">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                                        <h4 style="margin: 0;"><i class="fa-solid fa-folder-open"></i> Pick from Server Library:</h4>
-                                        <span id="selectedCountBadge" style="font-size: 11px; background: #2271b1; color: #fff; padding: 2px 8px; border-radius: 10px; font-weight: bold;">0 Selected</span>
-                                    </div>
-                                    <details open>
-                                        <summary style="color: #2271b1; cursor: pointer; font-weight: 600; font-size: 13px;">Browse Library (<?php echo count($available_images); ?> photos available)</summary>
-                                        <div style="max-height: 300px; overflow-y: auto; margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); gap: 6px; padding: 6px; background: #ffffff; border: 1px solid #dcdcde; border-radius: 3px;">
-                                            <?php foreach ($available_images as $imgPath): 
-                                                $thumb = get_collection_image_url($imgPath);
-                                            ?>
-                                            <label style="position: relative; aspect-ratio: 1; border-radius: 3px; overflow: hidden; display: block; cursor: pointer; border: 1px solid #dcdcde;">
-                                                <input type="checkbox" name="library_images[]" value="<?php echo htmlspecialchars($imgPath); ?>" style="position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; z-index: 2;" onchange="updateSelectedCount()">
-                                                <img src="<?php echo htmlspecialchars($thumb); ?>" alt="Photo" style="width: 100%; height: 100%; object-fit: cover;" loading="lazy">
-                                            </label>
-                                            <?php endforeach; ?>
-                                        </div>
-                                    </details>
-                                </div>
-                            </div>
-
-                        </div>
+                    <div style="margin-bottom: 16px;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 6px; color: #334155;">Short Subtitle / Tagline</label>
+                        <input type="text" name="subtitle" class="form-control" style="width: 100%; padding: 8px 12px; border-radius: 6px;" placeholder="e.g. Handcrafted couture bridal edition">
                     </div>
 
+                    <div style="margin-bottom: 16px;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 6px; color: #334155;">Lookbook Description</label>
+                        <textarea name="description" rows="4" class="form-control" style="width: 100%; padding: 8px 12px; border-radius: 6px;" placeholder="Detailed design notes, styling inspirations, neckline details, matching lehenga/sari pairing..."></textarea>
+                    </div>
+
+                    <div>
+                        <label style="font-weight: 600; display: block; margin-bottom: 6px; color: #334155;">Outfit Video URL (Optional)</label>
+                        <input type="text" name="video_url" class="form-control" style="width: 100%; padding: 8px 12px; border-radius: 6px;" placeholder="e.g. https://www.youtube.com/watch?v=... or MP4 file link">
+                    </div>
                 </div>
 
-                <!-- Right Sidebar Column (WordPress Standard Sidebar) -->
-                <div id="postbox-container-1" class="postbox-container">
-                    
-                    <!-- Postbox: Publish Options -->
-                    <div class="postbox">
-                        <div class="postbox-header">
-                            <h2><strong>Publish &amp; Visibility</strong></h2>
-                        </div>
-                        <div class="inside" style="padding: 12px 15px;">
-                            
-                            <div class="misc-pub-section" style="padding: 8px 0; border-bottom: 1px solid #f0f0f1;">
-                                <label for="coll_status"><strong>Status:</strong></label>
-                                <select id="coll_status" name="status" style="width: 100%; margin-top: 4px;">
-                                    <option value="published">Published (Live on Website)</option>
-                                    <option value="draft">Draft (Hidden)</option>
-                                </select>
-                            </div>
+                <!-- Photoshoot Media Card -->
+                <div class="card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                    <h3 style="font-size: 16px; font-weight: 700; color: #0f172a; margin-top: 0; margin-bottom: 16px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">
+                        <i class="fa-solid fa-camera" style="color: #6366f1;"></i> Photoshoot Gallery (Multiple Angles)
+                    </h3>
 
-                            <div class="misc-pub-section" style="padding: 10px 0; border-bottom: 1px solid #f0f0f1;">
-                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                                    <input type="checkbox" name="is_featured" value="1" checked>
-                                    <strong>Feature on Homepage</strong>
+                    <div style="margin-bottom: 18px;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 6px; color: #334155;">Upload Photos (Front, Back, Close-up angles)</label>
+                        <input type="file" name="gallery_files[]" multiple accept="image/*" class="form-control" style="width: 100%; padding: 8px; border-radius: 6px;">
+                        <span style="font-size: 11px; color: #64748b;">Select multiple image files at once to create a complete outfit gallery.</span>
+                    </div>
+
+                    <?php if (!empty($available_images)): ?>
+                    <div style="margin-top: 16px; border-top: 1px solid #f1f5f9; padding-top: 16px;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 8px; color: #334155;">Or Select from Server Image Library:</label>
+                        <div style="max-height: 240px; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+                            <?php foreach (array_slice($available_images, 0, 40) as $imgPath): ?>
+                                <label style="display: block; position: relative; aspect-ratio: 1; border-radius: 4px; overflow: hidden; cursor: pointer; border: 1px solid #cbd5e1;">
+                                    <input type="checkbox" name="library_images[]" value="<?php echo htmlspecialchars($imgPath); ?>" style="position: absolute; top: 4px; left: 4px; z-index: 2;">
+                                    <img src="<?php echo htmlspecialchars(get_collection_image_url($imgPath)); ?>" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='assets/images/placeholder.svg';">
                                 </label>
-                            </div>
-
-                            <div class="misc-pub-section" style="padding: 8px 0;">
-                                <label for="coll_sort_order"><strong>Display Order:</strong></label>
-                                <input type="number" id="coll_sort_order" name="sort_order" value="0" style="width: 80px; margin-top: 4px;">
-                            </div>
-
-                            <div id="major-publishing-actions" style="margin-top: 15px; padding-top: 12px; border-top: 1px solid #dcdcde; text-align: right;">
-                                <button type="submit" class="button button-primary button-large" style="width: 100%;">
-                                    <i class="fa-solid fa-save"></i> Save Collection
-                                </button>
-                            </div>
-
+                            <?php endforeach; ?>
                         </div>
                     </div>
+                    <?php endif; ?>
+                </div>
+            </div>
 
-                    <!-- Postbox: Cover Image -->
-                    <div class="postbox">
-                        <div class="postbox-header">
-                            <h2><strong>Featured Cover Image (Optional)</strong></h2>
-                        </div>
-                        <div class="inside" style="padding: 15px;">
-                            <label for="cover_file"><strong>Upload Specific Cover:</strong></label>
-                            <input type="file" id="cover_file" name="cover_file" accept="image/*" style="width: 100%; margin-top: 4px;">
-                            <p class="description" style="margin-top: 6px;">Leave empty to auto-use the first attached photo as the collection cover.</p>
-                        </div>
+            <!-- Right Sidebar Column -->
+            <div>
+                <!-- Publish / Save Card -->
+                <div class="card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                    <h3 style="font-size: 15px; font-weight: 700; color: #0f172a; margin-top: 0; margin-bottom: 14px; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">
+                        Publishing
+                    </h3>
+
+                    <div style="margin-bottom: 14px;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px; color: #334155;">Status</label>
+                        <select name="status" class="form-control" style="width: 100%; padding: 6px; border-radius: 6px;">
+                            <option value="published">Published (Visible in Lookbook)</option>
+                            <option value="draft">Draft</option>
+                        </select>
                     </div>
 
+                    <div style="margin-bottom: 14px;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px; color: #334155;">Sort Order</label>
+                        <input type="number" name="sort_order" value="0" class="form-control" style="width: 100%; padding: 6px; border-radius: 6px;">
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; color: #334155;">
+                            <input type="checkbox" name="is_featured" value="1"> 
+                            <span><i class="fa-solid fa-star" style="color: #eab308;"></i> Featured Outfit</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="button button-primary" style="width: 100%; padding: 10px; font-weight: 700; font-size: 14px; background: #059669; border-color: #047857;">
+                        <i class="fa-solid fa-check"></i> Save Outfit Style
+                    </button>
                 </div>
 
+                <!-- Cover Image Card -->
+                <div class="card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                    <h3 style="font-size: 15px; font-weight: 700; color: #0f172a; margin-top: 0; margin-bottom: 14px; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">
+                        Hero Cover Image
+                    </h3>
+                    <div>
+                        <input type="file" name="cover_file" accept="image/*" class="form-control" style="width: 100%; padding: 6px; border-radius: 6px;">
+                        <span style="font-size: 11px; color: #64748b; margin-top: 4px; display: block;">If empty, the first photoshoot image will be used automatically.</span>
+                    </div>
+                </div>
             </div>
         </div>
-
     </form>
-
 </div>
-
-<script>
-function updateSelectedCount() {
-    const checked = document.querySelectorAll('input[name="library_images[]"]:checked').length;
-    document.getElementById('selectedCountBadge').innerText = checked + ' Selected';
-}
-</script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

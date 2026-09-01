@@ -143,8 +143,38 @@ try {
         unset($c);
     }
 
-    // Category Counts Breakdown
-    $catCounts = $pdo->query("SELECT category, COUNT(*) as count FROM collections WHERE category IS NOT NULL AND category != '' GROUP BY category ORDER BY category ASC")->fetchAll(PDO::FETCH_ASSOC);
+    // Category Counts Breakdown (Combining DB records + on-disk category folders)
+    $catCountsDb = $pdo->query("SELECT category, COUNT(*) as count FROM collections WHERE category IS NOT NULL AND category != '' GROUP BY category ORDER BY category ASC")->fetchAll(PDO::FETCH_KEY_PAIR);
+
+    $allKnownCats = ['Blouse', 'Anarkali', 'Lehenga', 'Gown', 'Suit', 'Indo western', 'Kids wear', 'Sari', 'Sari Makeover', 'Family Twinning', 'Mens wear', 'Home furnishing'];
+    $uploadsPath = realpath(__DIR__ . '/../uploads/collections');
+    if ($uploadsPath && is_dir($uploadsPath)) {
+        foreach (scandir($uploadsPath) as $d) {
+            if ($d === '.' || $d === '..') continue;
+            if (is_dir($uploadsPath . DIRECTORY_SEPARATOR . $d)) {
+                $cName = ucfirst($d);
+                if (!in_array($cName, $allKnownCats)) {
+                    $allKnownCats[] = $cName;
+                }
+            }
+        }
+    }
+
+    $catCounts = [];
+    foreach ($allKnownCats as $catName) {
+        $count = 0;
+        foreach ($catCountsDb as $k => $v) {
+            if (strcasecmp($k, $catName) === 0) {
+                $count = (int)$v;
+                break;
+            }
+        }
+        $catCounts[] = [
+            'category' => $catName,
+            'count' => $count
+        ];
+    }
+
     $totalAllCollections = $pdo->query("SELECT COUNT(*) FROM collections")->fetchColumn();
     $totalPhotosInDb = $pdo->query("SELECT COUNT(*) FROM collection_images")->fetchColumn();
 

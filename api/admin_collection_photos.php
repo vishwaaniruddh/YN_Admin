@@ -60,6 +60,15 @@ try {
         exit();
     }
 
+    // 3b. Update Angle Type via AJAX
+    if ($action === 'update_angle' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        $photo_id = (int)($_POST['photo_id'] ?? 0);
+        $angle = trim($_POST['angle_type'] ?? 'Front View');
+        $pdo->prepare("UPDATE collection_images SET angle_type = ? WHERE id = ? AND collection_id = ?")->execute([$angle, $photo_id, $collection_id]);
+        echo json_encode(['success' => true, 'message' => 'Angle updated']);
+        exit();
+    }
+
     // 4. Batch Upload Photos via AJAX
     if ($action === 'upload_photos' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $pdo->prepare("SELECT slug, category FROM collections WHERE id = ?");
@@ -136,7 +145,7 @@ try {
     $totalPages = ceil($totalCount / $perPage);
 
     // Fetch batch
-    $sql = "SELECT id, collection_id, image_path, thumb_path, caption, outfit_type, sort_order 
+    $sql = "SELECT id, collection_id, image_path, thumb_path, caption, outfit_type, angle_type, media_type, is_cover, sort_order 
             FROM collection_images 
             WHERE $whereSql 
             ORDER BY sort_order ASC, id ASC 
@@ -151,6 +160,9 @@ try {
     foreach ($photos as &$p) {
         $p['image_url'] = get_collection_image_url($p['image_path']);
         $p['is_cover'] = ($p['image_path'] === $coverImage);
+        if (empty($p['angle_type'])) {
+            $p['angle_type'] = 'Angle View';
+        }
     }
     unset($p);
 
