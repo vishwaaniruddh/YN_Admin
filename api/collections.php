@@ -21,7 +21,7 @@ try {
         }
 
         // Fetch gallery images
-        $img_stmt = $pdo->prepare("SELECT id, image_path, thumb_path, caption, outfit_type, sort_order FROM collection_images WHERE collection_id = ? ORDER BY sort_order ASC, id ASC");
+        $img_stmt = $pdo->prepare("SELECT id, image_path, thumb_path, caption, angle_type, media_type, is_cover, sort_order FROM collection_images WHERE collection_id = ? ORDER BY sort_order ASC, id ASC");
         $img_stmt->execute([$collection['id']]);
         $gallery = $img_stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -36,9 +36,10 @@ try {
     }
 
     if (isset($_GET['all_photos']) && $_GET['all_photos'] == '1') {
-        // Fetch all individual shoot photos across published collections
+        // Fetch all individual shoot photos across published collections with angle tags & outfit info
         $catFilter = trim($_GET['category'] ?? '');
-        $sql = "SELECT ci.id, ci.image_path, ci.caption, ci.outfit_type, ci.collection_id, c.title as collection_title, c.slug as collection_slug, c.category 
+        $sql = "SELECT ci.id, ci.image_path, ci.caption, ci.angle_type, ci.media_type, ci.is_cover, ci.collection_id, 
+                       c.title as collection_title, c.slug as collection_slug, c.category, c.fabric, c.work_type, c.color, c.sku
                 FROM collection_images ci 
                 JOIN collections c ON ci.collection_id = c.id 
                 WHERE c.status = 'published'";
@@ -67,6 +68,7 @@ try {
         ]);
         exit();
     }
+
     $where = ["status = 'published'"];
     $params = [];
 
@@ -74,7 +76,7 @@ try {
         $where[] = "is_featured = 1";
     }
 
-    if (!empty($_GET['category'])) {
+    if (!empty($_GET['category']) && $_GET['category'] !== 'All') {
         $where[] = "category = ?";
         $params[] = $_GET['category'];
     }
@@ -86,8 +88,7 @@ try {
     }
 
     $sql = "SELECT c.*, 
-            (SELECT COUNT(*) FROM collection_images ci WHERE ci.collection_id = c.id) as total_images,
-            (SELECT GROUP_CONCAT(ci.image_path SEPARATOR '||') FROM (SELECT image_path, collection_id FROM collection_images ORDER BY sort_order ASC LIMIT 4) ci WHERE ci.collection_id = c.id) as preview_thumbs
+            (SELECT COUNT(*) FROM collection_images ci WHERE ci.collection_id = c.id) as total_images
             FROM collections c 
             WHERE $where_sql 
             ORDER BY c.sort_order ASC, c.id DESC $limit_sql";
@@ -96,18 +97,41 @@ try {
     $stmt->execute($params);
     $collections = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    foreach ($collections as &$c) {
-        $c['preview_images'] = !empty($c['preview_thumbs']) ? explode('||', $c['preview_thumbs']) : [];
-        unset($c['preview_thumbs']);
+    // Batch fetch all preview photos for each outfit
+    if (!empty($collections)) {
+        $collIds = array_column($collections, 'id');
+        $inPlaceholders = implode(',', array_fill(0, count($collIds), '?'));
+        
+        $prevSql = "SELECT id, collection_id, image_path, caption, angle_type, is_cover, media_type 
+                    FROM collection_images 
+                    WHERE collection_id IN ($inPlaceholders) 
+                    ORDER BY sort_order ASC, id ASC";
+        $prevStmt = $pdo->prepare($prevSql);
+        $prevStmt->execute($collIds);
+        $allMedia = $prevStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $mediaMap = [];
+        foreach ($allMedia as $m) {
+            $cid = $m['collection_id'];
+            if (!isset($mediaMap[$cid])) $mediaMap[$cid] = [];
+            $mediaMap[$cid][] = $m;
+        }
+
+        foreach ($collections as &$c) {
+            $c['gallery'] = $mediaMap[$c['id']] ?? [];
+            $c['preview_images'] = array_column(array_slice($c['gallery'], 0, 4), 'image_path');
+        }
+        unset($c);
     }
 
-    // Fetch active categories for tab filters
-    $categories = $pdo->query("SELECT DISTINCT category FROM collections WHERE status = 'published' AND category IS NOT NULL AND category != '' ORDER BY category ASC")->fetchAll(PDO::FETCH_COLUMN);
+    // Fetch active categories with counts
+    $catCounts = $pdo->query("SELECT category, COUNT(*) as count FROM collections WHERE status = 'published' AND category IS NOT NULL AND category != '' GROUP BY category ORDER BY category ASC")->fetchAll(PDO::FETCH_ASSOC);
 
     echo json_encode([
         'success' => true,
         'data' => $collections,
-        'categories' => $categories,
+        'categories' => array_column($catCounts, 'category'),
+        'category_counts' => $catCounts,
         'count' => count($collections)
     ]);
 
