@@ -100,6 +100,148 @@ if (!$archiveDir) {
     }
 }
 
+// Action: Download Blank Excel/CSV Template
+if (isset($_GET['action']) && $_GET['action'] === 'download_template') {
+    $format = strtolower($_GET['format'] ?? 'xlsx');
+    $sampleData = [
+        ['sku', 'name', 'categories', 'price', 'sale_price', 'stock_qty', 'description', 'short_description', 'status', 'is_featured'],
+        ['IT101', 'Royal Oudh Ittar 10ml', 'Ittar, Perfumes > Oudh', '1499', '1199', '25', 'Premium long-lasting concentrated pure Oudh ittar perfume oil.', 'Pure Oudh fragrance oil 10ml', 'published', '1'],
+        ['IT102', 'Gulab Khas Rose Ittar 10ml', 'Ittar, Perfumes > Floral', '999', '799', '30', 'Authentic distilled Indian Damask rose ittar fragrance with sweet floral notes.', 'Indian Rose fragrance oil 10ml', 'published', '0'],
+        ['IT103', 'Mitti Attar 10ml (Petrichor)', 'Ittar, Perfumes > Earthy', '1299', '999', '20', 'The iconic scent of baked earth after the first monsoon rain.', 'Natural petrichor baked earth ittar', 'published', '1'],
+    ];
+
+    if ($format === 'csv') {
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="product_import_template.csv"');
+        $output = fopen('php://output', 'w');
+        foreach ($sampleData as $row) {
+            fputcsv($output, $row);
+        }
+        fclose($output);
+        exit;
+    } else {
+        if (class_exists('\PhpOffice\PhpSpreadsheet\Spreadsheet')) {
+            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('Products');
+
+            // Populate data
+            $sheet->fromArray($sampleData, null, 'A1');
+
+            // Style headers
+            $headerStyle = [
+                'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                'fill' => [
+                    'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                    'startColor' => ['rgb' => '4F46E5']
+                ],
+                'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER]
+            ];
+            $sheet->getStyle('A1:J1')->applyFromArray($headerStyle);
+            foreach (range('A', 'J') as $col) {
+                $sheet->getColumnDimension($col)->setAutoSize(true);
+            }
+
+            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            header('Content-Disposition: attachment; filename="product_import_template.xlsx"');
+            header('Cache-Control: max-age=0');
+            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+            $writer->save('php://output');
+            exit;
+        } else {
+            // Fallback to CSV if PhpSpreadsheet not available
+            header('Content-Type: text/csv; charset=utf-8');
+            header('Content-Disposition: attachment; filename="product_import_template.csv"');
+            $output = fopen('php://output', 'w');
+            foreach ($sampleData as $row) {
+                fputcsv($output, $row);
+            }
+            fclose($output);
+            exit;
+        }
+    }
+}
+
+// Action: Auto-generate spreadsheet directly from SKU folders in active directory
+if (isset($_GET['action']) && $_GET['action'] === 'generate_from_folders') {
+    if (!$archiveDir || !is_dir($archiveDir)) {
+        header("Location: import_archive.php?error=" . urlencode("Archive directory not found"));
+        exit;
+    }
+
+    $entries = scandir($archiveDir);
+    $skuFolders = [];
+    foreach ($entries as $e) {
+        if ($e === '.' || $e === '..') continue;
+        if (is_dir($archiveDir . DIRECTORY_SEPARATOR . $e)) {
+            $skuFolders[] = trim($e);
+        }
+    }
+
+    if (empty($skuFolders)) {
+        header("Location: import_archive.php?error=" . urlencode("No SKU folders found in " . basename($archiveDir) . "/"));
+        exit;
+    }
+
+    sort($skuFolders);
+
+    $rows = [
+        ['sku', 'name', 'categories', 'price', 'sale_price', 'stock_qty', 'description', 'short_description', 'status', 'is_featured']
+    ];
+
+    $defaultCat = (stripos(basename($archiveDir), 'ittar') !== false || stripos(basename($archiveDir), 'attar') !== false) ? 'Ittar' : 'Fashion';
+
+    foreach ($skuFolders as $sku) {
+        $cleanName = ucwords(str_replace(['_', '-'], ' ', $sku));
+        $rows[] = [
+            $sku,
+            $cleanName,
+            $defaultCat,
+            '999',
+            '799',
+            '10',
+            $cleanName . ' - Premium Quality Collection.',
+            $cleanName,
+            'published',
+            '0'
+        ];
+    }
+
+    $targetExcel = $archiveDir . DIRECTORY_SEPARATOR . 'products_' . strtolower(basename($archiveDir)) . '.xlsx';
+
+    if (class_exists('\PhpOffice\PhpSpreadsheet\Spreadsheet')) {
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Products');
+        $sheet->fromArray($rows, null, 'A1');
+
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '16A34A']
+            ]
+        ];
+        $sheet->getStyle('A1:J1')->applyFromArray($headerStyle);
+        foreach (range('A', 'J') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save($targetExcel);
+    } else {
+        $targetCsv = $archiveDir . DIRECTORY_SEPARATOR . 'products_' . strtolower(basename($archiveDir)) . '.csv';
+        $fp = fopen($targetCsv, 'w');
+        foreach ($rows as $r) {
+            fputcsv($fp, $r);
+        }
+        fclose($fp);
+    }
+
+    header("Location: import_archive.php?custom_path=" . urlencode($archiveDir) . "&msg=" . urlencode("Successfully generated spreadsheet with " . count($skuFolders) . " SKUs from your folders!"));
+    exit;
+}
+
 // Helper: Resolve or Create Category Tree
 function resolve_or_create_category($pdo, $categoryInput) {
     if (empty($categoryInput)) return null;
@@ -520,8 +662,8 @@ $requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $requestUri = $_SERVER['REQUEST_URI'] ?? 'import_archive.php';
 
 // Handle file uploads (Excel / CSV or ZIP Archive)
-$uploadMessage = null;
-$uploadError = null;
+$uploadMessage = $_GET['msg'] ?? null;
+$uploadError = $_GET['error'] ?? null;
 
 if ($requestMethod === 'POST') {
     // 1. Direct Excel / CSV Upload
@@ -632,43 +774,135 @@ $scanResult = scanArchiveDirectory($archiveDir, $pdo);
 
         <?php if (!empty($scanResult['error'])): ?>
             <!-- Error / Setup Card -->
-            <div class="bg-rose-950/40 border border-rose-500/40 p-6 rounded-2xl text-xs text-rose-300 space-y-4">
-                <div class="flex items-center gap-2 text-sm font-bold text-rose-400">
-                    <i class="fas fa-exclamation-triangle"></i> Archive Setup Required
+            <div class="bg-slate-900/90 border border-slate-800 p-6 rounded-2xl text-xs space-y-5">
+                <div class="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-slate-800">
+                    <div class="flex items-center gap-2.5 text-sm font-bold text-amber-400">
+                        <i class="fas fa-file-circle-exclamation text-lg"></i>
+                        <span>Spreadsheet Needed in <code class="text-white bg-slate-950 px-2 py-0.5 rounded border border-slate-800"><?php echo htmlspecialchars(basename($archiveDir)); ?>/</code></span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <a href="import_archive.php?action=download_template&format=xlsx" class="px-3 py-1.5 bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30 font-semibold rounded-lg text-xs transition-all flex items-center gap-1.5">
+                            <i class="fas fa-file-excel"></i> Download Sample Excel (.xlsx)
+                        </a>
+                        <a href="import_archive.php?action=download_template&format=csv" class="px-3 py-1.5 bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 font-semibold rounded-lg text-xs transition-all flex items-center gap-1.5">
+                            <i class="fas fa-file-csv"></i> Download CSV
+                        </a>
+                    </div>
                 </div>
-                <p class="text-slate-300"><?php echo htmlspecialchars($scanResult['error']); ?></p>
-                
-                <?php if ($archiveDir && is_dir($archiveDir)): ?>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-                        <!-- Direct Excel / CSV Uploader -->
-                        <div class="bg-slate-900/90 border border-indigo-500/30 rounded-xl p-5 space-y-3">
-                            <div class="flex items-center gap-2 text-xs font-bold text-indigo-300">
-                                <i class="fas fa-file-excel text-emerald-400"></i> Option 1: Upload Spreadsheet (.xlsx / .csv)
-                            </div>
-                            <form method="POST" enctype="multipart/form-data" action="<?php echo htmlspecialchars($requestUri); ?>" class="space-y-3">
-                                <input type="hidden" name="custom_path" value="<?php echo htmlspecialchars($archiveDir); ?>">
-                                <input type="file" name="excel_file" accept=".xlsx,.xls,.csv" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-300 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 focus:outline-none">
-                                <button type="submit" class="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-600/20">
-                                    <i class="fas fa-upload"></i> Upload &amp; Audit
-                                </button>
-                            </form>
-                        </div>
 
-                        <!-- ZIP Archive Uploader -->
-                        <div class="bg-slate-900/90 border border-indigo-500/30 rounded-xl p-5 space-y-3">
-                            <div class="flex items-center gap-2 text-xs font-bold text-indigo-300">
-                                <i class="fas fa-file-zipper text-yellow-400"></i> Option 2: Upload ZIP (Spreadsheet + SKU Folders)
+                <?php if ($archiveDir && is_dir($archiveDir) && !empty($scanResult['total_folders'])): ?>
+                    <!-- Quick 1-Click Auto Generator Box -->
+                    <div class="bg-emerald-950/40 border border-emerald-500/40 rounded-xl p-5 flex items-center justify-between flex-wrap gap-4">
+                        <div class="space-y-1">
+                            <div class="text-xs font-bold text-emerald-300 flex items-center gap-2">
+                                <i class="fas fa-magic text-emerald-400"></i> Found <?php echo $scanResult['total_folders']; ?> SKU folder(s) in <?php echo htmlspecialchars(basename($archiveDir)); ?>/
                             </div>
-                            <form method="POST" enctype="multipart/form-data" action="<?php echo htmlspecialchars($requestUri); ?>" class="space-y-3">
-                                <input type="hidden" name="custom_path" value="<?php echo htmlspecialchars($archiveDir); ?>">
-                                <input type="file" name="zip_file" accept=".zip" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-300 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-yellow-600 file:text-white hover:file:bg-yellow-700 focus:outline-none">
-                                <button type="submit" class="w-full py-2 bg-yellow-600 hover:bg-yellow-700 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-yellow-600/20">
-                                    <i class="fas fa-file-zipper"></i> Upload &amp; Extract ZIP
-                                </button>
-                            </form>
+                            <p class="text-[11px] text-emerald-400/80">You can instantly auto-generate a pre-filled Excel spreadsheet with all your folder SKUs with 1 click!</p>
                         </div>
+                        <a href="import_archive.php?action=generate_from_folders&custom_path=<?php echo urlencode($archiveDir); ?>" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-all flex items-center gap-2 shadow-lg shadow-emerald-600/30">
+                            <i class="fas fa-bolt"></i> Auto-Generate Excel for <?php echo $scanResult['total_folders']; ?> SKUs
+                        </a>
                     </div>
                 <?php endif; ?>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Direct Excel / CSV Uploader -->
+                    <div class="bg-slate-950 border border-indigo-500/30 rounded-xl p-5 space-y-3">
+                        <div class="flex items-center gap-2 text-xs font-bold text-indigo-300">
+                            <i class="fas fa-file-excel text-emerald-400"></i> Option 1: Upload Existing Spreadsheet (.xlsx / .csv)
+                        </div>
+                        <form method="POST" enctype="multipart/form-data" action="<?php echo htmlspecialchars($requestUri); ?>" class="space-y-3">
+                            <input type="hidden" name="custom_path" value="<?php echo htmlspecialchars($archiveDir); ?>">
+                            <input type="file" name="excel_file" accept=".xlsx,.xls,.csv" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-300 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 focus:outline-none">
+                            <button type="submit" class="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-600/20">
+                                <i class="fas fa-upload"></i> Upload &amp; Start Audit
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- ZIP Archive Uploader -->
+                    <div class="bg-slate-950 border border-yellow-500/30 rounded-xl p-5 space-y-3">
+                        <div class="flex items-center gap-2 text-xs font-bold text-yellow-400">
+                            <i class="fas fa-file-zipper text-yellow-400"></i> Option 2: Upload Full ZIP (Spreadsheet + SKU Folders)
+                        </div>
+                        <form method="POST" enctype="multipart/form-data" action="<?php echo htmlspecialchars($requestUri); ?>" class="space-y-3">
+                            <input type="hidden" name="custom_path" value="<?php echo htmlspecialchars($archiveDir); ?>">
+                            <input type="file" name="zip_file" accept=".zip" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-300 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-yellow-600 file:text-white hover:file:bg-yellow-700 focus:outline-none">
+                            <button type="submit" class="w-full py-2 bg-yellow-600 hover:bg-yellow-700 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-yellow-600/20">
+                                <i class="fas fa-file-zipper"></i> Upload &amp; Extract ZIP
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Excel Format Guide Table -->
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
+                    <div class="text-xs font-bold text-slate-300 flex items-center gap-2">
+                        <i class="fas fa-table-list text-indigo-400"></i> Excel Column Format Reference
+                    </div>
+                    <div class="overflow-x-auto custom-scrollbar">
+                        <table class="w-full text-left text-[11px] font-mono border-collapse">
+                            <thead>
+                                <tr class="text-slate-400 border-b border-slate-800">
+                                    <th class="py-1.5 px-2">Column Header</th>
+                                    <th class="py-1.5 px-2">Required?</th>
+                                    <th class="py-1.5 px-2">Example Value</th>
+                                    <th class="py-1.5 px-2">Description</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800/60 text-slate-300">
+                                <tr>
+                                    <td class="py-1.5 px-2 text-indigo-300 font-bold">sku</td>
+                                    <td class="py-1.5 px-2 text-emerald-400 font-bold">Yes</td>
+                                    <td class="py-1.5 px-2 text-slate-400">IT101</td>
+                                    <td class="py-1.5 px-2">Must match the SKU folder name in ittar/</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1.5 px-2 text-indigo-300 font-bold">name</td>
+                                    <td class="py-1.5 px-2 text-emerald-400 font-bold">Yes</td>
+                                    <td class="py-1.5 px-2 text-slate-400">Royal Oudh Ittar 10ml</td>
+                                    <td class="py-1.5 px-2">Product title displayed on store</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1.5 px-2 text-indigo-300 font-bold">categories</td>
+                                    <td class="py-1.5 px-2 text-slate-400">Optional</td>
+                                    <td class="py-1.5 px-2 text-slate-400">Ittar, Perfumes > Oudh</td>
+                                    <td class="py-1.5 px-2">Category or subcategory names separated by comma</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1.5 px-2 text-indigo-300 font-bold">price</td>
+                                    <td class="py-1.5 px-2 text-emerald-400 font-bold">Yes</td>
+                                    <td class="py-1.5 px-2 text-slate-400">1499</td>
+                                    <td class="py-1.5 px-2">Regular / MRP price</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1.5 px-2 text-indigo-300 font-bold">sale_price</td>
+                                    <td class="py-1.5 px-2 text-slate-400">Optional</td>
+                                    <td class="py-1.5 px-2 text-slate-400">1199</td>
+                                    <td class="py-1.5 px-2">Discounted / offer price</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1.5 px-2 text-indigo-300 font-bold">stock_qty</td>
+                                    <td class="py-1.5 px-2 text-slate-400">Optional</td>
+                                    <td class="py-1.5 px-2 text-slate-400">25</td>
+                                    <td class="py-1.5 px-2">Available inventory quantity (default: 10)</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1.5 px-2 text-indigo-300 font-bold">description</td>
+                                    <td class="py-1.5 px-2 text-slate-400">Optional</td>
+                                    <td class="py-1.5 px-2 text-slate-400">Pure concentrated perfume oil...</td>
+                                    <td class="py-1.5 px-2">Full product details / fragrance notes</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1.5 px-2 text-indigo-300 font-bold">status</td>
+                                    <td class="py-1.5 px-2 text-slate-400">Optional</td>
+                                    <td class="py-1.5 px-2 text-slate-400">published</td>
+                                    <td class="py-1.5 px-2">"published" or "draft"</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
                 <div class="pt-3 border-t border-rose-500/20">
                     <span class="text-[11px] text-slate-400 font-medium block mb-1.5">Or specify a folder path on the server:</span>
