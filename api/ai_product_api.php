@@ -509,125 +509,130 @@ switch ($action) {
             exit;
         }
 
-        // Fetch product with full category hierarchy
-        $stmtP = $pdo->prepare("
-            SELECT p.id, p.sku, p.name, p.category_id, p.short_description, p.description,
-            (SELECT GROUP_CONCAT(c.name ORDER BY c.parent_id ASC SEPARATOR ' > ') 
-             FROM product_categories pc 
-             JOIN categories c ON pc.category_id = c.id 
-             WHERE pc.product_id = p.id) as full_category_name
-            FROM products WHERE p.id = ?
-        ");
-        $stmtP->execute([$productId]);
-        $prodRow = $stmtP->fetch(PDO::FETCH_ASSOC);
+        try {
+            // Fetch product with full category hierarchy
+            $stmtP = $pdo->prepare("
+                SELECT p.id, p.sku, p.name, p.category_id, p.short_description, p.description,
+                (SELECT GROUP_CONCAT(c.name ORDER BY c.parent_id ASC SEPARATOR ' > ') 
+                 FROM product_categories pc 
+                 JOIN categories c ON pc.category_id = c.id 
+                 WHERE pc.product_id = p.id) as full_category_name
+                FROM products p WHERE p.id = ?
+            ");
+            $stmtP->execute([$productId]);
+            $prodRow = $stmtP->fetch(PDO::FETCH_ASSOC);
 
-        if (!$prodRow) {
-            echo json_encode(['error' => 'Product not found in database.']);
-            exit;
-        }
+            if (!$prodRow) {
+                echo json_encode(['error' => 'Product not found in database.']);
+                exit;
+            }
 
-        $categoryName = $prodRow['full_category_name'];
-        if (empty($categoryName) && !empty($prodRow['category_id'])) {
-            $catStmt = $pdo->prepare("SELECT name FROM categories WHERE id = ?");
-            $catStmt->execute([$prodRow['category_id']]);
-            $categoryName = $catStmt->fetchColumn() ?: 'Fashion & Jewellery';
-        }
-        if (empty($categoryName)) $categoryName = 'Fashion & Jewellery';
+            $categoryName = $prodRow['full_category_name'];
+            if (empty($categoryName) && !empty($prodRow['category_id'])) {
+                $catStmt = $pdo->prepare("SELECT name FROM categories WHERE id = ?");
+                $catStmt->execute([$prodRow['category_id']]);
+                $categoryName = $catStmt->fetchColumn() ?: 'Fashion & Jewellery';
+            }
+            if (empty($categoryName)) $categoryName = 'Fashion & Jewellery';
 
-        $imgDataRes = getProductImageData($pdo, $productId);
-        if (isset($imgDataRes['error'])) {
-            echo json_encode(['error' => $imgDataRes['error']]);
-            exit;
-        }
+            $imgDataRes = getProductImageData($pdo, $productId);
+            if (isset($imgDataRes['error'])) {
+                echo json_encode(['error' => $imgDataRes['error']]);
+                exit;
+            }
 
-        $prompt = "You are an expert luxury Indian fashion and bridal jewellery copywriter for Yosshita & Neha Fashion Studio, Mumbai. " .
-                  "Carefully examine the attached product photograph and category context.\n\n" .
-                  "Category Context: " . $categoryName . "\n" .
-                  "SKU Code: " . ($prodRow['sku'] ?? '') . "\n" .
-                  "Current Working Title: " . ($prodRow['name'] ?? '') . "\n\n" .
-                  "Based on visual analysis of the product's colors, fabrics, stones, metal plating, embroidery, pattern, and design silhouette, generate complete e-commerce product copy in JSON format with exactly three fields:\n" .
-                  "1. \"name\": A clear, descriptive, and elegant product title (10 to 14 words long). Use simple, natural English. Include specific color, fabric/material (e.g. Pure Silk, Velvet, Brass/Copper Gold Plated, Kundan, Vilandi, Kalamkari), key design motifs, and style type. Do NOT use overly complex, archaic, or poetic words like 'resplendent', 'ethereal', 'wisteria', 'intricately'.\n" .
-                  "2. \"short_description\": A compelling 1 to 2 sentence highlight summary (20 to 35 words) perfect for search previews and quick overview.\n" .
-                  "3. \"description\": A rich, detailed product description (75 to 120 words). Start with an engaging paragraph describing its artisanal craftsmanship, drape/aesthetic appeal, and suitability for weddings, festive occasions, sangeet, or receptions. Follow with 'Key Features:' and 3 to 5 concise bullet points starting with the bullet character '• ' (e.g., '• Fabric/Material: ...', '• Work/Embroidery: ...', '• Color Palette: ...', '• Occasion: ...'). Do NOT use markdown asterisks (no '**').\n\n" .
-                  "Return ONLY a valid, parseable JSON object with keys \"name\", \"short_description\", and \"description\". Do NOT wrap with markdown code fences (no ```json, no ```).";
+            $prompt = "You are an expert luxury Indian fashion and bridal jewellery copywriter for Yosshita & Neha Fashion Studio, Mumbai. " .
+                      "Carefully examine the attached product photograph and category context.\n\n" .
+                      "Category Context: " . $categoryName . "\n" .
+                      "SKU Code: " . ($prodRow['sku'] ?? '') . "\n" .
+                      "Current Working Title: " . ($prodRow['name'] ?? '') . "\n\n" .
+                      "Based on visual analysis of the product's colors, fabrics, stones, metal plating, embroidery, pattern, and design silhouette, generate complete e-commerce product copy in JSON format with exactly three fields:\n" .
+                      "1. \"name\": A clear, descriptive, and elegant product title (10 to 14 words long). Use simple, natural English. Include specific color, fabric/material (e.g. Pure Silk, Velvet, Brass/Copper Gold Plated, Kundan, Vilandi, Kalamkari), key design motifs, and style type. Do NOT use overly complex, archaic, or poetic words like 'resplendent', 'ethereal', 'wisteria', 'intricately'.\n" .
+                      "2. \"short_description\": A compelling 1 to 2 sentence highlight summary (20 to 35 words) perfect for search previews and quick overview.\n" .
+                      "3. \"description\": A rich, detailed product description (75 to 120 words). Start with an engaging paragraph describing its artisanal craftsmanship, drape/aesthetic appeal, and suitability for weddings, festive occasions, sangeet, or receptions. Follow with 'Key Features:' and 3 to 5 concise bullet points starting with the bullet character '• ' (e.g., '• Fabric/Material: ...', '• Work/Embroidery: ...', '• Color Palette: ...', '• Occasion: ...'). Do NOT use markdown asterisks (no '**').\n\n" .
+                      "Return ONLY a valid, parseable JSON object with keys \"name\", \"short_description\", and \"description\". Do NOT wrap with markdown code fences (no ```json, no ```).";
 
-        $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=' . $apiKey;
-        $payload = json_encode([
-            'contents' => [
-                [
-                    'parts' => [
-                        ['text' => $prompt],
-                        [
-                            'inlineData' => [
-                                'mimeType' => $imgDataRes['mime_type'],
-                                'data' => $imgDataRes['base64']
+            $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=' . $apiKey;
+            $payload = json_encode([
+                'contents' => [
+                    [
+                        'parts' => [
+                            ['text' => $prompt],
+                            [
+                                'inlineData' => [
+                                    'mimeType' => $imgDataRes['mime_type'],
+                                    'data' => $imgDataRes['base64']
+                                ]
                             ]
                         ]
                     ]
+                ],
+                'generationConfig' => [
+                    'responseMimeType' => 'application/json',
+                    'temperature' => 0.4,
+                    'maxOutputTokens' => 2048,
                 ]
-            ],
-            'generationConfig' => [
-                'temperature' => 0.4,
-                'maxOutputTokens' => 1024,
-            ]
-        ]);
+            ]);
 
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-            CURLOPT_POSTFIELDS => $payload,
-            CURLOPT_TIMEOUT => 30,
-            CURLOPT_SSL_VERIFYPEER => false,
-        ]);
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST => true,
+                CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+                CURLOPT_POSTFIELDS => $payload,
+                CURLOPT_TIMEOUT => 30,
+                CURLOPT_SSL_VERIFYPEER => false,
+            ]);
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
 
-        if ($httpCode !== 200) {
-            echo json_encode(['error' => 'Gemini API call failed (HTTP ' . $httpCode . '): ' . $response]);
-            exit;
-        }
-
-        $decoded = json_decode($response, true);
-        $rawText = $decoded['candidates'][0]['content']['parts'][0]['text'] ?? '';
-        $cleanText = trim(preg_replace('/^```json|```$/', '', trim($rawText)));
-        
-        $resultJson = json_decode($cleanText, true);
-
-        if (!is_array($resultJson) || empty($resultJson['name'])) {
-            // Fallback JSON extraction
-            if (preg_match('/\{[\s\S]*\}/', $cleanText, $matches)) {
-                $resultJson = json_decode($matches[0], true);
+            if ($httpCode !== 200) {
+                echo json_encode(['error' => 'Gemini API call failed (HTTP ' . $httpCode . '): ' . $response]);
+                exit;
             }
+
+            $decoded = json_decode($response, true);
+            $rawText = $decoded['candidates'][0]['content']['parts'][0]['text'] ?? '';
+            $cleanText = trim(preg_replace('/^```json|```$/', '', trim($rawText)));
+            
+            $resultJson = json_decode($cleanText, true);
+
+            if (!is_array($resultJson) || empty($resultJson['name'])) {
+                // Fallback JSON extraction
+                if (preg_match('/\{[\s\S]*\}/', $cleanText, $matches)) {
+                    $resultJson = json_decode($matches[0], true);
+                }
+            }
+
+            if (!is_array($resultJson) || empty($resultJson['name'])) {
+                echo json_encode(['error' => 'Could not parse Gemini JSON response: ' . $cleanText]);
+                exit;
+            }
+
+            $generatedName = trim($resultJson['name'] ?? '');
+            $generatedShortDesc = trim($resultJson['short_description'] ?? '');
+            $generatedDesc = trim($resultJson['description'] ?? '');
+
+            // Log AI Generation to parent ai_analytics DB
+            $promptTokens = (int)($decoded['usageMetadata']['promptTokenCount'] ?? 0);
+            $candidateTokens = (int)($decoded['usageMetadata']['candidatesTokenCount'] ?? 0);
+            $totalTokens = (int)($decoded['usageMetadata']['totalTokenCount'] ?? 0);
+            $costEstimate = max(0.01, (($promptTokens * 0.000000075) + ($candidateTokens * 0.0000003)) * 86);
+
+            @log_ai_analytics_to_parent_db($productId, 'fashion', 'bulk_content', $prompt, json_encode($resultJson), 1, $promptTokens, $candidateTokens, $totalTokens, $costEstimate, 'yosshitaneha');
+
+            echo json_encode([
+                'success' => true,
+                'product_id' => $productId,
+                'name' => $generatedName,
+                'short_description' => $generatedShortDesc,
+                'description' => $generatedDesc
+            ]);
+        } catch (Throwable $t) {
+            echo json_encode(['error' => 'Server exception: ' . $t->getMessage()]);
         }
-
-        if (!is_array($resultJson) || empty($resultJson['name'])) {
-            echo json_encode(['error' => 'Could not parse Gemini JSON response: ' . $cleanText]);
-            exit;
-        }
-
-        $generatedName = trim($resultJson['name'] ?? '');
-        $generatedShortDesc = trim($resultJson['short_description'] ?? '');
-        $generatedDesc = trim($resultJson['description'] ?? '');
-
-        // Log AI Generation to parent ai_analytics DB
-        $promptTokens = (int)($decoded['usageMetadata']['promptTokenCount'] ?? 0);
-        $candidateTokens = (int)($decoded['usageMetadata']['candidatesTokenCount'] ?? 0);
-        $totalTokens = (int)($decoded['usageMetadata']['totalTokenCount'] ?? 0);
-        $costEstimate = max(0.01, (($promptTokens * 0.000000075) + ($candidateTokens * 0.0000003)) * 86);
-
-        log_ai_analytics_to_parent_db($productId, 'fashion', 'bulk_content', $prompt, json_encode($resultJson), 1, $promptTokens, $candidateTokens, $totalTokens, $costEstimate, 'yosshitaneha');
-
-        echo json_encode([
-            'success' => true,
-            'product_id' => $productId,
-            'name' => $generatedName,
-            'short_description' => $generatedShortDesc,
-            'description' => $generatedDesc
-        ]);
         break;
 
     case 'save_ai_product_content':
