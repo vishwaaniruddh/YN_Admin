@@ -121,7 +121,7 @@ $current_script = basename($_SERVER['PHP_SELF']);
 
         <!-- Tools Group -->
         <?php 
-        $tools_active = in_array($current_script, ['desc-corrector.php', 'analytics.php', 'cache-manager.php', 'generate-yn-products-excel.php', 'sku-lookup.php', 'import_archive.php']);
+        $tools_active = in_array($current_script, ['desc-corrector.php', 'analytics.php', 'cache-manager.php', 'generate-yn-products-excel.php', 'sku-lookup.php', 'import_archive.php', 'pos-price-sync.php', 'sync_db.php', 'bulk-ai-writer.php']);
         ?>
         <li class="menu-item has-submenu <?php echo $tools_active ? 'open active-parent' : ''; ?>">
             <a href="javascript:void(0);" class="submenu-toggle">
@@ -130,6 +130,16 @@ $current_script = basename($_SERVER['PHP_SELF']);
                 <i class="fa-solid fa-chevron-right submenu-arrow"></i>
             </a>
             <ul class="submenu">
+                <li class="<?php echo ($current_script == 'bulk-ai-writer.php') ? 'active' : ''; ?>">
+                    <a href="bulk-ai-writer.php" style="font-weight: 700; color: #a855f7;">
+                        <i class="fa-solid fa-wand-magic-sparkles" style="color: #a855f7;"></i> Bulk AI Writer <span class="badge" style="background:#7c3aed;color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;margin-left:4px;">Gemini</span>
+                    </a>
+                </li>
+                <li class="<?php echo ($current_script == 'pos-price-sync.php') ? 'active' : ''; ?>">
+                    <a href="pos-price-sync.php">
+                        <i class="fa-solid fa-tags" style="color: #6366f1;"></i> POS Price Sync
+                    </a>
+                </li>
                 <li class="<?php echo ($current_script == 'import_archive.php') ? 'active' : ''; ?>">
                     <a href="import_archive.php">
                         <i class="fa-solid fa-folder-tree"></i> Archive Importer
@@ -158,6 +168,11 @@ $current_script = basename($_SERVER['PHP_SELF']);
                 <li class="<?php echo ($current_script == 'cache-manager.php') ? 'active' : ''; ?>">
                     <a href="cache-manager.php">
                         <i class="fa-solid fa-bolt"></i> Cache Manager
+                    </a>
+                </li>
+                <li class="<?php echo ($current_script == 'sync_db.php') ? 'active' : ''; ?>">
+                    <a href="sync_db.php">
+                        <i class="fa-solid fa-database" style="color: #0ea5e9;"></i> Database Sync
                     </a>
                 </li>
             </ul>

@@ -164,8 +164,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Handle Sync Data Action (Production -> Local)
+// Handle Sync Data Action (Production -> Local & Local -> Production)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Production -> Local
     if (isset($_POST['sync_data_table'])) {
         $table = $_POST['sync_data_table'];
         $res = syncTableData($table, $localConn, $serverConn);
@@ -195,6 +196,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $errMsg = implode("\\n", $errors);
             echo "<script>alert('Synced data for $successCount tables. Errors:\\n$errMsg'); window.location.href='sync_db.php';</script>";
+        }
+    }
+
+    // Local -> Production
+    if (isset($_POST['sync_data_to_server_table'])) {
+        $table = $_POST['sync_data_to_server_table'];
+        $res = syncLocalToServerData($table, $localConn, $serverConn);
+        if ($res === true) {
+            echo "<script>alert('Data for table `$table` synced successfully from Local to Production Server.'); window.location.href='sync_db.php';</script>";
+        } else {
+            echo "<script>alert('Error syncing data to Production for `$table`: " . addslashes($res) . "'); window.location.href='sync_db.php';</script>";
+        }
+    }
+
+    if (isset($_POST['sync_all_data_to_server'])) {
+        $errors = [];
+        $successCount = 0;
+        $localTables = getTables($localConn);
+        $serverTables = getTables($serverConn);
+        $matching = array_intersect($localTables, $serverTables);
+        foreach ($matching as $table) {
+            $res = syncLocalToServerData($table, $localConn, $serverConn);
+            if ($res === true) {
+                $successCount++;
+            } else {
+                $errors[] = "$table: $res";
+            }
+        }
+        if (empty($errors)) {
+            echo "<script>alert('Data for all $successCount tables synced successfully from Local to Production Server.'); window.location.href='sync_db.php';</script>";
+        } else {
+            $errMsg = implode("\\n", $errors);
+            echo "<script>alert('Synced data to server for $successCount tables. Errors:\\n$errMsg'); window.location.href='sync_db.php';</script>";
         }
     }
 }
@@ -381,6 +415,72 @@ function syncTableData($table, $localConn, $serverConn)
     }
 }
 
+function syncLocalToServerData($table, $localConn, $serverConn)
+{
+    try {
+        $serverConn->query("SET FOREIGN_KEY_CHECKS = 0");
+
+        // Truncate server table
+        if (!$serverConn->query("TRUNCATE TABLE `$table`")) {
+            $err = $serverConn->error;
+            $serverConn->query("SET FOREIGN_KEY_CHECKS = 1");
+            return "Truncate error on server: " . $err;
+        }
+
+        // Fetch data from local
+        $res = $localConn->query("SELECT * FROM `$table`");
+        if (!$res) {
+            $err = $localConn->error;
+            $serverConn->query("SET FOREIGN_KEY_CHECKS = 1");
+            return "Fetch error from local: " . $err;
+        }
+
+        $fields = [];
+        $fieldInfo = $res->fetch_fields();
+        foreach ($fieldInfo as $val) {
+            $fields[] = "`" . $val->name . "`";
+        }
+
+        if (empty($fields)) {
+            $serverConn->query("SET FOREIGN_KEY_CHECKS = 1");
+            return true;
+        }
+
+        $fieldList = implode(', ', $fields);
+
+        $rows = [];
+        while ($row = $res->fetch_assoc()) {
+            $escapedVals = [];
+            foreach ($row as $val) {
+                if ($val === null) {
+                    $escapedVals[] = "NULL";
+                } else {
+                    $escapedVals[] = "'" . $serverConn->real_escape_string($val) . "'";
+                }
+            }
+            $rows[] = "(" . implode(', ', $escapedVals) . ")";
+        }
+
+        if (count($rows) > 0) {
+            $chunks = array_chunk($rows, 500);
+            foreach ($chunks as $chunk) {
+                $insertSQL = "INSERT INTO `$table` ($fieldList) VALUES " . implode(', ', $chunk);
+                if (!$serverConn->query($insertSQL)) {
+                    $err = $serverConn->error;
+                    $serverConn->query("SET FOREIGN_KEY_CHECKS = 1");
+                    return "Insert error on server: " . $err;
+                }
+            }
+        }
+
+        $serverConn->query("SET FOREIGN_KEY_CHECKS = 1");
+        return true;
+    } catch (Exception $e) {
+        $serverConn->query("SET FOREIGN_KEY_CHECKS = 1");
+        return $e->getMessage();
+    }
+}
+
 function getRowCount($conn, $table)
 {
     $res = $conn->query("SELECT COUNT(*) FROM `$table`");
@@ -458,6 +558,8 @@ function getRowCount($conn, $table)
             padding: 5px 10px;
             cursor: pointer;
             border-radius: 4px;
+            text-decoration: none;
+            display: inline-block;
         }
 
         .btn-sync:hover {
@@ -476,6 +578,22 @@ function getRowCount($conn, $table)
 
         .btn-blue:hover {
             background-color: #138496;
+        }
+
+        .btn-orange {
+            background-color: #e65100;
+        }
+
+        .btn-orange:hover {
+            background-color: #bf360c;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
         }
     </style>
 </head>
@@ -672,22 +790,38 @@ function getRowCount($conn, $table)
     </table>
 
     <div class="section-title"
-        style="background:#28a745; display: flex; justify-content: space-between; align-items: center; padding: 8px 15px;">
-        <span>Data Synchronization (Production &rarr; Local)</span>
-        <form method="POST"
-            onsubmit="return confirm('WARNING: This will overwrite ALL local data for matching tables with production server data. Proceed?');"
-            style="margin: 0;">
-            <input type="hidden" name="sync_all_data" value="1">
-            <button type="submit" class="btn-sync btn-blue" style="font-size: 12px; padding: 4px 12px;">Sync All Tables
-                Data to Local</button>
-        </form>
+        style="background:#1e293b; display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-radius: 6px 6px 0 0; flex-wrap: wrap; gap: 10px;">
+        <span style="font-size: 15px; font-weight: bold; color: #fff;">
+            🔄 Full Data Synchronization
+        </span>
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <!-- Sync All to Production (Local -> Server) -->
+            <form method="POST"
+                onsubmit="return confirm('⚠️ DANGER: This will OVERWRITE ALL matching table data on the PRODUCTION SERVER with your LOCAL database data. Are you sure you want to push local data to production?');"
+                style="margin: 0;">
+                <input type="hidden" name="sync_all_data_to_server" value="1">
+                <button type="submit" class="btn-sync btn-orange" style="font-size: 12px; font-weight: bold; padding: 6px 14px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                    🚀 Sync All Tables Data to Production
+                </button>
+            </form>
+
+            <!-- Sync All to Local (Server -> Local) -->
+            <form method="POST"
+                onsubmit="return confirm('WARNING: This will overwrite ALL local data for matching tables with production server data. Proceed?');"
+                style="margin: 0;">
+                <input type="hidden" name="sync_all_data" value="1">
+                <button type="submit" class="btn-sync btn-blue" style="font-size: 12px; padding: 6px 14px;">
+                    📥 Sync All Tables Data to Local
+                </button>
+            </form>
+        </div>
     </div>
     <table>
         <tr>
             <th>Table Name</th>
             <th style="width: 150px; text-align: right;">Production Rows</th>
             <th style="width: 150px; text-align: right;">Local Rows</th>
-            <th style="width: 200px; text-align: right;">Action</th>
+            <th style="width: 320px; text-align: right;">Actions</th>
         </tr>
         <?php foreach ($matchingTables as $table): ?>
                 <?php
@@ -701,12 +835,27 @@ function getRowCount($conn, $table)
                     <td style="text-align: right; font-weight: bold; color: #111;"><?php echo number_format($prodRows); ?></td>
                     <td style="text-align: right; font-weight: bold; color: #555;"><?php echo number_format($localRows); ?></td>
                     <td style="text-align: right;">
-                        <form method="POST"
-                            onsubmit="return confirm('Are you sure you want to overwrite local data for table `<?php echo $table; ?>` with production server data?');">
-                            <input type="hidden" name="sync_data_table" value="<?php echo $table; ?>">
-                            <button type="submit" class="btn-sync" style="font-size: 11px; padding: 4px 10px;">Sync to
-                                Local</button>
-                        </form>
+                        <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                            <!-- Sync single table Local -> Production -->
+                            <form method="POST"
+                                onsubmit="return confirm('⚠️ Overwrite PRODUCTION server data for `<?php echo $table; ?>` with your LOCAL data?');"
+                                style="margin: 0;">
+                                <input type="hidden" name="sync_data_to_server_table" value="<?php echo $table; ?>">
+                                <button type="submit" class="btn-sync btn-orange" style="font-size: 11px; padding: 4px 10px; font-weight: bold;">
+                                    ⬆️ Sync to Production
+                                </button>
+                            </form>
+
+                            <!-- Sync single table Production -> Local -->
+                            <form method="POST"
+                                onsubmit="return confirm('Are you sure you want to overwrite local data for table `<?php echo $table; ?>` with production server data?');"
+                                style="margin: 0;">
+                                <input type="hidden" name="sync_data_table" value="<?php echo $table; ?>">
+                                <button type="submit" class="btn-sync btn-blue" style="font-size: 11px; padding: 4px 10px;">
+                                    ⬇️ Sync to Local
+                                </button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
         <?php endforeach; ?>

@@ -35,10 +35,30 @@ if ($cached_res !== false) {
 try {
     $category_info = null;
     $category_slugs_array = [];
+
+    $slug_aliases = [
+        'kalamkari-collection-ittar' => 'kalamkari-collection',
+        'kalamkari' => 'kalamkari-collection',
+        'ittar' => 'kalamkari-collection',
+        'neclace-sets' => 'necklace-sets',
+        'outfits' => 'outfit',
+        'apparel' => 'outfit',
+        'jewellery' => 'jewellery',
+        'jewelry' => 'jewellery',
+    ];
+
+    $has_explicit_cat_filter = false;
+
     if ($category_slugs_raw) {
-        $category_slugs_array = array_filter(array_map('trim', explode(',', $category_slugs_raw)));
+        $has_explicit_cat_filter = true;
+        $raw_arr = array_filter(array_map('trim', explode(',', $category_slugs_raw)));
+        foreach ($raw_arr as $s) {
+            $category_slugs_array[] = $slug_aliases[$s] ?? $s;
+        }
     } elseif ($category_slug) {
-        $category_slugs_array = [$category_slug];
+        $has_explicit_cat_filter = true;
+        $norm_slug = $slug_aliases[$category_slug] ?? $category_slug;
+        $category_slugs_array = [$norm_slug];
     }
 
     $category_ids_in = [];
@@ -55,7 +75,7 @@ try {
             foreach ($cats as $cat) {
                 $category_ids_in = array_merge($category_ids_in, get_all_child_category_ids($pdo, $cat['id']));
             }
-            $category_ids_in = array_unique($category_ids_in);
+            $category_ids_in = array_values(array_unique($category_ids_in));
 
             $stmtChildren = $pdo->prepare("SELECT id, name, slug FROM categories WHERE parent_id = ? AND deleted_at IS NULL ORDER BY name ASC");
             $stmtChildren->execute([$category_id]);
@@ -71,6 +91,7 @@ try {
             }
         }
     } elseif ($category_id) {
+        $has_explicit_cat_filter = true;
         $category_ids_in = get_all_child_category_ids($pdo, $category_id);
     }
 
@@ -78,10 +99,15 @@ try {
     $where_sql = "WHERE p.status = 'published' AND p.deleted_at IS NULL AND p.stock_qty > 0";
     $params = [];
     
-    if (!empty($category_ids_in)) {
-        $in_placeholders = str_repeat('?,', count($category_ids_in) - 1) . '?';
-        $where_sql .= " AND (p.category_id IN ($in_placeholders) OR EXISTS (SELECT 1 FROM product_categories pc WHERE pc.product_id = p.id AND pc.category_id IN ($in_placeholders)))";
-        $params = array_merge($params, $category_ids_in, $category_ids_in);
+    if ($has_explicit_cat_filter) {
+        if (!empty($category_ids_in)) {
+            $in_placeholders = str_repeat('?,', count($category_ids_in) - 1) . '?';
+            $where_sql .= " AND (p.category_id IN ($in_placeholders) OR EXISTS (SELECT 1 FROM product_categories pc WHERE pc.product_id = p.id AND pc.category_id IN ($in_placeholders)))";
+            $params = array_merge($params, $category_ids_in, $category_ids_in);
+        } else {
+            // Explicit category requested but no matching category found -> return 0 products
+            $where_sql .= " AND 1 = 0";
+        }
     }
     
     if ($featured !== null) {

@@ -88,16 +88,34 @@ function get_or_create_cat($pdo, $category_string) {
         
         $slug = generate_slug($cat_name);
         
-        $stmt = $pdo->prepare("SELECT id FROM categories WHERE slug = ?");
-        $stmt->execute([$slug]);
+        $stmt = $pdo->prepare("SELECT id FROM categories WHERE (slug = ? OR LOWER(name) = ?) AND parent_id " . ($parent_id ? "= ?" : "IS NULL") . " AND deleted_at IS NULL LIMIT 1");
+        if ($parent_id) {
+            $stmt->execute([$slug, strtolower($cat_name), $parent_id]);
+        } else {
+            $stmt->execute([$slug, strtolower($cat_name)]);
+        }
         $existing = $stmt->fetch();
         
         if ($existing) {
             $current_id = $existing['id'];
         } else {
-            $stmt = $pdo->prepare("INSERT INTO categories (name, slug, parent_id) VALUES (?, ?, ?)");
-            $stmt->execute([$cat_name, $slug, $parent_id]);
-            $current_id = $pdo->lastInsertId();
+            // Check global match if root
+            $stmtFallback = $pdo->prepare("SELECT id FROM categories WHERE (slug = ? OR LOWER(name) = ?) AND deleted_at IS NULL LIMIT 1");
+            $stmtFallback->execute([$slug, strtolower($cat_name)]);
+            $fallback = $stmtFallback->fetch();
+
+            if ($fallback && empty($parent_id)) {
+                $current_id = $fallback['id'];
+            } else {
+                $checkSlug = $pdo->prepare("SELECT COUNT(*) FROM categories WHERE slug = ?");
+                $checkSlug->execute([$slug]);
+                if ($checkSlug->fetchColumn() > 0) {
+                    $slug .= '-' . rand(100, 999);
+                }
+                $stmt = $pdo->prepare("INSERT INTO categories (name, slug, parent_id) VALUES (?, ?, ?)");
+                $stmt->execute([$cat_name, $slug, $parent_id]);
+                $current_id = $pdo->lastInsertId();
+            }
         }
         $parent_id = $current_id;
     }

@@ -189,7 +189,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'generate_from_folders') {
         ['sku', 'name', 'categories', 'price', 'sale_price', 'stock_qty', 'description', 'short_description', 'status', 'is_featured']
     ];
 
-    $defaultCat = (stripos(basename($archiveDir), 'ittar') !== false || stripos(basename($archiveDir), 'attar') !== false) ? 'Ittar' : 'Fashion';
+    $defaultCat = (stripos(basename($archiveDir), 'ittar') !== false || stripos(basename($archiveDir), 'attar') !== false) ? 'Kalamkari Collection' : 'Jewellery';
 
     foreach ($skuFolders as $sku) {
         $cleanName = ucwords(str_replace(['_', '-'], ' ', $sku));
@@ -259,8 +259,8 @@ function resolve_or_create_category($pdo, $categoryInput) {
             continue;
         }
 
-        // Check if hierarchical with > or /
-        $parts = preg_split('/[>\/]/', $branch);
+        // Check if hierarchical with >
+        $parts = explode('>', $branch);
         $parentId = null;
         $currentId = null;
 
@@ -269,16 +269,35 @@ function resolve_or_create_category($pdo, $categoryInput) {
             if (empty($catName)) continue;
 
             $slug = generate_slug($catName);
-            $stmt = $pdo->prepare("SELECT id FROM categories WHERE slug = ? AND deleted_at IS NULL LIMIT 1");
-            $stmt->execute([$slug]);
+            $stmt = $pdo->prepare("SELECT id FROM categories WHERE (slug = ? OR LOWER(name) = ?) AND parent_id " . ($parentId ? "= ?" : "IS NULL") . " AND deleted_at IS NULL LIMIT 1");
+            if ($parentId) {
+                $stmt->execute([$slug, strtolower($catName), $parentId]);
+            } else {
+                $stmt->execute([$slug, strtolower($catName)]);
+            }
             $existing = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($existing) {
                 $currentId = (int)$existing['id'];
             } else {
-                $insertStmt = $pdo->prepare("INSERT INTO categories (name, slug, parent_id) VALUES (?, ?, ?)");
-                $insertStmt->execute([$catName, $slug, $parentId]);
-                $currentId = (int)$pdo->lastInsertId();
+                // Fallback check by name or slug regardless of parent
+                $stmtFallback = $pdo->prepare("SELECT id FROM categories WHERE (slug = ? OR LOWER(name) = ?) AND deleted_at IS NULL LIMIT 1");
+                $stmtFallback->execute([$slug, strtolower($catName)]);
+                $fallback = $stmtFallback->fetch(PDO::FETCH_ASSOC);
+
+                if ($fallback && empty($parentId)) {
+                    $currentId = (int)$fallback['id'];
+                } else {
+                    $checkSlug = $pdo->prepare("SELECT COUNT(*) FROM categories WHERE slug = ?");
+                    $checkSlug->execute([$slug]);
+                    if ($checkSlug->fetchColumn() > 0) {
+                        $slug .= '-' . rand(100, 999);
+                    }
+
+                    $insertStmt = $pdo->prepare("INSERT INTO categories (name, slug, parent_id) VALUES (?, ?, ?)");
+                    $insertStmt->execute([$catName, $slug, $parentId]);
+                    $currentId = (int)$pdo->lastInsertId();
+                }
             }
             $parentId = $currentId;
         }
