@@ -27,7 +27,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'load_bulk_products') {
     $categoryId = isset($_GET['category_id']) && $_GET['category_id'] !== '' ? (int)$_GET['category_id'] : null;
     $filterType = $_GET['filter_type'] ?? 'needs_content';
     $search = trim($_GET['search'] ?? '');
-    $limit = isset($_GET['limit']) ? min(100, max(10, (int)$_GET['limit'])) : 50;
+    $nameFilter = trim($_GET['name_filter'] ?? '');
+    $descFilter = trim($_GET['desc_filter'] ?? '');
+    $skuFilter = trim($_GET['sku_filter'] ?? '');
+    $limit = isset($_GET['limit']) ? min(200, max(10, (int)$_GET['limit'])) : 50;
 
     try {
         $where = ["p.deleted_at IS NULL"];
@@ -39,17 +42,56 @@ if (isset($_GET['action']) && $_GET['action'] === 'load_bulk_products') {
             $params[] = $categoryId;
         }
 
-        if ($filterType === 'needs_content') {
-            // Name is basically SKU, or short_description is empty, or description is empty / default placeholder
-            $where[] = "(p.name = p.sku OR p.name LIKE 'YN%' OR p.short_description IS NULL OR p.short_description = '' OR p.description IS NULL OR p.description = '' OR p.description LIKE '%Srisringarr%' OR p.description LIKE '%Premium Quality Collection%')";
+        // Dedicated Name Filter
+        if ($nameFilter !== '') {
+            if ($nameFilter === '1' || $nameFilter === '0') {
+                $where[] = "(TRIM(p.name) = ? OR p.name = ?)";
+                $params[] = $nameFilter;
+                $params[] = $nameFilter;
+            } else {
+                $where[] = "p.name LIKE ?";
+                $params[] = "%$nameFilter%";
+            }
+        }
+
+        // Dedicated Description Filter
+        if ($descFilter !== '') {
+            if ($descFilter === '1' || $descFilter === '0') {
+                $where[] = "(TRIM(p.description) = ? OR p.description = ? OR TRIM(p.short_description) = ?)";
+                $params[] = $descFilter;
+                $params[] = $descFilter;
+                $params[] = $descFilter;
+            } else {
+                $where[] = "(p.description LIKE ? OR p.short_description LIKE ?)";
+                $params[] = "%$descFilter%";
+                $params[] = "%$descFilter%";
+            }
+        }
+
+        // Dedicated SKU Filter
+        if ($skuFilter !== '') {
+            $where[] = "p.sku LIKE ?";
+            $params[] = "%$skuFilter%";
+        }
+
+        // Presets
+        if ($filterType === 'name_is_1') {
+            $where[] = "(TRIM(p.name) = '1' OR p.name = '1')";
+        } elseif ($filterType === 'desc_is_1') {
+            $where[] = "(TRIM(p.description) = '1' OR p.description = '1' OR TRIM(p.short_description) = '1')";
+        } elseif ($filterType === 'name_or_desc_is_1') {
+            $where[] = "(TRIM(p.name) = '1' OR p.name = '1' OR TRIM(p.description) = '1' OR p.description = '1')";
+        } elseif ($filterType === 'needs_content') {
+            $where[] = "(TRIM(p.name) = '1' OR p.name = '1' OR p.name = p.sku OR p.name LIKE 'YN%' OR p.short_description IS NULL OR p.short_description = '' OR TRIM(p.short_description) = '1' OR p.description IS NULL OR p.description = '' OR TRIM(p.description) = '1' OR p.description LIKE '%Srisringarr%' OR p.description LIKE '%Premium Quality Collection%')";
         } elseif ($filterType === 'missing_desc') {
-            $where[] = "(p.description IS NULL OR p.description = '' OR p.description LIKE '%Srisringarr%' OR p.description LIKE '%Premium Quality Collection%')";
+            $where[] = "(p.description IS NULL OR p.description = '' OR TRIM(p.description) = '1' OR p.description LIKE '%Srisringarr%' OR p.description LIKE '%Premium Quality Collection%')";
         } elseif ($filterType === 'missing_short_desc') {
-            $where[] = "(p.short_description IS NULL OR p.short_description = '' OR p.short_description = p.name)";
+            $where[] = "(p.short_description IS NULL OR p.short_description = '' OR TRIM(p.short_description) = '1' OR p.short_description = p.name)";
         }
 
         if (!empty($search)) {
-            $where[] = "(p.sku LIKE ? OR p.name LIKE ?)";
+            $where[] = "(p.sku LIKE ? OR p.name LIKE ? OR p.description LIKE ?)";
+            $params[] = "%$search%";
             $params[] = "%$search%";
             $params[] = "%$search%";
         }
@@ -137,7 +179,7 @@ try {
 
     <!-- Filter Control Card -->
     <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 20px;">
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; align-items: end;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; align-items: end; margin-bottom: 15px;">
             <!-- Category Selector -->
             <div>
                 <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 6px;">
@@ -156,22 +198,17 @@ try {
             <!-- Content Status Filter -->
             <div>
                 <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 6px;">
-                    <i class="fa-solid fa-filter" style="color: #7c3aed;"></i> Content Quality Filter
+                    <i class="fa-solid fa-filter" style="color: #7c3aed;"></i> Quality Preset
                 </label>
                 <select id="status_filter" class="form-control" style="width: 100%; height: 38px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 13px;">
-                    <option value="needs_content" selected>⚠️ Needs AI Content (SKU Name / Missing Desc)</option>
+                    <option value="name_or_desc_is_1">⚠️ Name or Description is '1' (Raw Imports)</option>
+                    <option value="name_is_1">🎯 Exact Name is '1'</option>
+                    <option value="desc_is_1">🎯 Exact Description is '1'</option>
+                    <option value="needs_content" selected>⚠️ Needs AI Content (Name '1'/SKU/Missing Desc)</option>
                     <option value="missing_desc">📝 Missing Detailed Description</option>
                     <option value="missing_short_desc">📄 Missing Short Summary</option>
                     <option value="all">📋 All Products in Category</option>
                 </select>
-            </div>
-
-            <!-- Search SKU / Name -->
-            <div>
-                <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 6px;">
-                    <i class="fa-solid fa-magnifying-glass" style="color: #7c3aed;"></i> Search SKU / Title
-                </label>
-                <input type="text" id="search_kw" placeholder="e.g. YNIT21, SET824, Blouse..." style="width: 100%; height: 38px; border-radius: 8px; border: 1px solid #cbd5e1; padding: 0 10px; font-size: 13px;">
             </div>
 
             <!-- Batch Size -->
@@ -183,6 +220,7 @@ try {
                     <option value="25">25 items</option>
                     <option value="50" selected>50 items</option>
                     <option value="100">100 items</option>
+                    <option value="200">200 items</option>
                 </select>
             </div>
 
@@ -191,6 +229,43 @@ try {
                 <button type="button" id="load_products_btn" class="button button-primary" style="width: 100%; height: 38px; border-radius: 8px; background: #7c3aed; border-color: #6d28d9; font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
                     <i class="fa-solid fa-arrows-rotate"></i> Load Products
                 </button>
+            </div>
+        </div>
+
+        <!-- Dedicated Specific Search Inputs Row -->
+        <div style="padding-top: 15px; border-top: 1px solid #f1f5f9; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;">
+            <!-- Dedicated Product Name Filter -->
+            <div>
+                <label style="display: block; font-size: 11px; font-weight: 700; color: #6b21a8; margin-bottom: 4px;">
+                    <i class="fa-solid fa-tag"></i> Filter by Product Name / Title:
+                </label>
+                <div style="position: relative; display: flex;">
+                    <input type="text" id="name_filter" placeholder="e.g. 1 (exact '1') or keyword..." style="width: 100%; height: 34px; border-radius: 6px; border: 1px solid #c084fc; padding: 0 50px 0 8px; font-size: 12px;">
+                    <button type="button" onclick="setNameFilter('1')" style="position: absolute; right: 3px; top: 3px; bottom: 3px; padding: 0 8px; font-size: 10px; font-weight: 700; background: #f3e8ff; color: #7c3aed; border: 1px solid #d8b4fe; border-radius: 4px; cursor: pointer;">
+                        = '1'
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dedicated Description Filter -->
+            <div>
+                <label style="display: block; font-size: 11px; font-weight: 700; color: #6b21a8; margin-bottom: 4px;">
+                    <i class="fa-solid fa-align-left"></i> Filter by Description:
+                </label>
+                <div style="position: relative; display: flex;">
+                    <input type="text" id="desc_filter" placeholder="e.g. 1 or keyword..." style="width: 100%; height: 34px; border-radius: 6px; border: 1px solid #c084fc; padding: 0 50px 0 8px; font-size: 12px;">
+                    <button type="button" onclick="setDescFilter('1')" style="position: absolute; right: 3px; top: 3px; bottom: 3px; padding: 0 8px; font-size: 10px; font-weight: 700; background: #f3e8ff; color: #7c3aed; border: 1px solid #d8b4fe; border-radius: 4px; cursor: pointer;">
+                        = '1'
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dedicated SKU Filter -->
+            <div>
+                <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 4px;">
+                    <i class="fa-solid fa-barcode"></i> Filter by SKU Code:
+                </label>
+                <input type="text" id="sku_filter" placeholder="e.g. YNIT21, SET824..." style="width: 100%; height: 34px; border-radius: 6px; border: 1px solid #cbd5e1; padding: 0 8px; font-size: 12px;">
             </div>
         </div>
     </div>
@@ -283,7 +358,9 @@ let stopRequested = false;
 
 const catFilter = document.getElementById('cat_filter');
 const statusFilter = document.getElementById('status_filter');
-const searchKw = document.getElementById('search_kw');
+const nameFilter = document.getElementById('name_filter');
+const descFilter = document.getElementById('desc_filter');
+const skuFilter = document.getElementById('sku_filter');
 const limitFilter = document.getElementById('limit_filter');
 const loadProductsBtn = document.getElementById('load_products_btn');
 const tbody = document.getElementById('product_tbody');
@@ -305,10 +382,22 @@ const progressBar = document.getElementById('progress_bar');
 const currentTaskStatus = document.getElementById('current_task_status');
 const stopQueueBtn = document.getElementById('stop_queue_btn');
 
+function setNameFilter(val) {
+    if (nameFilter) nameFilter.value = val;
+    loadProducts();
+}
+
+function setDescFilter(val) {
+    if (descFilter) descFilter.value = val;
+    loadProducts();
+}
+
 async function loadProducts() {
     const catId = catFilter.value;
     const filter = statusFilter.value;
-    const search = searchKw.value;
+    const nameVal = nameFilter ? nameFilter.value.trim() : '';
+    const descVal = descFilter ? descFilter.value.trim() : '';
+    const skuVal = skuFilter ? skuFilter.value.trim() : '';
     const limit = limitFilter.value;
 
     loadProductsBtn.disabled = true;
@@ -316,7 +405,7 @@ async function loadProducts() {
     tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 40px; color: #7c3aed;"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2 block"></i> Fetching products...</td></tr>`;
 
     try {
-        const url = `bulk-ai-writer.php?action=load_bulk_products&category_id=${encodeURIComponent(catId)}&filter_type=${encodeURIComponent(filter)}&search=${encodeURIComponent(search)}&limit=${encodeURIComponent(limit)}`;
+        const url = `bulk-ai-writer.php?action=load_bulk_products&category_id=${encodeURIComponent(catId)}&filter_type=${encodeURIComponent(filter)}&name_filter=${encodeURIComponent(nameVal)}&desc_filter=${encodeURIComponent(descVal)}&sku_filter=${encodeURIComponent(skuVal)}&limit=${encodeURIComponent(limit)}`;
         const res = await fetch(url);
         const data = await res.json();
 
