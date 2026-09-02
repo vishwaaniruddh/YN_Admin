@@ -24,7 +24,7 @@ $current_script = basename($_SERVER['PHP_SELF']);
         <li class="menu-section-label">Management</li>
         
         <?php 
-        $catalog_active = in_array($current_script, ['products.php', 'product-add.php', 'product-edit.php', 'categories.php']);
+        $catalog_active = in_array($current_script, ['products.php', 'product-add.php', 'product-edit.php', 'categories.php', 'product-import.php', 'import_archive.php']);
         ?>
         <li class="menu-item has-submenu <?php echo $catalog_active ? 'open active-parent' : ''; ?>">
             <a href="javascript:void(0);" class="submenu-toggle">
@@ -46,6 +46,11 @@ $current_script = basename($_SERVER['PHP_SELF']);
                 <li class="<?php echo ($current_script == 'categories.php') ? 'active' : ''; ?>">
                     <a href="categories.php">
                         <i class="fa-solid fa-folder-tree"></i> Categories
+                    </a>
+                </li>
+                <li class="<?php echo ($current_script == 'import_archive.php') ? 'active' : ''; ?>">
+                    <a href="import_archive.php">
+                        <i class="fa-solid fa-file-import"></i> Archive / Folder Import
                     </a>
                 </li>
             </ul>
@@ -116,7 +121,7 @@ $current_script = basename($_SERVER['PHP_SELF']);
 
         <!-- Tools Group -->
         <?php 
-        $tools_active = in_array($current_script, ['desc-corrector.php', 'analytics.php', 'cache-manager.php', 'generate-yn-products-excel.php', 'sku-lookup.php']);
+        $tools_active = in_array($current_script, ['desc-corrector.php', 'analytics.php', 'cache-manager.php', 'generate-yn-products-excel.php', 'sku-lookup.php', 'import_archive.php']);
         ?>
         <li class="menu-item has-submenu <?php echo $tools_active ? 'open active-parent' : ''; ?>">
             <a href="javascript:void(0);" class="submenu-toggle">
@@ -125,6 +130,11 @@ $current_script = basename($_SERVER['PHP_SELF']);
                 <i class="fa-solid fa-chevron-right submenu-arrow"></i>
             </a>
             <ul class="submenu">
+                <li class="<?php echo ($current_script == 'import_archive.php') ? 'active' : ''; ?>">
+                    <a href="import_archive.php">
+                        <i class="fa-solid fa-folder-tree"></i> Archive Importer
+                    </a>
+                </li>
                 <li class="<?php echo ($current_script == 'generate-yn-products-excel.php') ? 'active' : ''; ?>">
                     <a href="generate-yn-products-excel.php">
                         <i class="fa-solid fa-file-excel"></i> YN Products Excel

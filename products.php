@@ -156,9 +156,10 @@ try {
 
 <div class="wrap-header">
     <h1>Products</h1>
-    <div style="display: flex; gap: 10px; align-items: center;">
+    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
         <a href="product-add.php" class="button button-primary"><i class="fa-solid fa-plus"></i> Add New</a>
-        <a href="product-import.php" class="button button-secondary"><i class="fa-solid fa-file-csv"></i> Bulk Import</a>
+        <a href="import_archive.php" class="button" style="background: #4f46e5; color: #fff; border-color: #4338ca; font-weight: 600;"><i class="fa-solid fa-folder-tree"></i> Archive / Folder Import</a>
+        <a href="product-import.php" class="button button-secondary"><i class="fa-solid fa-file-csv"></i> CSV Import</a>
 
         <!-- Export Dropdown -->
         <div style="position: relative; display: inline-block;" id="export-dropdown-wrap">
