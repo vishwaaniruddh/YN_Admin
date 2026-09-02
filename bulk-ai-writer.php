@@ -445,7 +445,7 @@ function renderTable(products) {
                     <input type="checkbox" class="row-checkbox" value="${p.id}" checked style="width: 16px; height: 16px; cursor: pointer;">
                 </td>
                 <td style="padding-top: 12px;">
-                    <img src="${imgUrl}" alt="${p.sku}" style="width: 44px; height: 55px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0;">
+                    <img src="${imgUrl}" alt="${p.sku}" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'44\' height=\'55\' viewBox=\'0 0 44 55\'%3E%3Crect width=\'44\' height=\'55\' fill=\'%23f1f5f9\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%2394a3b8\' font-size=\'9\'%3ENo Image%3C/text%3E%3C/svg%3E';" style="width: 44px; height: 55px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0;">
                 </td>
                 <td style="padding-top: 12px;">
                     <strong style="color: #7c3aed; font-family: monospace; font-size: 13px;">${p.sku}</strong>
