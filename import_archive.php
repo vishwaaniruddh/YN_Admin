@@ -38,18 +38,20 @@ if (!$isCli) {
     }
 }
 
-// Locate the import folder (archive, new_earrng, etc.)
+// Locate the import folder (ittar outside admin, archive, etc.)
 $possibleArchivePaths = [
-    __DIR__ . '/archive',
+    __DIR__ . '/../ittar',
+    dirname(__DIR__) . '/ittar',
+    '/home/u464193275/domains/yosshitaneha.com/public_html/ittar',
+    '/domains/yosshitaneha.com/public_html/ittar',
+    '/public_html/ittar',
+    'C:/xampp/htdocs/yn/ittar',
+    __DIR__ . '/ittar',
     __DIR__ . '/../archive',
-    __DIR__ . '/../../archive',
     dirname(__DIR__) . '/archive',
-    __DIR__ . '/new_earrng',
-    __DIR__ . '/../new_earrng',
-    '/domains/yosshitaneha.com/public_html/archive',
-    '/domains/yosshitaneha.com/public_html/admin/archive',
+    __DIR__ . '/archive',
     '/home/u464193275/domains/yosshitaneha.com/public_html/archive',
-    '/home/u464193275/domains/yosshitaneha.com/public_html/admin/archive',
+    '/domains/yosshitaneha.com/public_html/archive',
     'C:/xampp/htdocs/yn/archive',
     'C:/xampp/htdocs/yn/admin/archive'
 ];
@@ -71,17 +73,30 @@ if (!empty($_POST['custom_path']) || !empty($_GET['custom_path'])) {
         $archiveDir = realpath(__DIR__ . '/' . $cPath);
     } elseif (is_dir(dirname(__DIR__) . '/' . $cPath)) {
         $archiveDir = realpath(dirname(__DIR__) . '/' . $cPath);
+    } elseif (is_dir(__DIR__ . '/../' . ltrim($cPath, '/\\'))) {
+        $archiveDir = realpath(__DIR__ . '/../' . ltrim($cPath, '/\\'));
+    } elseif (is_dir('/home/u464193275/domains/yosshitaneha.com/public_html/' . ltrim($cPath, '/\\'))) {
+        $archiveDir = realpath('/home/u464193275/domains/yosshitaneha.com/public_html/' . ltrim($cPath, '/\\'));
+    } elseif (is_dir('/domains/yosshitaneha.com/public_html/' . ltrim($cPath, '/\\'))) {
+        $archiveDir = realpath('/domains/yosshitaneha.com/public_html/' . ltrim($cPath, '/\\'));
+    } elseif (is_dir('/' . ltrim($cPath, '/\\'))) {
+        $archiveDir = realpath('/' . ltrim($cPath, '/\\'));
     }
 }
 
-// Ensure default archive dir exists if none found
+// Ensure default fallback directory exists if none found
 if (!$archiveDir) {
-    $defaultArchive = __DIR__ . '/archive';
-    if (!file_exists($defaultArchive)) {
-        @mkdir($defaultArchive, 0777, true);
-    }
-    if (is_dir($defaultArchive)) {
-        $archiveDir = realpath($defaultArchive);
+    $defaultIttar = dirname(__DIR__) . '/ittar';
+    if (is_dir($defaultIttar)) {
+        $archiveDir = realpath($defaultIttar);
+    } else {
+        $defaultArchive = __DIR__ . '/archive';
+        if (!file_exists($defaultArchive)) {
+            @mkdir($defaultArchive, 0777, true);
+        }
+        if (is_dir($defaultArchive)) {
+            $archiveDir = realpath($defaultArchive);
+        }
     }
 }
 
@@ -658,7 +673,7 @@ $scanResult = scanArchiveDirectory($archiveDir, $pdo);
                 <div class="pt-3 border-t border-rose-500/20">
                     <span class="text-[11px] text-slate-400 font-medium block mb-1.5">Or specify a folder path on the server:</span>
                     <form method="GET" class="flex gap-2">
-                        <input type="text" name="custom_path" value="<?php echo htmlspecialchars($_GET['custom_path'] ?? ''); ?>" placeholder="C:/xampp/htdocs/yn/archive or relative folder name" class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs font-mono text-white focus:outline-none focus:border-indigo-500">
+                        <input type="text" name="custom_path" value="<?php echo htmlspecialchars($_GET['custom_path'] ?? ''); ?>" placeholder="/public_html/ittar, ittar, or custom folder path" class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs font-mono text-white focus:outline-none focus:border-indigo-500">
                         <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-all">Scan Folder</button>
                     </form>
                 </div>
@@ -678,7 +693,7 @@ $scanResult = scanArchiveDirectory($archiveDir, $pdo);
                         <i class="fas fa-file-zipper"></i> Upload ZIP
                     </button>
                     <form method="GET" class="flex items-center gap-2">
-                        <input type="text" name="custom_path" placeholder="Switch folder path..." class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1 text-xs font-mono text-slate-200 focus:outline-none focus:border-indigo-500 w-48">
+                        <input type="text" name="custom_path" placeholder="Switch folder (e.g. ittar)" class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1 text-xs font-mono text-slate-200 focus:outline-none focus:border-indigo-500 w-52">
                         <button type="submit" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium rounded-lg text-xs transition-all">Switch</button>
                     </form>
                 </div>
