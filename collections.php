@@ -500,7 +500,10 @@ require_once __DIR__ . '/includes/sidebar.php';
                 </div>
             </div>
         </div>
-        <div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <a href="sync-sold-out-collections.php" class="button" style="background: #ffffff; color: #b45309; border: 1px solid #fde68a; font-weight: 800; padding: 6px 16px;">
+                <i class="fa-solid fa-boxes-packing" style="color: #f59e0b;"></i> Sync Sold Out Outfits
+            </a>
             <a href="collection-ai-sorter.php" class="button" style="background: #ffffff; color: #4f46e5; border: none; font-weight: 800; padding: 6px 16px;">
                 <i class="fa-solid fa-wand-magic-sparkles"></i> Open AI Sorter Studio
             </a>

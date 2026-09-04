@@ -146,7 +146,22 @@ try {
     // Category Counts Breakdown (Combining DB records + on-disk category folders)
     $catCountsDb = $pdo->query("SELECT category, COUNT(*) as count FROM collections WHERE category IS NOT NULL AND category != '' GROUP BY category ORDER BY category ASC")->fetchAll(PDO::FETCH_KEY_PAIR);
 
-    $allKnownCats = ['Blouse', 'Anarkali', 'Lehenga', 'Gown', 'Suit', 'Indo western', 'Kids wear', 'Sari', 'Sari Makeover', 'Family Twinning', 'Mens wear', 'Home furnishing'];
+    $allKnownCats = ['Blouse', 'Sold out', 'Anarkali', 'Lehenga', 'Gown', 'Suit', 'Indo western', 'Kids wear', 'Sari', 'Sari Makeover', 'Family Twinning', 'Mens wear', 'Home furnishing'];
+    
+    // Auto-include any category that exists in the database
+    foreach ($catCountsDb as $k => $v) {
+        $found = false;
+        foreach ($allKnownCats as $known) {
+            if (strcasecmp($k, $known) === 0) {
+                $found = true;
+                break;
+            }
+        }
+        if (!$found && trim($k) !== '' && strtolower($k) !== 'new folder') {
+            $allKnownCats[] = $k;
+        }
+    }
+
     $uploadsPath = realpath(__DIR__ . '/../uploads/collections');
     if ($uploadsPath && is_dir($uploadsPath)) {
         foreach (scandir($uploadsPath) as $d) {

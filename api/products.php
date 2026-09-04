@@ -14,6 +14,8 @@ $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 12;
 $min_price = isset($_GET['min_price']) && $_GET['min_price'] !== '' ? (float)$_GET['min_price'] : null;
 $max_price = isset($_GET['max_price']) && $_GET['max_price'] !== '' ? (float)$_GET['max_price'] : null;
+$include_out_of_stock = isset($_GET['include_out_of_stock']) ? (bool)$_GET['include_out_of_stock'] : null;
+$in_stock = isset($_GET['in_stock']) ? (bool)$_GET['in_stock'] : null;
 
 $valid_sorts = ['default', 'sku_desc', 'sku_asc', 'newest', 'created_desc', 'oldest', 'price_asc', 'price_low', 'price_desc', 'price_high', 'name_asc', 'name_desc'];
 if (!in_array($sort, $valid_sorts, true)) {
@@ -24,7 +26,7 @@ $page = $page > 0 ? $page : 1;
 $limit = $limit > 0 ? $limit : 12;
 $offset = ($page - 1) * $limit;
 
-$cache_key = "products_c" . ($category_id ?: '0') . "_cs" . ($category_slug ?: 'none') . "_css" . ($category_slugs_raw ?: 'none') . "_f" . ($featured ? '1' : '0') . "_sq" . ($search ?: 'none') . "_s" . $sort . "_p" . $page . "_l" . $limit . "_min" . ($min_price !== null ? $min_price : 'none') . "_max" . ($max_price !== null ? $max_price : 'none');
+$cache_key = "products_c" . ($category_id ?: '0') . "_cs" . ($category_slug ?: 'none') . "_css" . ($category_slugs_raw ?: 'none') . "_f" . ($featured ? '1' : '0') . "_sq" . ($search ?: 'none') . "_s" . $sort . "_p" . $page . "_l" . $limit . "_min" . ($min_price !== null ? $min_price : 'none') . "_max" . ($max_price !== null ? $max_price : 'none') . "_ioos" . ($include_out_of_stock ? '1' : '0') . "_is" . ($in_stock ? '1' : '0');
 
 $cached_res = get_cache($cache_key, 3600, $pdo);
 if ($cached_res !== false) {
@@ -95,8 +97,32 @@ try {
         $category_ids_in = get_all_child_category_ids($pdo, $category_id);
     }
 
+    // Determine if out-of-stock products should be included:
+    // 1. Explicit parameter: include_out_of_stock=1
+    // 2. Outfit category listing (outfit root ID 26 and all its subcategories like designer-blouses, kalamkari, etc.)
+    // 3. BUT if in_stock=1 is explicitly requested (e.g. user toggled 'In Stock Only'), then force in-stock only.
+    $outfit_category_ids = get_all_child_category_ids($pdo, 26);
+    $is_outfit_category = false;
+    if (!empty($category_ids_in)) {
+        if (!empty(array_intersect($category_ids_in, $outfit_category_ids))) {
+            $is_outfit_category = true;
+        }
+    }
+    if (!$is_outfit_category && !empty($category_slugs_array)) {
+        $outfit_slugs = ['outfit', 'outfits', 'apparel', 'designer-blouses', 'kalamkari-collection', 'kalamkari-collection-ittar', 'trail-gowns-infinity-gowns'];
+        if (!empty(array_intersect($category_slugs_array, $outfit_slugs))) {
+            $is_outfit_category = true;
+        }
+    }
+
+    $show_out_of_stock = ($include_out_of_stock || $is_outfit_category) && !$in_stock;
+
     // Build WHERE clause (shared between count and data queries)
-    $where_sql = "WHERE p.status = 'published' AND p.deleted_at IS NULL AND p.stock_qty > 0";
+    if ($show_out_of_stock) {
+        $where_sql = "WHERE p.status = 'published' AND p.deleted_at IS NULL";
+    } else {
+        $where_sql = "WHERE p.status = 'published' AND p.deleted_at IS NULL AND p.stock_qty > 0";
+    }
     $params = [];
     
     if ($has_explicit_cat_filter) {

@@ -72,7 +72,7 @@ $current_script = basename($_SERVER['PHP_SELF']);
 
         <!-- Collections & Lookbook Group -->
         <?php 
-        $collections_active = in_array($current_script, ['collections.php', 'collection-add.php', 'collection-edit.php', 'collection-ai-sorter.php']);
+        $collections_active = in_array($current_script, ['collections.php', 'collection-add.php', 'collection-edit.php', 'collection-ai-sorter.php', 'sync-sold-out-collections.php']);
         ?>
         <li class="menu-item has-submenu <?php echo $collections_active ? 'open active-parent' : ''; ?>">
             <a href="javascript:void(0);" class="submenu-toggle">
@@ -84,6 +84,11 @@ $current_script = basename($_SERVER['PHP_SELF']);
                 <li class="<?php echo ($current_script == 'collections.php' || $current_script == 'collection-edit.php') ? 'active' : ''; ?>">
                     <a href="collections.php">
                         <i class="fa-solid fa-vest-patches"></i> Outfit Styles
+                    </a>
+                </li>
+                <li class="<?php echo ($current_script == 'sync-sold-out-collections.php') ? 'active' : ''; ?>">
+                    <a href="sync-sold-out-collections.php" style="font-weight: 700; color: #d97706;">
+                        <i class="fa-solid fa-boxes-packing" style="color: #f59e0b;"></i> Sync Sold Out Styles
                     </a>
                 </li>
                 <li class="<?php echo ($current_script == 'collection-add.php') ? 'active' : ''; ?>">
