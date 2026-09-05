@@ -65,6 +65,31 @@ try {
         $imgStmt->execute([$product['id']]);
         $product['images'] = $imgStmt->fetchAll();
     }
+    unset($product);
+
+    // Batch-resolve live POS inventory for outfit products
+    $outfitSkus = [];
+    foreach ($products as $p) {
+        if (is_outfit_category_or_product($p, $pdo)) {
+            $outfitSkus[] = $p['sku'];
+        }
+    }
+    if (!empty($outfitSkus)) {
+        $posStockMap = get_pos_stock_for_skus($outfitSkus);
+        foreach ($products as &$product) {
+            if (is_outfit_category_or_product($product, $pdo)) {
+                $skuKey = strtolower(trim($product['sku']));
+                if (isset($posStockMap[$skuKey])) {
+                    $posQty = max(0, (int)$posStockMap[$skuKey]);
+                    $product['stock_qty'] = $posQty;
+                    $product['stock_quantity'] = $posQty;
+                    $product['is_in_stock'] = ($posQty > 0);
+                    $product['is_out_of_stock'] = ($posQty <= 0);
+                }
+            }
+        }
+        unset($product);
+    }
     
     echo json_encode([
         'success' => true,

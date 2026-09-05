@@ -1384,4 +1384,226 @@ if (!function_exists('format_bytes')) {
     }
 }
 
+/**
+ * POS Database Connection Helper with multi-environment fallbacks
+ */
+function get_pos_pdo() {
+    static $posPdo = null;
+    if ($posPdo !== null) return $posPdo;
+
+    $isLocal = (php_sapi_name() === 'cli' || !isset($_SERVER['HTTP_HOST']) || in_array($_SERVER['HTTP_HOST'], ['localhost', '127.0.0.1', '::1']) || strpos($_SERVER['HTTP_HOST'], 'localhost:') === 0);
+
+    $configs = [];
+    if ($isLocal) {
+        $configs[] = ['host' => 'localhost', 'user' => 'root', 'pass' => '', 'db' => 'u464193275_srishringarr'];
+        $configs[] = ['host' => 'localhost', 'user' => 'root', 'pass' => '', 'db' => 'u464193275_srishrinjewels'];
+    } else {
+        $configs[] = ['host' => 'localhost', 'user' => 'u464193275_sarmicropos', 'pass' => 'Mypos1234', 'db' => 'u464193275_srishringarr'];
+        $configs[] = ['host' => 'localhost', 'user' => 'u464193275_yosshitanehafs', 'pass' => 'AVav@@2026', 'db' => 'u464193275_srishringarr'];
+        $configs[] = ['host' => 'localhost', 'user' => 'u464193275_srishrinjuser', 'pass' => '9b@hMgk!=zI', 'db' => 'u464193275_srishrinjewels'];
+    }
+
+    foreach ($configs as $cfg) {
+        try {
+            $pdo = new PDO("mysql:host={$cfg['host']};dbname={$cfg['db']};charset=utf8mb4", $cfg['user'], $cfg['pass'], [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_TIMEOUT => 3
+            ]);
+            // Verify phppos_items exists
+            $stmt = $pdo->query("SHOW TABLES LIKE 'phppos_items'");
+            if ($stmt->rowCount() > 0) {
+                $posPdo = $pdo;
+                return $posPdo;
+            }
+        } catch (Exception $e) {
+            continue;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Check if a product or category belongs to the Outfit tree (ID 26 and all its subcategories)
+ */
+function is_outfit_category_or_product($productOrCatId, $pdo = null) {
+    static $outfitCatIds = null;
+
+    if ($outfitCatIds === null) {
+        if (!$pdo && isset($GLOBALS['pdo'])) {
+            $pdo = $GLOBALS['pdo'];
+        }
+        if ($pdo) {
+            try {
+                $outfitCatIds = get_all_child_category_ids($pdo, 26);
+            } catch (Exception $e) {
+                $outfitCatIds = [26, 27, 28, 64, 68];
+            }
+        } else {
+            $outfitCatIds = [26, 27, 28, 64, 68];
+        }
+    }
+
+    if (is_numeric($productOrCatId)) {
+        return in_array((int)$productOrCatId, $outfitCatIds, true);
+    }
+
+    if (is_array($productOrCatId)) {
+        $catId = (int)($productOrCatId['category_id'] ?? 0);
+        if ($catId > 0 && in_array($catId, $outfitCatIds, true)) {
+            return true;
+        }
+        $sku = strtoupper(trim($productOrCatId['sku'] ?? ''));
+        if (str_starts_with($sku, 'YNB') || str_starts_with($sku, 'YNI') || str_starts_with($sku, 'BL') || str_starts_with($sku, 'DR') || str_starts_with($sku, 'SAREE')) {
+            return true;
+        }
+        $catName = strtolower(trim($productOrCatId['category_name'] ?? ''));
+        if ($catName !== '' && (str_contains($catName, 'outfit') || str_contains($catName, 'blouse') || str_contains($catName, 'kalamkari') || str_contains($catName, 'gown'))) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Batch-fetch live inventory from phppos_items table for a list of SKUs.
+ * Handles SKU variations, trims, case insensitivity, variant suffixes like ' (1)',
+ * and numbers with/without leading zeros (e.g. YNIHA01 vs YNIHA1).
+ * Returns an associative map: [sku_lowercase => float_qty]
+ */
+function get_pos_stock_for_skus(array $skus) {
+    if (empty($skus)) return [];
+
+    $posPdo = get_pos_pdo();
+    if (!$posPdo) return [];
+
+    $stockMap = [];
+    $lookupCandidates = [];
+    $skuToOriginalMap = [];
+
+    foreach ($skus as $rawSku) {
+        $clean = trim((string)$rawSku);
+        if ($clean === '') continue;
+        $lowerClean = strtolower($clean);
+
+        $candidates = [$clean];
+        // Strip trailing parentheses like " (1)" or "(2)"
+        $stripped = trim(preg_replace('/\s*\(\d+\)$/', '', $clean));
+        if ($stripped !== '' && $stripped !== $clean) {
+            $candidates[] = $stripped;
+        }
+        // Handle leading zeros in numeric suffix like YNIHA01 -> YNIHA1
+        if (preg_match('/^([A-Za-z]+)0+(\d+)$/', $clean, $m)) {
+            $candidates[] = $m[1] . $m[2];
+        }
+        if (preg_match('/^([A-Za-z]+)0+(\d+)$/', $stripped, $m)) {
+            $candidates[] = $m[1] . $m[2];
+        }
+
+        foreach ($candidates as $cand) {
+            $lookupCandidates[] = $cand;
+            $skuToOriginalMap[strtolower($cand)][] = $lowerClean;
+        }
+    }
+
+    $lookupCandidates = array_values(array_unique(array_filter($lookupCandidates)));
+    if (empty($lookupCandidates)) return [];
+
+    try {
+        foreach (array_chunk($lookupCandidates, 250) as $chunk) {
+            $placeholders = implode(',', array_fill(0, count($chunk), '?'));
+            $sql = "SELECT name, item_number, quantity FROM phppos_items WHERE name IN ($placeholders) OR item_number IN ($placeholders)";
+            $stmt = $posPdo->prepare($sql);
+            $stmt->execute(array_merge($chunk, $chunk));
+            
+            while ($row = $stmt->fetch()) {
+                $posQty = (float)($row['quantity'] ?? 0);
+                $keyName = strtolower(trim($row['name'] ?? ''));
+                $keyItem = strtolower(trim($row['item_number'] ?? ''));
+
+                if ($keyName !== '' && isset($skuToOriginalMap[$keyName])) {
+                    foreach ($skuToOriginalMap[$keyName] as $orig) {
+                        $stockMap[$orig] = $posQty;
+                    }
+                }
+                if ($keyItem !== '' && isset($skuToOriginalMap[$keyItem])) {
+                    foreach ($skuToOriginalMap[$keyItem] as $orig) {
+                        if (!isset($stockMap[$orig])) {
+                            $stockMap[$orig] = $posQty;
+                        }
+                    }
+                }
+            }
+        }
+    } catch (Exception $e) {
+        error_log("POS stock fetch failed: " . $e->getMessage());
+    }
+
+    return $stockMap;
+}
+
+/**
+ * Synchronize stock_qty in products table for all outfit products from phppos_items
+ */
+function sync_outfit_stock_from_pos($pdo = null) {
+    if (!$pdo && isset($GLOBALS['pdo'])) {
+        $pdo = $GLOBALS['pdo'];
+    }
+    if (!$pdo) return ['success' => false, 'message' => 'No database connection'];
+
+    $posPdo = get_pos_pdo();
+    if (!$posPdo) return ['success' => false, 'message' => 'Cannot connect to POS database'];
+
+    try {
+        $outfitCatIds = get_all_child_category_ids($pdo, 26);
+        $inCats = implode(',', array_map('intval', $outfitCatIds));
+
+        $stmt = $pdo->query("SELECT id, sku, stock_qty FROM products WHERE (category_id IN ($inCats) OR sku LIKE 'YNB%' OR sku LIKE 'YNI%') AND deleted_at IS NULL");
+        $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($products)) {
+            return ['success' => true, 'updated' => 0, 'total' => 0];
+        }
+
+        $skus = array_column($products, 'sku');
+        $posStockMap = get_pos_stock_for_skus($skus);
+
+        $updateStmt = $pdo->prepare("UPDATE products SET stock_qty = ? WHERE id = ?");
+        $updatedCount = 0;
+        $details = [];
+
+        foreach ($products as $p) {
+            $skuLower = strtolower(trim($p['sku']));
+            if (isset($posStockMap[$skuLower])) {
+                $newStock = max(0, (int)$posStockMap[$skuLower]);
+                $oldStock = (int)$p['stock_qty'];
+                if ($newStock !== $oldStock) {
+                    $updateStmt->execute([$newStock, $p['id']]);
+                    $updatedCount++;
+                    $details[] = [
+                        'sku' => $p['sku'],
+                        'old_stock' => $oldStock,
+                        'new_stock' => $newStock
+                    ];
+                }
+            }
+        }
+
+        if (function_exists('purge_cache')) {
+            purge_cache();
+        }
+
+        return [
+            'success' => true,
+            'total_outfits' => count($products),
+            'updated' => $updatedCount,
+            'changes' => $details
+        ];
+    } catch (Exception $e) {
+        return ['success' => false, 'message' => $e->getMessage()];
+    }
+}
+
 ?>

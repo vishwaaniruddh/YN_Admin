@@ -30,6 +30,36 @@ $cache_key = "products_c" . ($category_id ?: '0') . "_cs" . ($category_slug ?: '
 
 $cached_res = get_cache($cache_key, 3600, $pdo);
 if ($cached_res !== false) {
+    // Ensure outfit products always reflect live POS stock even when returned from cache
+    if (!empty($cached_res['data']) && is_array($cached_res['data'])) {
+        $outfitSkus = [];
+        foreach ($cached_res['data'] as $p) {
+            if (is_outfit_category_or_product($p, $pdo)) {
+                $outfitSkus[] = $p['sku'];
+            }
+        }
+        if (!empty($outfitSkus)) {
+            $posStockMap = get_pos_stock_for_skus($outfitSkus);
+            foreach ($cached_res['data'] as &$product) {
+                if (is_outfit_category_or_product($product, $pdo)) {
+                    $skuKey = strtolower(trim($product['sku']));
+                    if (isset($posStockMap[$skuKey])) {
+                        $posQty = max(0, (int)$posStockMap[$skuKey]);
+                        $product['stock_qty'] = $posQty;
+                        $product['stock_quantity'] = $posQty;
+                        $product['is_in_stock'] = ($posQty > 0);
+                        $product['is_out_of_stock'] = ($posQty <= 0);
+                    }
+                }
+            }
+            unset($product);
+            if ($in_stock) {
+                $cached_res['data'] = array_values(array_filter($cached_res['data'], function($p) {
+                    return (int)($p['stock_qty'] ?? 0) > 0;
+                }));
+            }
+        }
+    }
     echo json_encode($cached_res);
     exit;
 }
@@ -265,6 +295,35 @@ try {
             }
         }
         unset($product);
+    }
+
+    // Batch-resolve live POS inventory for outfit products
+    $outfitSkus = [];
+    foreach ($paginated_products as $p) {
+        if (is_outfit_category_or_product($p, $pdo)) {
+            $outfitSkus[] = $p['sku'];
+        }
+    }
+    if (!empty($outfitSkus)) {
+        $posStockMap = get_pos_stock_for_skus($outfitSkus);
+        foreach ($paginated_products as &$product) {
+            if (is_outfit_category_or_product($product, $pdo)) {
+                $skuKey = strtolower(trim($product['sku']));
+                if (isset($posStockMap[$skuKey])) {
+                    $posQty = max(0, (int)$posStockMap[$skuKey]);
+                    $product['stock_qty'] = $posQty;
+                    $product['stock_quantity'] = $posQty;
+                    $product['is_in_stock'] = ($posQty > 0);
+                    $product['is_out_of_stock'] = ($posQty <= 0);
+                }
+            }
+        }
+        unset($product);
+        if ($in_stock) {
+            $paginated_products = array_values(array_filter($paginated_products, function($p) {
+                return (int)($p['stock_qty'] ?? 0) > 0;
+            }));
+        }
     }
     
     // Log activity

@@ -55,6 +55,18 @@ $cache_key = "product_detail_" . ($slug ? "slug_" . md5($slug) : "id_" . $id);
 
 $cached_product = get_cache($cache_key, 3600, $pdo);
 if ($cached_product !== false) {
+    // Ensure outfit products always reflect live POS stock even when returned from cache
+    if (isset($cached_product['data']) && is_outfit_category_or_product($cached_product['data'], $pdo)) {
+        $posStock = get_pos_stock_for_skus([$cached_product['data']['sku']]);
+        $skuLower = strtolower(trim($cached_product['data']['sku']));
+        if (isset($posStock[$skuLower])) {
+            $qty = max(0, (int)$posStock[$skuLower]);
+            $cached_product['data']['stock_qty'] = $qty;
+            $cached_product['data']['stock_quantity'] = $qty;
+            $cached_product['data']['is_in_stock'] = ($qty > 0);
+            $cached_product['data']['is_out_of_stock'] = ($qty <= 0);
+        }
+    }
     echo json_encode($cached_product);
     if (isset($cached_product['data']['id'])) {
         try {
@@ -181,6 +193,41 @@ try {
         unset($relProd);
 
         $product['related_products'] = $relatedProducts;
+
+        // Resolve live POS stock for Outfit products
+        if (is_outfit_category_or_product($product, $pdo)) {
+            $posStock = get_pos_stock_for_skus([$product['sku']]);
+            $skuLower = strtolower(trim($product['sku']));
+            if (isset($posStock[$skuLower])) {
+                $qty = max(0, (int)$posStock[$skuLower]);
+                $product['stock_qty'] = $qty;
+                $product['stock_quantity'] = $qty;
+                $product['is_in_stock'] = ($qty > 0);
+                $product['is_out_of_stock'] = ($qty <= 0);
+            }
+        }
+
+        // Also resolve live POS stock for any related outfit products
+        $relOutfitSkus = [];
+        foreach ($product['related_products'] as $rp) {
+            if (is_outfit_category_or_product($rp, $pdo)) {
+                $relOutfitSkus[] = $rp['sku'];
+            }
+        }
+        if (!empty($relOutfitSkus)) {
+            $relPosStock = get_pos_stock_for_skus($relOutfitSkus);
+            foreach ($product['related_products'] as &$relProd) {
+                $rSkuLower = strtolower(trim($relProd['sku']));
+                if (isset($relPosStock[$rSkuLower])) {
+                    $rQty = max(0, (int)$relPosStock[$rSkuLower]);
+                    $relProd['stock_qty'] = $rQty;
+                    $relProd['stock_quantity'] = $rQty;
+                    $relProd['is_in_stock'] = ($rQty > 0);
+                    $relProd['is_out_of_stock'] = ($rQty <= 0);
+                }
+            }
+            unset($relProd);
+        }
 
         $response_data = [
             'success' => true,

@@ -45,6 +45,26 @@ try {
         }
 
         $total = 0;
+        // Batch-resolve live POS inventory for outfit items in cart
+        $outfitSkus = [];
+        foreach ($items as $item) {
+            if (is_outfit_category_or_product($item, $pdo)) {
+                $outfitSkus[] = $item['sku'];
+            }
+        }
+        if (!empty($outfitSkus)) {
+            $posStockMap = get_pos_stock_for_skus($outfitSkus);
+            foreach ($items as &$item) {
+                if (is_outfit_category_or_product($item, $pdo)) {
+                    $skuKey = strtolower(trim($item['sku']));
+                    if (isset($posStockMap[$skuKey])) {
+                        $item['stock_qty'] = max(0, (int)$posStockMap[$skuKey]);
+                    }
+                }
+            }
+            unset($item);
+        }
+
         foreach($items as &$item) {
             // Ensure product_id is explicitly set
             $item['product_id'] = (int)$item['product_id'];
@@ -80,10 +100,29 @@ try {
         }
 
         // Check stock quantity from products table
-        $pStmt = $pdo->prepare("SELECT stock_qty FROM products WHERE id = ?");
+        $pStmt = $pdo->prepare("SELECT id, sku, category_id, stock_qty FROM products WHERE id = ?");
         $pStmt->execute([$product_id]);
         $prod = $pStmt->fetch();
         $availableStock = ($prod && $prod['stock_qty'] !== null && $prod['stock_qty'] !== '') ? (int)$prod['stock_qty'] : 99;
+
+        // Resolve live POS stock for outfit products
+        if ($prod && is_outfit_category_or_product($prod, $pdo)) {
+            $posStock = get_pos_stock_for_skus([$prod['sku']]);
+            $skuLower = strtolower(trim($prod['sku']));
+            if (isset($posStock[$skuLower])) {
+                $availableStock = max(0, (int)$posStock[$skuLower]);
+            }
+        }
+
+        if ($availableStock <= 0) {
+            echo json_encode([
+                "success" => false, 
+                "message" => "This outfit is currently out of stock (Made to Order / Custom Restock available).", 
+                "stock_qty" => 0,
+                "is_out_of_stock" => true
+            ]);
+            exit();
+        }
 
         // Check if exists in cart
         $stmt = $pdo->prepare("SELECT id, quantity FROM cart_items WHERE session_token = ? AND product_id = ?");
@@ -120,10 +159,19 @@ try {
             exit();
         }
 
-        $pStmt = $pdo->prepare("SELECT stock_qty FROM products WHERE id = ?");
+        $pStmt = $pdo->prepare("SELECT id, sku, category_id, stock_qty FROM products WHERE id = ?");
         $pStmt->execute([$product_id]);
         $prod = $pStmt->fetch();
         $availableStock = ($prod && $prod['stock_qty'] !== null && $prod['stock_qty'] !== '') ? (int)$prod['stock_qty'] : 99;
+
+        // Resolve live POS stock for outfit products
+        if ($prod && is_outfit_category_or_product($prod, $pdo)) {
+            $posStock = get_pos_stock_for_skus([$prod['sku']]);
+            $skuLower = strtolower(trim($prod['sku']));
+            if (isset($posStock[$skuLower])) {
+                $availableStock = max(0, (int)$posStock[$skuLower]);
+            }
+        }
 
         if ($quantity > 0 && $availableStock > 0 && $quantity > $availableStock) {
             echo json_encode(["success" => false, "message" => "Cannot set quantity higher than available stock ({$availableStock} available).", "stock_qty" => $availableStock]);
