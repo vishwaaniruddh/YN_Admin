@@ -319,9 +319,14 @@ try {
                 ];
             }
 
+            // Ensure first image is explicitly designated as the primary/main image
+            if (!empty($imagesList)) {
+                $imagesList[0]['is_main'] = true;
+            }
+
             $p['all_images'] = $imagesList;
-            // Default selected images: first image (main)
-            $p['selected_images'] = [$imagesList[0]['path']];
+            // Default selection: strictly the main product image (Angle 1)
+            $p['selected_images'] = !empty($imagesList) ? [$imagesList[0]['path']] : [];
             $p['price_formatted'] = '₹' . number_format($p['price'], 0);
             $p['sale_price_formatted'] = $p['sale_price'] ? '₹' . number_format($p['sale_price'], 0) : null;
             $p['effective_price'] = (float)($p['sale_price'] > 0 ? $p['sale_price'] : $p['price']);

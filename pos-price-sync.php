@@ -15,6 +15,7 @@ require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/includes/cache.php';
 
 // POS Database Connection Helper with multi-environment fallbacks
+if (!function_exists('get_pos_pdo')) {
 function get_pos_pdo() {
     static $posPdo = null;
     if ($posPdo !== null) return $posPdo;
@@ -49,6 +50,7 @@ function get_pos_pdo() {
     }
 
     return null;
+}
 }
 
 // -------------------------------------------------------------------------
@@ -581,19 +583,24 @@ function renderTable(products) {
                     ${canSync ? `<input type="checkbox" class="row-checkbox" value="${p.id}" style="width: 16px; height: 16px; cursor: pointer;">` : `<input type="checkbox" disabled style="opacity: 0.3;">`}
                 </td>
                 <td>
-                    <img src="${imgUrl}" alt="${p.sku}" style="width: 44px; height: 44px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0;">
+                    <div style="width: 40px; height: 40px; border-radius: 6px; overflow: hidden; border: 1px solid #e4e4e7; background: #f4f4f5; display: flex; align-items: center; justify-content: center;">
+                        <img src="${imgUrl}" alt="" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center; color: #a1a1aa;">
+                            <i class="fa-solid fa-gem" style="font-size: 13px;"></i>
+                        </div>
+                    </div>
                 </td>
                 <td>
-                    <strong style="color: #4f46e5; font-family: monospace; font-size: 13px;">${p.sku}</strong>
+                    <strong style="color: #4f46e5; font-family: monospace; font-size: 12.5px; font-weight: 500;">${p.sku}</strong>
                 </td>
                 <td>
-                    <div style="font-weight: 600; color: #1e293b; font-size: 13px;">${p.name}</div>
-                    <div style="font-size: 11px; color: #64748b; margin-top: 2px;"><i class="fa-solid fa-folder text-slate-400"></i> ${p.category_name}</div>
+                    <div style="font-weight: 500; color: #09090b; font-size: 13px;">${p.name}</div>
+                    <div style="font-size: 11px; color: #71717a; margin-top: 2px;"><i class="fa-solid fa-folder" style="color: #a1a1aa;"></i> ${p.category_name}</div>
                 </td>
-                <td style="text-align: right; font-family: monospace; font-size: 13px; font-weight: 700; color: ${p.current_price <= 1.0 ? '#dc2626' : '#1e293b'};">
+                <td style="text-align: right; font-family: monospace; font-size: 13px; font-weight: 600; color: ${p.current_price <= 1.0 ? '#dc2626' : '#09090b'};">
                     ₹${p.current_price.toLocaleString('en-IN', {minimumFractionDigits: 2})}
                 </td>
-                <td style="text-align: right; font-family: monospace; font-size: 14px; font-weight: 800; color: #059669;">
+                <td style="text-align: right; font-family: monospace; font-size: 13px; font-weight: 600; color: #059669;">
                     ${p.pos_price !== null ? '₹' + p.pos_price.toLocaleString('en-IN', {minimumFractionDigits: 2}) : '<span style="color:#94a3b8; font-weight:normal;">N/A</span>'}
                 </td>
                 <td style="text-align: center;">

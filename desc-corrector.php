@@ -89,55 +89,57 @@ foreach ($products as $p) {
 
 <style>
 .desc-corrector-container {
-    padding: 25px 30px;
-    color: #e2e8f0;
+    padding: 20px;
+    color: #09090b;
 }
 .page-header-card {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #1e1e1e;
-    padding: 20px 25px;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    margin-bottom: 25px;
+    background: #ffffff;
+    padding: 16px 20px;
+    border-radius: 8px;
+    border: 1px solid #e4e4e7;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 .page-header-card h1 {
-    font-size: 20px;
-    font-weight: 700;
-    color: #fff;
+    font-size: 18px;
+    font-weight: 600;
+    color: #09090b;
     margin: 0 0 4px 0;
+    letter-spacing: -0.02em;
 }
 .page-header-card p {
-    font-size: 13px;
-    color: #94a3b8;
+    font-size: 12.5px;
+    color: #71717a;
     margin: 0;
 }
 .info-card {
-    background: #181818;
-    border: 1px solid rgba(200, 165, 92, 0.3);
-    border-left: 4px solid #c8a55c;
-    border-radius: 8px;
-    padding: 16px 20px;
-    font-size: 13px;
-    color: #cbd5e1;
-    margin-bottom: 25px;
-    line-height: 1.6;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-left: 3px solid #3b82f6;
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-size: 12.5px;
+    color: #334155;
+    margin-bottom: 20px;
+    line-height: 1.5;
 }
 .info-card strong {
-    color: #c8a55c;
-    font-size: 14px;
+    color: #1e293b;
+    font-size: 13px;
     display: inline-block;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
 }
 .info-card code {
-    background: #090909;
-    color: #f59e0b;
-    border: 1px solid rgba(245, 158, 11, 0.2);
-    padding: 2px 6px;
+    background: #f1f5f9;
+    color: #0284c7;
+    border: 1px solid #e2e8f0;
+    padding: 1px 5px;
     border-radius: 4px;
     font-family: monospace;
-    font-size: 12px;
+    font-size: 11.5px;
 }
 .search-form {
     display: flex;
@@ -145,217 +147,235 @@ foreach ($products as $p) {
     align-items: center;
 }
 .search-input {
-    background: #090909;
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: #ffffff;
+    border: 1px solid #e4e4e7;
     border-radius: 6px;
-    color: #fff;
-    padding: 9px 14px;
-    font-size: 13px;
+    color: #09090b;
+    padding: 0 12px;
+    height: 32px;
+    font-size: 12.5px;
     outline: none;
-    width: 260px;
-    transition: border-color 0.2s;
+    width: 240px;
+    transition: all 0.15s ease;
 }
 .search-input:focus {
-    border-color: #c8a55c;
+    border-color: #09090b;
+    box-shadow: 0 0 0 1px #09090b;
 }
 .btn-search {
-    background: #334155;
+    background: #09090b;
     color: #fff;
     border: none;
-    padding: 9px 16px;
+    height: 32px;
+    padding: 0 14px;
     border-radius: 6px;
-    font-weight: 600;
-    font-size: 13px;
+    font-weight: 500;
+    font-size: 12.5px;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    transition: background 0.2s;
+    transition: background 0.15s;
 }
 .btn-search:hover {
-    background: #475569;
+    background: #27272a;
 }
 .btn-clear-search {
-    background: rgba(255, 255, 255, 0.08);
-    color: #94a3b8;
+    background: #f4f4f5;
+    color: #71717a;
     text-decoration: none;
-    padding: 9px 12px;
+    height: 32px;
+    padding: 0 10px;
     border-radius: 6px;
-    font-size: 13px;
+    border: 1px solid #e4e4e7;
+    font-size: 12.5px;
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    transition: all 0.2s;
 }
 .btn-clear-search:hover {
-    color: #fff;
-    background: rgba(255, 255, 255, 0.15);
+    color: #09090b;
+    background: #e4e4e7;
 }
 .btn-bulk {
-    background: #c8a55c;
-    color: #000;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
-    font-weight: 700;
-    font-size: 13px;
+    background: #f4f4f5;
+    color: #09090b;
+    border: 1px solid #e4e4e7;
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 12.5px;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    transition: all 0.2s;
+    gap: 6px;
+    transition: all 0.15s;
 }
 .btn-bulk:hover {
-    background: #dfb96c;
+    background: #e4e4e7;
 }
 .product-correct-card {
-    background: #181818;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 20px;
-    transition: all 0.3s;
-}
-.product-correct-card:hover {
-    border-color: rgba(255, 255, 255, 0.15);
+    background: #ffffff;
+    border: 1px solid #e4e4e7;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 .card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-bottom: 14px;
-    margin-bottom: 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid #f4f4f5;
 }
 .product-meta {
     display: flex;
     align-items: center;
     gap: 12px;
 }
-.product-img {
-    width: 48px;
-    height: 60px;
-    object-fit: cover;
+.product-img-wrap {
+    width: 44px;
+    height: 56px;
     border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+    border: 1px solid #e4e4e7;
+    background: #f4f4f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.product-img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 .product-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #fff;
-    margin: 0 0 4px 0;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: #09090b;
+    margin: 0 0 3px 0;
 }
 .product-sku {
-    font-size: 12px;
-    color: #94a3b8;
+    font-size: 11.5px;
+    color: #71717a;
     font-family: monospace;
 }
 .btn-action {
-    padding: 8px 16px;
+    height: 32px;
+    padding: 0 14px;
     border-radius: 6px;
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 500;
     cursor: pointer;
     border: none;
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    transition: all 0.2s;
+    transition: all 0.15s;
 }
 .btn-apply {
-    background: #16a34a;
+    background: #10b981;
     color: #fff;
 }
 .btn-apply:hover {
-    background: #15803d;
+    background: #059669;
 }
 .btn-skip {
-    background: #334155;
-    color: #cbd5e1;
+    background: #f4f4f5;
+    color: #71717a;
+    border: 1px solid #e4e4e7;
 }
 .btn-skip:hover {
-    background: #475569;
+    background: #e4e4e7;
+    color: #09090b;
 }
 .grid-compare {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
+    gap: 14px;
 }
 .desc-box {
-    background: #101010;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 8px;
-    padding: 12px 14px;
+    background: #fafafa;
+    border: 1px solid #e4e4e7;
+    border-radius: 6px;
+    padding: 12px;
 }
 .box-label {
-    font-size: 11px;
-    font-weight: 700;
+    font-size: 10.5px;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #64748b;
-    margin-bottom: 8px;
+    letter-spacing: 0.04em;
+    color: #71717a;
+    margin-bottom: 6px;
     display: block;
 }
 .desc-preview {
-    font-size: 12px;
-    color: #cbd5e1;
+    font-size: 12.5px;
+    color: #52525b;
     white-space: pre-wrap;
     line-height: 1.5;
-    font-weight: 300;
 }
 .desc-textarea {
     width: 100%;
-    background: #090909;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: #ffffff;
+    border: 1px solid #e4e4e7;
     border-radius: 6px;
-    color: #fff;
-    padding: 10px;
-    font-size: 12px;
+    color: #09090b;
+    padding: 8px 10px;
+    font-size: 12.5px;
     line-height: 1.5;
     resize: vertical;
     outline: none;
+    font-family: inherit;
 }
 .desc-textarea:focus {
-    border-color: #c8a55c;
+    border-color: #09090b;
+    box-shadow: 0 0 0 1px #09090b;
 }
 .empty-state {
     text-align: center;
-    padding: 60px 20px;
-    background: #181818;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 50px 20px;
+    background: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #e4e4e7;
 }
 .empty-state i {
-    font-size: 48px;
-    color: #2ecc71;
-    margin-bottom: 16px;
+    font-size: 36px;
+    color: #10b981;
+    margin-bottom: 10px;
 }
 .empty-state h3 {
-    font-size: 18px;
-    color: #fff;
-    margin-bottom: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #09090b;
+    margin-bottom: 4px;
 }
 </style>
 
 <div class="desc-corrector-container">
-
-    <!-- Header Section -->
+    
+    <!-- Top Header Card -->
     <div class="page-header-card">
         <div>
             <h1>Format Description Tool</h1>
-            <p>Detects and corrects leading bullets (•) and double question marks (??) into clean numbered list formatting.</p>
+            <p>Detects and corrects leading bullets (&bull;) and double question marks (??) into clean numbered list formatting.</p>
         </div>
-        <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+        <div style="display: flex; gap: 10px; align-items: center;">
             <form method="GET" action="desc-corrector.php" class="search-form">
-                <input type="text" name="search" placeholder="Search SKU, Name or ID..." value="<?php echo htmlspecialchars($search); ?>" class="search-input">
+                <input type="text" name="search" class="search-input" placeholder="Search SKU, Name or ID..." value="<?php echo htmlspecialchars($search); ?>">
                 <button type="submit" class="btn-search"><i class="fa-solid fa-magnifying-glass"></i> Search</button>
                 <?php if (!empty($search)): ?>
-                    <a href="desc-corrector.php" class="btn-clear-search" title="Clear Search"><i class="fa-solid fa-xmark"></i> Clear</a>
+                    <a href="desc-corrector.php" class="btn-clear-search" title="Clear search"><i class="fa-solid fa-xmark"></i></a>
                 <?php endif; ?>
             </form>
+
             <?php if (!empty($cleanedProducts)): ?>
-                <button onclick="bulkCorrectAll()" id="bulkBtn" class="btn-bulk">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i> Bulk Correct (Max 50)
+                <button onclick="bulkCorrectAll()" id="btn-bulk-correct" class="btn-bulk">
+                    <i class="fa-solid fa-wand-magic-sparkles" style="color: #6366f1;"></i> Bulk Correct (Max <?php echo count($cleanedProducts); ?>)
                 </button>
             <?php endif; ?>
         </div>
@@ -364,28 +384,37 @@ foreach ($products as $p) {
     <!-- Informational Card -->
     <div class="info-card">
         <strong>💡 Formatting Information:</strong><br>
-        This utility detects double question marks (<code>??</code>), leading bullets (<code>•</code>), or unformatted text wrappers often caused by legacy encoding. It automatically converts separators into clean numbered lines (<code>1)</code>, <code>2)</code>, etc.) separated by newlines.
+        This utility detects double question marks (<code>??</code>), leading bullets (<code>&bull;</code>), or unformatted text wrappers often caused by legacy encoding. It automatically converts separators into clean numbered lines (<code>1)</code>, <code>2)</code>, etc.) separated by newlines.
     </div>
 
     <?php if (empty($cleanedProducts)): ?>
         <div class="empty-state">
             <i class="fa-solid fa-circle-check"></i>
             <h3>All Clear!</h3>
-            <p style="color: #94a3b8; font-size: 13px;">No products were found with poorly formatted descriptions (bullets or double question marks).</p>
+            <p style="color: #71717a; font-size: 13px;">No products were found with poorly formatted descriptions (bullets or double question marks).</p>
         </div>
     <?php else: ?>
         <div id="product-list">
             <?php foreach ($cleanedProducts as $p): ?>
                 <?php 
-                $imgUrl = $p['main_image'] ? ($p['main_image'] && str_starts_with($p['main_image'], 'http') ? $p['main_image'] : $p['main_image']) : 'https://placehold.co/100x120/1A1A1A/D4AF37?text=No+Image';
+                $imgUrl = $p['main_image'] ?: '';
                 ?>
                 <div id="row-product-<?php echo $p['id']; ?>" class="product-correct-card">
                     <div class="card-header">
                         <div class="product-meta">
-                            <img src="<?php echo htmlspecialchars($imgUrl); ?>" alt="" class="product-img">
+                            <div class="product-img-wrap">
+                                <?php if ($imgUrl): ?>
+                                    <img src="<?php echo htmlspecialchars($imgUrl); ?>" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                    <div style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center; color: #a1a1aa;">
+                                        <i class="fa-solid fa-gem" style="font-size: 13px;"></i>
+                                    </div>
+                                <?php else: ?>
+                                    <i class="fa-solid fa-gem" style="font-size: 13px; color: #a1a1aa;"></i>
+                                <?php endif; ?>
+                            </div>
                             <div>
                                 <h3 class="product-title"><?php echo htmlspecialchars($p['name']); ?></h3>
-                                <div class="product-sku">SKU: <?php echo htmlspecialchars($p['sku'] ?: 'N/A'); ?> | ID: #<?php echo $p['id']; ?></div>
+                                <div class="product-sku">SKU: <?php echo htmlspecialchars($p['sku'] ?: 'N/A'); ?> &bull; ID: #<?php echo $p['id']; ?></div>
                             </div>
                         </div>
                         <div style="display: flex; gap: 8px;">
@@ -404,7 +433,7 @@ foreach ($products as $p) {
                             <div class="desc-preview"><?php echo htmlspecialchars($p['description']); ?></div>
                         </div>
                         <div class="desc-box">
-                            <span class="box-label" style="color: #c8a55c;">Corrected Preview (Editable)</span>
+                            <span class="box-label" style="color: #6366f1;">Corrected Preview (Editable)</span>
                             <textarea id="correct-product-<?php echo $p['id']; ?>" rows="5" class="desc-textarea"><?php echo htmlspecialchars($p['corrected_description']); ?></textarea>
                         </div>
                     </div>

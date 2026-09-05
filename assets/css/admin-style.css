@@ -1,35 +1,47 @@
 /* admin/assets/css/admin-style.css */
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+/* Inter - Official ShadCN UI Typography Standard */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-    --wp-dark: #1d2327;               /* WP Admin Bar Dark */
-    --wp-sidebar-dark: #1d2327;       /* WP Sidebar */
-    --wp-sidebar-hover: #2c3338;      /* WP Sidebar Hover */
-    --wp-sidebar-active: #2271b1;     /* WP Active Blue */
-    --wp-sidebar-submenu-bg: #2c3338; /* WP Submenu */
-    --wp-blue: #2271b1;               /* Sky 600 */
-    --wp-blue-hover: #135e96;         /* Sky 700 */
-    --wp-bg: #f0f0f1;                 /* WP Background */
-    --wp-border: #c3c4c7;             /* Slate 200 */
-    --wp-text: #3c434a;               /* Slate 700 */
-    --wp-text-dark: #1d2327;          /* Slate 900 */
-    --wp-error-red: #d63638;          /* Red 500 */
-    --wp-success-green: #00a32a;      /* Emerald 500 */
-    --wp-warning-orange: #dba617;     /* Amber 500 */
-    --font-stack: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    --wp-dark: #09090b;               /* ShadCN Zinc 950 */
+    --wp-blue: #2563eb;               /* Primary Blue */
+    --wp-blue-hover: #1d4ed8;         /* Blue 700 */
+    --wp-bg: #fafafa;                 /* Crisp light canvas */
+    --wp-border: #e4e4e7;             /* Zinc 200 Border */
+    --wp-text: #09090b;               /* Zinc 950 High-Contrast */
+    --wp-text-dark: #09090b;          /* Pure Dark */
+    --wp-text-muted: #71717a;         /* Zinc 500 Muted */
+    --wp-error-red: #ef4444;          /* Red 500 */
+    --wp-success-green: #10b981;      /* Emerald 500 */
+    --wp-warning-orange: #f59e0b;     /* Amber 500 */
+    
+    /* Clean Light ShadCN Sidebar Tokens */
+    --sidebar-width: 240px;
+    --sidebar-bg: #ffffff;
+    --sidebar-border: #e4e4e7;
+    --sidebar-muted: #a1a1aa;
+    --sidebar-text: #52525b;
+    --sidebar-text-hover: #09090b;
+    --sidebar-text-active: #09090b;
+    --sidebar-hover-bg: #f4f4f5;
+    --sidebar-active-bg: #f4f4f5;
+    --font-stack: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
 }
 
-body {
+html, body {
     font-family: var(--font-stack);
     background-color: var(--wp-bg);
     color: var(--wp-text);
-    font-size: 14px;
+    font-size: 13px;
     line-height: 1.5;
     display: flex;
     flex-direction: column;
@@ -39,93 +51,229 @@ body {
 a {
     color: var(--wp-blue);
     text-decoration: none;
+    transition: color 0.15s ease;
 }
 
 a:hover {
     color: var(--wp-blue-hover);
 }
 
-/* Auth Login Page */
+/* Base Headings - Crisp & Proportionate */
+h1, .h1 {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: #09090b;
+    line-height: 1.25;
+}
+
+h2, .h2 {
+    font-size: 14.5px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: #09090b;
+    line-height: 1.3;
+}
+
+h3, .h3 {
+    font-size: 13px;
+    font-weight: 600;
+    color: #09090b;
+}
+
+/* ==========================================================================
+   SHADCN LIGHT AUTH LOGIN PAGE
+   ========================================================================== */
 .login-body {
-    background-color: var(--wp-bg);
+    background-color: #fafafa;
+    background-image: 
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(37, 99, 235, 0.05), transparent),
+        radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.03) 1px, transparent 0);
+    background-size: 100% 100%, 24px 24px;
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
+    padding: 24px;
+    font-family: var(--font-stack);
+    color: #09090b;
 }
 
 .login-wrapper {
-    width: 320px;
+    width: 100%;
+    max-width: 380px;
     margin: 0 auto;
+}
+
+.login-form-card {
+    background: #ffffff;
+    border: 1px solid #e4e4e7;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+    padding: 32px 28px;
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
 }
 
 .login-logo {
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
+}
+
+.login-brand-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #d97706;
+    font-size: 18px;
+    margin-bottom: 12px;
 }
 
 .login-logo h1 {
-    font-size: 24px;
-    font-weight: 700;
-    color: var(--wp-text-dark);
+    font-size: 18px;
+    font-weight: 600;
+    color: #09090b;
+    letter-spacing: -0.02em;
 }
 
 .login-logo p {
-    font-size: 13px;
-    color: #646970;
-    margin-top: 5px;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
+    font-size: 12px;
+    color: #71717a;
+    margin-top: 4px;
+    line-height: 1.4;
 }
 
-.login-form-card {
-    background: #fff;
-    border: 1px solid var(--wp-border);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-    padding: 26px 24px;
-    border-radius: 4px;
-}
-
-.form-group {
+.login-form-card .form-group {
     margin-bottom: 16px;
 }
 
-.form-group label {
-    display: block;
+.login-form-card .form-group label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12.5px;
     font-weight: 500;
+    color: #09090b;
     margin-bottom: 6px;
-    color: var(--wp-text-dark);
 }
 
-.form-control {
+.login-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.login-input-icon {
+    position: absolute;
+    left: 12px;
+    color: #a1a1aa;
+    font-size: 13px;
+    pointer-events: none;
+}
+
+.login-form-card .form-control {
     width: 100%;
-    padding: 6px 10px;
-    font-size: 14px;
-    line-height: 1.5;
-    color: var(--wp-text-dark);
-    background-color: #fff;
-    border: 1px solid #8c8f94;
-    border-radius: 4px;
-    box-shadow: 0 0 0 transparent;
-    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    height: 38px;
+    padding: 0 12px 0 36px;
+    background-color: #ffffff;
+    border: 1px solid #e4e4e7;
+    border-radius: 6px;
+    color: #09090b;
+    font-size: 13px;
+    font-family: inherit;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.form-control:focus {
-    border-color: var(--wp-blue);
-    box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.3);
+.login-form-card .form-control:focus {
+    border-color: #09090b;
+    box-shadow: 0 0 0 1px #09090b;
     outline: none;
 }
 
-textarea.form-control {
-    min-height: 100px;
-    resize: vertical;
+.login-form-card .form-control::placeholder {
+    color: #a1a1aa;
 }
 
-.login-submit {
+.password-toggle-btn {
+    position: absolute;
+    right: 10px;
+    background: transparent;
+    border: none;
+    color: #a1a1aa;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 4px;
+    transition: color 0.15s ease;
+}
+
+.password-toggle-btn:hover {
+    color: #09090b;
+}
+
+.login-btn-submit {
+    width: 100%;
+    height: 38px;
+    background: #09090b;
+    color: #ffffff;
+    border: 1px solid #09090b;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    transition: background-color 0.15s ease;
+    margin-top: 4px;
+}
+
+.login-btn-submit:hover {
+    background: #27272a;
+}
+
+.login-alert-error {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #b91c1c;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 12.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    line-height: 1.4;
+}
+
+.login-footer-back {
+    text-align: center;
     margin-top: 20px;
+    font-size: 12px;
 }
 
-/* Admin Panel Layout */
+.login-footer-back a {
+    color: #71717a;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.login-footer-back a:hover {
+    color: #09090b;
+}
+
+/* ==========================================================================
+   ADMIN LAYOUT (SHADCN WORKSPACE)
+   ========================================================================== */
 #wpwrap {
     display: flex;
     flex-direction: column;
@@ -134,80 +282,96 @@ textarea.form-control {
     position: relative;
 }
 
-/* Header / Top Bar */
+.admin-main-container {
+    display: flex;
+    flex: 1;
+    margin-top: 50px;
+    min-height: calc(100vh - 50px);
+    padding-left: var(--sidebar-width);
+    transition: padding-left 0.2s ease;
+}
+
+/* Top Navigation Bar */
 #wpadminbar {
     position: fixed;
     top: 0;
-    left: 0;
+    left: var(--sidebar-width);
     right: 0;
-    height: 46px;
-    background-color: var(--wp-dark);
-    color: #c3c4c7;
+    height: 50px;
+    background-color: #ffffff;
+    border-bottom: 1px solid #e4e4e7;
+    color: #09090b;
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 0 20px;
     z-index: 10001;
+    transition: left 0.2s ease;
 }
 
 .adminbar-brand {
+    display: none;
     font-weight: 600;
-    font-size: 15px;
-    color: #fff;
-    display: flex;
+    font-size: 13.5px;
+    color: #09090b;
     align-items: center;
-}
-
-.adminbar-brand i {
-    margin-right: 8px;
+    text-decoration: none;
 }
 
 /* Header Product Search Bar */
 .adminbar-search-container {
     position: relative;
-    flex: 1;
-    max-width: 480px;
-    margin: 0 20px;
+    width: 360px;
+    max-width: 100%;
 }
 
 .adminbar-search-form {
     display: flex;
     align-items: center;
-    gap: 6px;
+    width: 100%;
 }
 
 .adminbar-search-input-wrap {
     position: relative;
-    flex: 1;
+    width: 100%;
     display: flex;
     align-items: center;
 }
 
 .adminbar-search-input-wrap .search-icon {
     position: absolute;
-    left: 12px;
-    color: #8c8f94;
-    font-size: 13px;
+    left: 11px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #a1a1aa;
+    font-size: 11.5px;
     pointer-events: none;
 }
 
 .adminbar-search-input-wrap input {
     width: 100%;
     height: 32px;
-    background: #191e23;
-    border: 1px solid #3c434a;
-    border-radius: 4px;
-    color: #f0f0f1;
-    padding: 0 28px 0 32px;
-    font-size: 13px;
+    background: #f4f4f5;
+    border: 1px solid #e4e4e7;
+    border-radius: 6px;
+    color: #09090b;
+    padding: 0 28px 0 36px;
+    font-size: 12.5px;
+    font-weight: 400;
     outline: none;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
+    font-family: inherit;
+}
+
+.adminbar-search-input-wrap input::placeholder {
+    color: #a1a1aa;
+    font-size: 12.5px;
 }
 
 .adminbar-search-input-wrap input:focus {
-    background: #23282d;
-    border-color: #c8a55c;
-    box-shadow: 0 0 0 1px #c8a55c;
+    background: #ffffff;
+    border-color: #09090b;
+    box-shadow: 0 0 0 1px #09090b;
 }
 
 .adminbar-search-input-wrap .search-clear-btn {
@@ -215,38 +379,19 @@ textarea.form-control {
     right: 8px;
     background: none;
     border: none;
-    color: #8c8f94;
-    font-size: 18px;
+    color: #a1a1aa;
+    font-size: 15px;
     cursor: pointer;
     padding: 0;
     line-height: 1;
 }
 
 .adminbar-search-input-wrap .search-clear-btn:hover {
-    color: #fff;
+    color: #09090b;
 }
 
 .adminbar-search-btn {
-    height: 32px;
-    background: #c8a55c;
-    color: #0a0a0a;
-    border: none;
-    padding: 0 14px;
-    border-radius: 4px;
-    font-weight: 600;
-    font-size: 12px;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    transition: background 0.2s;
-    white-space: nowrap;
-}
-
-.adminbar-search-btn:hover {
-    background: #dfb96c;
+    display: none;
 }
 
 /* Auto-complete Dropdown Results */
@@ -255,41 +400,41 @@ textarea.form-control {
     top: 38px;
     left: 0;
     right: 0;
-    background: #1d2327;
-    border: 1px solid #3c434a;
-    border-radius: 6px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+    background: #ffffff;
+    border: 1px solid #e4e4e7;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
     max-height: 380px;
     overflow-y: auto;
     z-index: 10002;
     padding: 4px 0;
 }
 
-.header-search-item {
+.header-search-result-item {
     display: flex;
     align-items: center;
     gap: 12px;
     padding: 8px 14px;
     text-decoration: none;
-    color: #f0f0f1;
-    transition: background 0.15s;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: #09090b;
+    transition: background 0.12s ease;
+    border-bottom: 1px solid #f4f4f5;
 }
 
-.header-search-item:last-child {
+.header-search-result-item:last-child {
     border-bottom: none;
 }
 
-.header-search-item:hover {
-    background: #2c3338;
+.header-search-result-item:hover {
+    background-color: #f4f4f5;
 }
 
-.header-search-item img {
-    width: 36px;
-    height: 44px;
+.header-search-thumb {
+    width: 34px;
+    height: 34px;
+    border-radius: 4px;
     object-fit: cover;
-    border-radius: 3px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid #e4e4e7;
     flex-shrink: 0;
 }
 
@@ -299,9 +444,9 @@ textarea.form-control {
 }
 
 .header-search-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: #fff;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #09090b;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -309,341 +454,579 @@ textarea.form-control {
 
 .header-search-meta {
     display: flex;
-    gap: 10px;
     align-items: center;
+    gap: 8px;
     font-size: 11px;
-    color: #a7aaad;
+    color: #71717a;
     margin-top: 2px;
 }
 
 .header-search-sku {
-    background: rgba(200, 165, 92, 0.15);
-    color: #c8a55c;
+    background: #f4f4f5;
+    color: #52525b;
     padding: 1px 5px;
     border-radius: 3px;
-    font-weight: 600;
     font-family: monospace;
+    font-size: 10.5px;
+    border: 1px solid #e4e4e7;
 }
 
 .header-search-price {
-    color: #4ab866;
+    color: #059669;
     font-weight: 600;
 }
 
-.header-search-no-results {
-    padding: 14px;
-    text-align: center;
-    color: #a7aaad;
-    font-size: 13px;
-}
-
+/* User pill in topbar */
 .adminbar-user {
     display: flex;
     align-items: center;
+    gap: 12px;
     margin-left: auto;
+    font-size: 12.5px;
+}
+
+.adminbar-user span {
+    color: #71717a;
+    font-size: 12.5px;
+    font-weight: 400;
+}
+
+.adminbar-user strong {
+    color: #09090b;
+    font-weight: 500;
 }
 
 .adminbar-user a {
-    color: #c3c4c7;
-    font-size: 13px;
-    margin-left: 15px;
+    color: #52525b;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid #e4e4e7;
+    background: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+    transition: all 0.15s ease;
 }
 
 .adminbar-user a:hover {
-    color: #fff;
+    color: #ef4444;
+    background: #fef2f2;
+    border-color: #fecaca;
 }
 
-/* Sidebar and Content Container */
-.admin-main-container {
-    display: flex;
-    flex: 1;
-    margin-top: 46px;
-    min-height: calc(100vh - 46px);
-    padding-left: 200px; /* Offset the fixed sidebar on desktop */
-}
+/* ==========================================================================
+   SHADCN-STYLE SIDEBAR DESIGN SYSTEM
+   ========================================================================== */
 
-/* Sidebar Header / Branding */
-.sidebar-header {
-    display: none;
-}
-
-/* Sidebar Menu */
 #adminmenuwrap {
-    width: 200px;
-    background-color: var(--wp-sidebar-dark);
+    width: var(--sidebar-width);
+    background-color: #ffffff;
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
-    border-right: none;
     position: fixed;
     top: 0;
     left: 0;
     height: 100vh;
-    padding-top: 46px;
-    z-index: 10000;
-    
-    /* WordPress style custom scrollbar */
+    padding-top: 0;
+    z-index: 10002;
+    border-right: 1px solid #e4e4e7;
+    user-select: none;
+    overflow: hidden;
+}
+
+/* Workspace Brand Header Card */
+.sidebar-header-workspace {
+    height: 50px;
+    padding: 0 14px;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #e4e4e7;
+    background: #ffffff;
+    flex-shrink: 0;
+}
+
+.workspace-brand {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    text-decoration: none;
+    width: 100%;
+}
+
+.workspace-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #d97706;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.workspace-meta {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.workspace-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #09090b;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.workspace-tag {
+    font-size: 11px;
+    font-weight: 400;
+    color: #71717a;
+    line-height: 1.2;
+}
+
+.sidebar-close-mobile-btn {
+    display: none;
+    background: transparent;
+    border: none;
+    color: #71717a;
+    font-size: 15px;
+    cursor: pointer;
+    padding: 4px;
+    margin-left: auto;
+    border-radius: 4px;
+}
+
+/* Scrollable Container for Navigation */
+.sidebar-scroll-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 8px 14px 8px;
     scrollbar-width: thin;
-    scrollbar-color: #3c434a var(--wp-sidebar-dark);
+    scrollbar-color: #e4e4e7 transparent;
 }
 
-#adminmenuwrap::-webkit-scrollbar {
-    width: 6px;
+.sidebar-scroll-container::-webkit-scrollbar {
+    width: 4px;
 }
-#adminmenuwrap::-webkit-scrollbar-track {
-    background: var(--wp-sidebar-dark);
-}
-#adminmenuwrap::-webkit-scrollbar-thumb {
-    background-color: #3c434a;
-    border-radius: 3px;
+.sidebar-scroll-container::-webkit-scrollbar-thumb {
+    background-color: #e4e4e7;
+    border-radius: 4px;
 }
 
+/* Menu list */
 #adminmenu {
     list-style: none;
     padding: 0;
     margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
 }
 
+/* Section Header (ShadCN SidebarGroupLabel) */
 .menu-section-label {
-    padding: 16px 20px 6px 20px;
-    font-size: 11px;
-    font-weight: 700;
+    padding: 14px 10px 4px 10px;
+    font-size: 10.5px;
+    font-weight: 500;
     text-transform: uppercase;
-    letter-spacing: 0.8px;
-    color: #475569; /* Slate 600 */
+    letter-spacing: 0.06em;
+    color: #a1a1aa;
+    user-select: none;
+}
+.menu-section-label:first-child {
+    padding-top: 4px;
 }
 
+/* Menu Item */
 .menu-item {
     margin: 0;
-    overflow: hidden;
+    list-style: none;
 }
 
 .menu-item > a {
     display: flex;
     align-items: center;
-    padding: 10px 14px;
-    color: #a7aaad; /* WP grey */
-    font-weight: 400;
-    font-size: 14px;
-    transition: all 0.15s ease;
+    gap: 8px;
+    padding: 6px 10px;
+    color: #52525b;
+    font-weight: 450;
+    font-size: 13px;
+    line-height: 1.4;
+    border-radius: 6px;
     text-decoration: none;
-    border-left: 4px solid transparent;
+    transition: all 0.12s ease;
+    border: 1px solid transparent;
 }
 
-.menu-item > a i {
-    width: 20px;
-    margin-right: 8px;
-    font-size: 18px;
-    text-align: center;
-    color: #a7aaad;
-    transition: color 0.15s ease;
+.menu-item > a i:first-child {
+    width: 16px;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #71717a;
+    transition: color 0.12s ease;
+    flex-shrink: 0;
 }
 
+.menu-item > a span {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Hover State */
 .menu-item > a:hover {
-    background-color: var(--wp-sidebar-hover);
-    color: #72aee6; /* WP hover blue */
+    background-color: #f4f4f5;
+    color: #09090b;
+}
+.menu-item > a:hover i:first-child {
+    color: #09090b;
 }
 
-.menu-item > a:hover i {
-    color: #72aee6;
+/* Active Top-Level item ONLY (e.g. Dashboard, standalone items) */
+.menu-item.active:not(.has-submenu) > a {
+    background-color: #f4f4f5;
+    color: #09090b;
+    font-weight: 500;
+}
+.menu-item.active:not(.has-submenu) > a i:first-child {
+    color: #09090b;
 }
 
-/* Active parent menu item or single active menu item */
-.menu-item.active > a,
-.menu-item.active-parent > a {
-    background-color: var(--wp-sidebar-active);
-    color: #ffffff;
-    font-weight: 600;
-    border-left-color: var(--wp-sidebar-active);
+/* Expanded parent item (has submenu) - do not double-highlight */
+.menu-item.has-submenu.open > a,
+.menu-item.has-submenu.active-parent > a {
+    color: #09090b;
+    font-weight: 500;
+    background-color: transparent;
+}
+.menu-item.has-submenu.open > a i:first-child,
+.menu-item.has-submenu.active-parent > a i:first-child {
+    color: #09090b;
 }
 
-.menu-item.active > a i,
-.menu-item.active-parent > a i {
-    color: #ffffff;
-}
-
-/* Submenu container (Accordion collapsing style) */
+/* Submenu container (ShadCN collapsible tree) */
 .submenu {
     list-style: none;
     padding: 0;
-    margin: 0;
-    background-color: var(--wp-sidebar-submenu-bg);
+    margin: 2px 0 2px 18px;
+    border-left: 1px solid #e4e4e7;
+    padding-left: 6px;
     max-height: 0;
     overflow: hidden;
-    transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: max-height 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background-color: transparent !important;
 }
 
 .menu-item.open .submenu {
-    max-height: 400px;
+    max-height: 500px;
+}
+
+.submenu li {
+    list-style: none;
+    margin: 0;
 }
 
 .submenu li a {
     display: flex;
     align-items: center;
-    padding: 8px 12px 8px 42px; /* Indent past parent icon */
-    color: #a7aaad;
-    font-size: 13px;
+    gap: 8px;
+    padding: 5px 8px;
+    color: #71717a;
+    font-size: 12.5px;
     font-weight: 400;
-    transition: all 0.2s ease;
+    border-radius: 5px;
+    transition: all 0.12s ease;
     text-decoration: none;
+    line-height: 1.4;
 }
 
 .submenu li a i {
-    margin-right: 8px;
-    font-size: 12px;
-    color: #a7aaad;
+    width: 14px;
+    font-size: 11px;
+    color: #a1a1aa;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
 
-.submenu li a:hover,
+.submenu li a:hover {
+    color: #09090b;
+    background-color: #f4f4f5;
+}
+.submenu li a:hover i {
+    color: #09090b;
+}
+
 .submenu li.active a {
-    color: #72aee6;
+    color: #09090b;
+    font-weight: 500;
+    background-color: #f4f4f5;
 }
-
-.submenu li.active a {
-    font-weight: 600;
-    color: #ffffff;
-}
-
 .submenu li.active a i {
-    color: #ffffff;
+    color: #09090b;
 }
 
 /* Chevron arrow indicators */
 .submenu-arrow {
     margin-left: auto;
-    font-size: 10px;
-    color: #475569;
-    transition: transform 0.2s ease;
+    font-size: 9px;
+    color: #a1a1aa;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), color 0.15s ease;
+    flex-shrink: 0;
 }
 
 .menu-item > a:hover .submenu-arrow {
-    color: #ffffff;
+    color: #09090b;
 }
 
-.menu-item.open .submenu-arrow {
+.menu-item.open > a .submenu-arrow {
     transform: rotate(90deg);
-    color: var(--wp-sidebar-active);
+    color: #71717a;
 }
 
-/* Special "Soon" Badges & disabled links */
-.badge-soon {
-    background-color: rgba(148, 163, 184, 0.12) !important;
-    color: #64748b !important;
-    font-size: 9px !important;
-    font-weight: 600 !important;
-    padding: 1px 5px !important;
-    margin-left: 6px;
+/* ShadCN Badges */
+.shadcn-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
     border-radius: 4px;
-    border: 1px solid rgba(148, 163, 184, 0.15);
+    font-size: 10.5px;
+    font-weight: 500;
     text-transform: uppercase;
+    letter-spacing: 0.03em;
+    line-height: 1.2;
+    flex-shrink: 0;
 }
 
-.disabled-link {
-    cursor: not-allowed;
-    pointer-events: none; /* Disables clicking but allows cursor visualization if mouse is inside parent */
+.shadcn-badge-gemini {
+    background: rgba(168, 85, 247, 0.08);
+    color: #7e22ce;
+    border: 1px solid rgba(168, 85, 247, 0.2);
 }
 
-.disabled-link i {
-    opacity: 0.5;
+.shadcn-badge-amber {
+    background: rgba(245, 158, 11, 0.08);
+    color: #b45309;
+    border: 1px solid rgba(245, 158, 11, 0.2);
 }
 
-/* Sidebar Footer */
-.sidebar-footer {
-    padding: 14px 16px;
-    background-color: rgba(15, 23, 42, 0.4);
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-    color: #64748b;
+.shadcn-badge-sky {
+    background: rgba(14, 165, 233, 0.08);
+    color: #0369a1;
+    border: 1px solid rgba(14, 165, 233, 0.2);
+}
+
+/* Sidebar User Footer Card */
+.sidebar-user-footer {
+    height: 50px;
+    padding: 0 12px;
+    border-top: 1px solid #e4e4e7;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+}
+
+.user-profile-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+}
+
+.user-avatar-pill {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: #f4f4f5;
+    border: 1px solid #e4e4e7;
+    color: #09090b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 11px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.user-meta {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    margin-top: auto;
+    min-width: 0;
 }
 
-.sidebar-footer .version {
-    font-weight: 600;
-    color: #475569;
-    font-size: 10px;
+.user-name {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #09090b;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-/* Main Content Area */
+.user-role {
+    font-size: 10.5px;
+    color: #71717a;
+    line-height: 1.2;
+}
+
+.sidebar-logout-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #71717a;
+    transition: all 0.15s ease;
+    text-decoration: none;
+    flex-shrink: 0;
+}
+
+.sidebar-logout-btn:hover {
+    color: #ef4444;
+    background: #fef2f2;
+}
+
+/* Main Content Canvas */
 #wpcontent {
     flex: 1;
-    padding: 24px 32px 60px 32px;
+    padding: 22px 28px 60px 28px;
     min-height: 100%;
     width: 100%;
     background-color: var(--wp-bg);
 }
 
-/* Common UI Elements */
+/* ==========================================================================
+   SHADCN UI COMPONENTS (CARDS, BUTTONS, TABLES, FORMS)
+   ========================================================================== */
+
 .wrap-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
 }
 
 .wrap-header h1 {
-    font-size: 23px;
+    font-size: 20px;
     font-weight: 600;
-    color: var(--wp-text-dark);
+    color: #09090b;
+    letter-spacing: -0.02em;
 }
 
-/* Buttons */
-.button {
-    display: inline-block;
-    padding: 6px 12px;
-    font-size: 13px;
-    line-height: 1.5;
+/* Clean ShadCN Buttons */
+.button, .shadcn-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 11px;
+    height: 32px;
+    font-size: 12.5px;
     font-weight: 500;
+    line-height: 1;
     text-align: center;
     cursor: pointer;
-    border-radius: 4px;
-    border: 1px solid var(--wp-border);
-    background: #f6f7f7;
-    color: var(--wp-blue);
-    transition: all 0.15s ease-in-out;
+    border-radius: 6px;
+    border: 1px solid #e4e4e7;
+    background: #ffffff;
+    color: #09090b;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    transition: all 0.12s ease;
+    text-decoration: none;
+    font-family: inherit;
+    white-space: nowrap;
 }
 
-.button:hover {
-    background: #f0f0f1;
-    border-color: #8c8f94;
-    color: var(--wp-blue-hover);
+.button:hover, .shadcn-btn:hover {
+    background: #f4f4f5;
+    border-color: #d4d4d8;
+    color: #09090b;
 }
 
-.button-primary {
-    background: var(--wp-blue);
-    border-color: var(--wp-blue);
-    color: #fff;
+.button-primary, .shadcn-btn-primary {
+    background: #09090b !important;
+    border-color: #09090b !important;
+    color: #ffffff !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
-.button-primary:hover {
-    background: var(--wp-blue-hover);
-    border-color: var(--wp-blue-hover);
-    color: #fff;
+.button-primary:hover, .shadcn-btn-primary:hover {
+    background: #27272a !important;
+    border-color: #27272a !important;
+    color: #ffffff !important;
 }
 
-.button-danger {
-    background: #fff;
-    border-color: var(--wp-error-red);
-    color: var(--wp-error-red);
+.button-danger, .shadcn-btn-danger {
+    background: #ffffff !important;
+    border-color: #fecaca !important;
+    color: #ef4444 !important;
 }
 
-.button-danger:hover {
-    background: var(--wp-error-red);
-    color: #fff;
+.button-danger:hover, .shadcn-btn-danger:hover {
+    background: #fef2f2 !important;
+    border-color: #ef4444 !important;
+    color: #dc2626 !important;
 }
 
-/* Alerts / Notices */
+.shadcn-btn-outline {
+    background: #ffffff;
+    border-color: #e4e4e7;
+    color: #09090b;
+}
+.shadcn-btn-outline:hover {
+    background: #f4f4f5;
+    border-color: #d4d4d8;
+}
+
+.shadcn-btn-ghost {
+    background: transparent;
+    border-color: transparent;
+    color: #71717a;
+    box-shadow: none;
+}
+.shadcn-btn-ghost:hover {
+    background: #f4f4f5;
+    color: #09090b;
+}
+
+/* ShadCN Notices / Alerts */
 .notice {
-    background: #fff;
-    border: 1px solid var(--wp-border);
-    border-left-width: 4px;
-    box-shadow: 0 1px 1px 0 rgba(0,0,0,0.05);
-    margin: 0 0 20px;
-    padding: 12px 18px;
-    position: relative;
-    border-radius: 4px;
+    background: #ffffff;
+    border: 1px solid #e4e4e7;
+    border-left: 3px solid #71717a;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    margin: 0 0 18px;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #09090b;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .notice p {
@@ -651,97 +1034,317 @@ textarea.form-control {
 }
 
 .notice-success {
-    border-left-color: var(--wp-success-green);
+    border-left-color: #10b981;
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #15803d;
 }
 
 .notice-error {
-    border-left-color: var(--wp-error-red);
+    border-left-color: #ef4444;
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #b91c1c;
 }
 
 .notice-warning {
-    border-left-color: var(--wp-warning-orange);
+    border-left-color: #f59e0b;
+    background: #fffbeb;
+    border-color: #fde68a;
+    color: #b45309;
 }
 
-/* WordPress-style Cards / Postboxes */
-.postbox {
-    background: #fff;
-    border: 1px solid var(--wp-border);
-    box-shadow: 0 1px 1px rgba(0,0,0,0.04);
-    border-radius: 4px;
+/* Dashboard Header Banner */
+.dashboard-header-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.dashboard-greeting {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dashboard-greeting h1 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #09090b;
+    letter-spacing: -0.02em;
+    margin: 0;
+}
+
+.dashboard-subtitle {
+    font-size: 12.5px;
+    color: #71717a;
+    margin-top: 3px;
+    line-height: 1.4;
+    font-weight: 400;
+}
+
+.dashboard-actions {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+}
+
+.shadcn-tag-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 7px;
+    border-radius: 12px;
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    color: #059669;
+    font-size: 10.5px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.pulse-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #10b981;
+}
+
+/* Modern ShadCN Stat Cards */
+.shadcn-stat-grid, .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
     margin-bottom: 20px;
 }
 
-.postbox-header {
-    border-bottom: 1px solid var(--wp-border);
+.shadcn-stat-card, .dash-card {
+    background: #ffffff;
+    border: 1px solid #e4e4e7;
+    border-radius: 8px;
+    padding: 16px 18px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.15s ease;
+    text-decoration: none;
+    color: inherit;
+    min-height: 105px;
+}
+
+.shadcn-stat-card:hover, .dash-card:hover {
+    border-color: #d4d4d8;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+}
+
+.shadcn-stat-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.shadcn-stat-title {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #71717a;
+}
+
+.shadcn-stat-icon-wrap {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12.5px;
+}
+
+.shadcn-stat-value {
+    font-size: 22px;
+    font-weight: 600;
+    color: #09090b;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin-bottom: 4px;
+}
+
+.shadcn-stat-note {
+    font-size: 11.5px;
+    color: #71717a;
+    font-weight: 400;
+    line-height: 1.3;
+}
+
+/* Modern ShadCN Card Containers */
+.shadcn-card, .postbox {
+    background: #ffffff;
+    border: 1px solid #e4e4e7;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.shadcn-card-header, .postbox-header {
     padding: 12px 16px;
+    border-bottom: 1px solid #f4f4f5;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    background: #ffffff;
 }
 
-.postbox-header h2 {
+.shadcn-card-title, .postbox-header h2 {
     font-size: 14px;
     font-weight: 600;
+    color: #09090b;
+    letter-spacing: -0.01em;
     margin: 0;
-    color: var(--wp-text-dark);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.shadcn-card-body {
+    padding: 0;
 }
 
 .postbox-body {
     padding: 16px;
 }
 
-/* Dashboard Summary Cards */
-.dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 20px;
-    margin-bottom: 24px;
+.postbox-body:has(> table), .postbox-body:has(> .shadcn-table), .postbox-body.no-padding {
+    padding: 0;
 }
 
-.dash-card {
-    background: #fff;
-    border: 1px solid var(--wp-border);
-    box-shadow: 0 1px 1px rgba(0,0,0,0.04);
-    border-radius: 4px;
-    padding: 20px;
-    display: flex;
-    align-items: center;
-    transition: transform 0.2s;
+.shadcn-card-padded {
+    padding: 16px;
 }
 
-.dash-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+/* Modern ShadCN Tables */
+.shadcn-table, .wp-list-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #ffffff;
+    border: none;
+    box-shadow: none;
 }
 
-.dash-card-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background-color: rgba(34, 113, 177, 0.1);
-    color: var(--wp-blue);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 20px;
-    margin-right: 16px;
-}
-
-.dash-card-info h3 {
-    font-size: 13px;
-    color: #646970;
+.shadcn-table th, .wp-list-table th {
+    background: #fafafa;
+    padding: 9px 14px;
+    font-size: 11px;
     font-weight: 500;
     text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #71717a;
+    border-bottom: 1px solid #e4e4e7;
+    text-align: left;
+    white-space: nowrap;
 }
 
-.dash-card-info p {
-    font-size: 24px;
-    font-weight: 700;
-    color: var(--wp-text-dark);
-    margin-top: 4px;
+.shadcn-table td, .wp-list-table td {
+    padding: 10px 14px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f4f4f5;
+    font-size: 13px;
+    color: #09090b;
+    font-weight: 400;
 }
 
-/* WordPress-style Split Layout columns for forms */
+.shadcn-table tbody tr:hover td, .wp-list-table tbody tr:hover td {
+    background-color: #fafafa;
+}
+
+.shadcn-table tbody tr:last-child td, .wp-list-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Status & Stock Badges */
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+.status-pill-delivered {
+    background: rgba(16, 185, 129, 0.08);
+    color: #047857;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.status-pill-shipped {
+    background: rgba(59, 130, 246, 0.08);
+    color: #1d4ed8;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.status-pill-processing {
+    background: rgba(245, 158, 11, 0.08);
+    color: #b45309;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.status-pill-cancelled {
+    background: rgba(239, 68, 68, 0.08);
+    color: #b91c1c;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.status-pill-pending, .status-pill-default {
+    background: #f4f4f5;
+    color: #52525b;
+    border: 1px solid #e4e4e7;
+}
+
+.stock-pill-in {
+    background: rgba(16, 185, 129, 0.08);
+    color: #047857;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    display: inline-block;
+}
+
+.stock-pill-low {
+    background: rgba(245, 158, 11, 0.08);
+    color: #b45309;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    display: inline-block;
+}
+
+.stock-pill-out {
+    background: rgba(239, 68, 68, 0.08);
+    color: #b91c1c;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    display: inline-block;
+}
+
+/* Two-column layout */
 .wp-editor-columns {
     display: flex;
     gap: 20px;
@@ -761,149 +1364,149 @@ textarea.form-control {
     flex: 0 0 280px;
 }
 
-/* WP standard lists/tables */
-.tablenav {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.alignleft {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.wp-list-table {
+/* Form Controls */
+.form-control, 
+.form-group input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]), 
+.form-group select,
+textarea.form-control, 
+textarea {
     width: 100%;
-    border-collapse: collapse;
-    background: #fff;
-    border: 1px solid var(--wp-border);
-    box-shadow: 0 1px 1px rgba(0,0,0,0.04);
-    border-radius: 4px;
-    overflow: hidden;
 }
 
-.wp-list-table th,
-.wp-list-table td {
-    padding: 12px 16px;
-    text-align: left;
-    vertical-align: middle;
-    border-bottom: 1px solid var(--wp-border);
+.form-control, input[type="text"], input[type="number"], input[type="email"], input[type="password"], input[type="search"], select {
+    background: #ffffff;
+    border: 1px solid #e4e4e7;
+    border-radius: 6px;
+    padding: 0 10px;
+    height: 32px;
+    font-size: 12.5px;
+    font-weight: 400;
+    color: #09090b;
+    font-family: inherit;
+    transition: border-color 0.12s ease, box-shadow 0.12s ease;
+    box-sizing: border-box;
 }
 
-.wp-list-table th {
-    background: #f6f7f7;
-    font-weight: 600;
-    color: var(--wp-text-dark);
-    font-size: 13px;
-    border-bottom: 2px solid var(--wp-border);
+textarea.form-control, textarea {
+    background: #ffffff;
+    border: 1px solid #e4e4e7;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 12.5px;
+    font-weight: 400;
+    color: #09090b;
+    font-family: inherit;
+    transition: border-color 0.12s ease, box-shadow 0.12s ease;
+    box-sizing: border-box;
+    resize: vertical;
 }
 
-.wp-list-table tbody tr:hover {
-    background-color: #f9f9fa;
+.form-control:focus, input[type="text"]:focus, input[type="number"]:focus, input[type="email"]:focus, input[type="password"]:focus, input[type="search"]:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #09090b;
+    box-shadow: 0 0 0 1px #09090b;
 }
 
-.column-thumbnail {
-    width: 70px;
+.form-group {
+    margin-bottom: 14px;
 }
 
-.column-thumbnail img {
-    width: 50px;
-    height: 50px;
-    object-fit: cover;
-    border-radius: 4px;
-    border: 1px solid var(--wp-border);
-}
-
-.column-actions {
-    opacity: 0;
+.form-group label {
+    display: block;
     font-size: 12px;
-    margin-top: 4px;
-    transition: opacity 0.15s ease;
+    font-weight: 500;
+    color: #09090b;
+    margin-bottom: 5px;
 }
 
-tr:hover .column-actions {
-    opacity: 1;
+/* Filter Navigation & Pill Tabs */
+.shadcn-filter-tabs {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    background: #f4f4f5;
+    padding: 3px;
+    border-radius: 7px;
+    border: 1px solid #e4e4e7;
+    width: fit-content;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
 }
 
-.column-actions a {
-    margin-right: 8px;
+.shadcn-tab-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 450;
+    color: #71717a;
+    text-decoration: none;
+    transition: all 0.12s ease;
 }
 
-.column-actions a.delete {
-    color: var(--wp-error-red);
+.shadcn-tab-item:hover {
+    color: #09090b;
+    background: rgba(255, 255, 255, 0.6);
 }
 
-/* Category column nesting indentation */
-.parent-indicator {
-    color: #8c8f94;
-    font-family: monospace;
-    margin-right: 4px;
+.shadcn-tab-item.active {
+    background: #ffffff;
+    color: #09090b;
+    font-weight: 500;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.shadcn-tab-count {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 5px;
+    border-radius: 10px;
+    background: #e4e4e7;
+    color: #52525b;
+}
+
+.shadcn-tab-item.active .shadcn-tab-count {
+    background: #f4f4f5;
+    color: #09090b;
+    border: 1px solid #e4e4e7;
 }
 
 /* Star for Featured product */
 .star-icon {
-    font-size: 18px;
+    font-size: 15px;
     cursor: pointer;
-    transition: color 0.2s;
+    transition: color 0.15s ease;
 }
 
 .star-icon.featured {
-    color: #ffb900;
+    color: #eab308;
 }
 
 .star-icon.not-featured {
-    color: #c3c4c7;
+    color: #d4d4d8;
 }
 
 .star-icon.not-featured:hover {
-    color: #ffb900;
-}
-
-/* Badges */
-.badge {
-    display: inline-block;
-    padding: 2px 8px;
-    font-size: 11px;
-    font-weight: 600;
-    border-radius: 12px;
-    text-transform: uppercase;
-}
-
-.badge-success {
-    background-color: rgba(0, 163, 42, 0.1);
-    color: var(--wp-success-green);
-}
-
-.badge-danger {
-    background-color: rgba(214, 54, 56, 0.1);
-    color: var(--wp-error-red);
-}
-
-.badge-warning {
-    background-color: rgba(219, 166, 23, 0.1);
-    color: var(--wp-warning-orange);
+    color: #eab308;
 }
 
 /* Image Management & Gallery UI */
 .image-upload-wrapper {
-    border: 2px dashed var(--wp-border);
+    border: 2px dashed #e4e4e7;
     background: #fafafa;
-    border-radius: 4px;
-    padding: 24px;
+    border-radius: 6px;
+    padding: 20px;
     text-align: center;
     cursor: pointer;
-    transition: border-color 0.2s, background-color 0.2s;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
     position: relative;
 }
 
 .image-upload-wrapper:hover {
-    border-color: var(--wp-blue);
-    background-color: #f4f8fb;
+    border-color: #09090b;
+    background-color: #f4f4f5;
 }
 
 .image-upload-wrapper input[type="file"] {
@@ -917,207 +1520,121 @@ tr:hover .column-actions {
 }
 
 .image-upload-wrapper i {
-    font-size: 32px;
-    color: #8c8f94;
-    margin-bottom: 10px;
+    font-size: 24px;
+    color: #a1a1aa;
+    margin-bottom: 8px;
 }
 
 .image-upload-wrapper p {
-    font-size: 13px;
-    color: #646970;
+    font-size: 12.5px;
+    color: #71717a;
 }
 
 /* Gallery thumbnails grid */
 .gallery-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 12px;
-    margin-top: 15px;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
 }
 
 .gallery-item {
     position: relative;
-    border: 1px solid var(--wp-border);
-    border-radius: 4px;
-    padding: 4px;
-    background: #fff;
+    border: 1px solid #e4e4e7;
+    border-radius: 6px;
+    padding: 3px;
+    background: #ffffff;
 }
 
 .gallery-item img {
     width: 100%;
-    height: 90px;
+    height: 80px;
     object-fit: cover;
-    border-radius: 2px;
+    border-radius: 4px;
 }
 
 .gallery-item-delete {
     position: absolute;
-    top: -6px;
-    right: -6px;
-    width: 20px;
-    height: 20px;
+    top: -5px;
+    right: -5px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
-    background: var(--wp-error-red);
-    color: #fff;
+    background: #ef4444;
+    color: #ffffff;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 11px;
+    font-size: 10px;
     cursor: pointer;
-    border: 1px solid #fff;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    border: 1px solid #ffffff;
 }
 
-.gallery-item-delete:hover {
-    background: #b32d2f;
-}
-
-/* Main Featured Image preview box */
-.main-image-preview-container {
-    text-align: center;
-    border: 1px solid var(--wp-border);
-    border-radius: 4px;
-    background: #fff;
-    padding: 10px;
-    margin-bottom: 12px;
-}
-
-.main-image-preview-container img {
-    max-width: 100%;
-    max-height: 200px;
-    object-fit: contain;
-    border-radius: 2px;
-}
-
-/* Category checklist box on product screens */
-.category-checklist-container {
-    border: 1px solid var(--wp-border);
-    background: #fff;
-    max-height: 180px;
-    overflow-y: auto;
-    padding: 10px;
-    border-radius: 4px;
-}
-
-.category-checklist-item {
-    display: flex;
-    align-items: center;
-    margin-bottom: 6px;
-}
-
-.category-checklist-item input {
-    margin-right: 8px;
-}
-
-.category-checklist-item label {
-    cursor: pointer;
-}
-
-/* Responsive styling */
-/* Mobile menu button style */
+/* Mobile Responsiveness */
 .mobile-menu-toggle {
     display: none;
     background: none;
     border: none;
-    color: #ffffff;
-    font-size: 18px;
+    color: #09090b;
+    font-size: 16px;
     cursor: pointer;
-    padding: 8px;
-    border-radius: 4px;
-    transition: background-color 0.2s;
+    padding: 6px;
+    border-radius: 6px;
     align-items: center;
     justify-content: center;
-    outline: none;
 }
 
 .mobile-menu-toggle:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: #f4f4f5;
 }
 
-@media (min-width: 783px) {
+@media (min-width: 992px) {
     #wpadminbar {
-        margin-left: 0;
-        width: 100%;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    }
-    .adminbar-brand {
-        display: flex !important;
-    }
-}
-
-@media (max-width: 900px) {
-    .wp-editor-columns {
-        flex-direction: column;
-    }
-    
-    .side-column {
-        flex: none;
-        width: 100%;
-    }
-}
-
-@media (max-width: 782px) {
-    /* Show mobile menu toggle button */
-    .mobile-menu-toggle {
-        display: inline-flex;
-    }
-
-    /* Fixed top bar with full width content */
-    #wpadminbar {
-        padding: 0 15px;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        display: flex;
-        align-items: center;
-        margin-left: 0;
-    }
-
-    .admin-main-container {
-        margin-top: 46px; /* Offset fixed header */
-        height: calc(100vh - 46px);
-        position: relative;
-        padding-left: 0; /* Reset desktop offset */
-    }
-
-    /* Sidebar Drawer styling */
-    #adminmenuwrap {
-        position: fixed;
-        top: 46px;
-        left: 0;
-        width: 200px;
-        height: calc(100vh - 46px);
-        z-index: 9998;
-        transform: translateX(-100%);
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 4px 0 15px rgba(0, 0, 0, 0.15);
-    }
-
-    /* Open state for mobile drawer */
-    #adminmenuwrap.mobile-open {
-        transform: translateX(0);
-    }
-
-    /* Backdrop Overlay */
-    .sidebar-backdrop {
-        display: none;
-        position: fixed;
-        top: 46px;
-        left: 0;
-        width: 100%;
-        height: calc(100vh - 46px);
-        background-color: rgba(15, 23, 42, 0.5); /* Slate 900 transparent */
-        backdrop-filter: blur(2px);
-        z-index: 9997;
-    }
-
-    .sidebar-backdrop.active {
-        display: block;
+        left: var(--sidebar-width);
+        width: calc(100% - var(--sidebar-width));
     }
 }
 
 @media (max-width: 991px) {
+    .mobile-menu-toggle {
+        display: inline-flex;
+    }
+    .sidebar-close-mobile-btn {
+        display: inline-flex;
+    }
+    #wpadminbar {
+        padding: 0 14px;
+        left: 0;
+        width: 100%;
+    }
+    .adminbar-brand {
+        display: inline-flex !important;
+    }
+    .admin-main-container {
+        padding-left: 0 !important;
+    }
+    #adminmenuwrap {
+        transform: translateX(-100%);
+        transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+        box-shadow: none;
+    }
+    #adminmenuwrap.mobile-open {
+        transform: translateX(0);
+        box-shadow: 10px 0 30px rgba(0, 0, 0, 0.12);
+    }
+    .sidebar-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(3px);
+        z-index: 10004;
+    }
+    .sidebar-backdrop.active {
+        display: block;
+    }
     .wp-editor-columns {
         flex-direction: column;
     }

@@ -106,21 +106,36 @@ foreach ($images as $idx => $imgUrl) {
 }
 
 // 3. Database UPSERT
-$categoryId = null;
-$catName = trim($data['category_name'] ?? '');
-if (!empty($catName)) {
-    $catSlug = preg_replace('/[^a-z0-9]+/i', '-', strtolower($catName));
-    $stmtCat = $pdo->prepare("SELECT id FROM categories WHERE name = ? OR slug = ? LIMIT 1");
-    $stmtCat->execute([$catName, $catSlug]);
+$rawCatNames = [];
+if (!empty($data['category_names']) && is_array($data['category_names'])) {
+    $rawCatNames = $data['category_names'];
+} elseif (!empty($data['category_name'])) {
+    $rawCatNames = explode(',', (string)$data['category_name']);
+}
+
+$resolvedCatIds = [];
+$primaryCategoryId = null;
+
+foreach ($rawCatNames as $rawC) {
+    $cName = trim((string)$rawC);
+    if (empty($cName) || $cName === 'N/A') continue;
+
+    $cSlug = preg_replace('/[^a-z0-9]+/i', '-', strtolower($cName));
+    $cSlug = trim($cSlug, '-');
+
+    $stmtCat = $pdo->prepare("SELECT id FROM categories WHERE (LOWER(name) = LOWER(?) OR slug = ?) AND deleted_at IS NULL LIMIT 1");
+    $stmtCat->execute([$cName, $cSlug]);
     $catRow = $stmtCat->fetch();
     if ($catRow) {
-        $categoryId = $catRow['id'];
+        $resolvedCatIds[] = (int)$catRow['id'];
     } else {
-        $stmtInsCat = $pdo->prepare("INSERT INTO categories (name, slug, description) VALUES (?, ?, ?)");
-        $stmtInsCat->execute([$catName, $catSlug, 'Auto-synced category']);
-        $categoryId = $pdo->lastInsertId();
+        $stmtInsCat = $pdo->prepare("INSERT INTO categories (name, slug, description, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())");
+        $stmtInsCat->execute([$cName, $cSlug, 'Auto-synced category']);
+        $resolvedCatIds[] = (int)$pdo->lastInsertId();
     }
 }
+$resolvedCatIds = array_values(array_unique($resolvedCatIds));
+$categoryId = !empty($resolvedCatIds) ? $resolvedCatIds[0] : null;
 
 $name = trim($data['name'] ?? ('Product ' . $sku));
 $slug = preg_replace('/[^a-z0-9]+/i', '-', strtolower($name)) . '-' . strtolower($sku);
@@ -154,6 +169,15 @@ if ($childProductId) {
         foreach ($galleryImages as $gi) {
             $stmtImg->execute([$childProductId, $gi['image_path'], $gi['thumb_path'], $sort++]);
         }
+    }
+
+    // 5. Update product_categories
+    if (!empty($resolvedCatIds)) {
+        $stmtRel = $pdo->prepare("INSERT IGNORE INTO product_categories (product_id, category_id) VALUES (?, ?)");
+        foreach ($resolvedCatIds as $rCid) {
+            $stmtRel->execute([$childProductId, $rCid]);
+        }
+        $pdo->prepare("DELETE pc FROM product_categories pc JOIN categories c ON pc.category_id = c.id WHERE pc.product_id = ? AND c.deleted_at IS NOT NULL")->execute([$childProductId]);
     }
 }
 

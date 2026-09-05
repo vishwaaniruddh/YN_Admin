@@ -302,17 +302,34 @@ try {
 }
 ?>
 
-<div class="wrap-header" style="flex-wrap: wrap; gap: 12px; align-items: flex-start;">
-    <div>
-        <h1 style="margin: 0; font-size: 22px; font-weight: 600; color: var(--wp-text-dark);">Edit Product</h1>
-        <p style="margin: 4px 0 0 0; font-size: 13px; color: #50575e; font-weight: 500; line-height: 1.4; max-width: 650px;"><?php echo sanitize_html($product['name']); ?></p>
+<div class="dashboard-header-banner" style="margin-bottom: 24px;">
+    <div class="dashboard-header-info">
+        <div class="dashboard-greeting" style="flex-wrap: wrap; gap: 10px;">
+            <a href="products.php" class="shadcn-btn shadcn-btn-outline" style="height: 32px; width: 32px; padding: 0;" title="Back to products">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <h1>Edit Product</h1>
+            <span class="shadcn-badge shadcn-badge-sky" style="font-size: 11px; padding: 3px 8px;">
+                <i class="fa-solid fa-hashtag" style="margin-right: 2px;"></i> ID #<?php echo $product['id']; ?>
+            </span>
+            <span class="shadcn-badge" style="font-size: 11px; padding: 3px 8px; font-family: monospace; background: #f4f4f5; border: 1px solid #e4e4e7; color: #52525b;">
+                <?php echo sanitize_html($product['sku']); ?>
+            </span>
+        </div>
+        <p class="dashboard-subtitle" style="max-width: 700px;">
+            <?php echo sanitize_html($product['name']); ?>
+        </p>
     </div>
-    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-        <button type="button" class="button" onclick="openSyncModal()" style="background-color: #8b2e3b; color: #fff; border-color: #72242e;">
-            <i class="fa-solid fa-cloud-arrow-down"></i> Sync from SriShringarr API
+    <div class="dashboard-actions">
+        <button type="button" class="shadcn-btn shadcn-btn-outline" onclick="openSyncModal()" style="border-color: #fecdd3; background: #fff1f2; color: #9f1239; font-weight: 600;">
+            <i class="fa-solid fa-cloud-arrow-down"></i> Sync API
         </button>
-        <a href="product-add.php" class="button button-primary"><i class="fa-solid fa-plus"></i> Add New Product</a>
-        <a href="products.php" class="button">Back to Products</a>
+        <a href="product-add.php" class="shadcn-btn shadcn-btn-outline">
+            <i class="fa-solid fa-plus"></i> Add New
+        </a>
+        <a href="products.php" class="shadcn-btn shadcn-btn-outline">
+            <i class="fa-solid fa-boxes-stacked"></i> All Products
+        </a>
     </div>
 </div>
 
@@ -681,8 +698,12 @@ try {
                     </div>
 
                     <div style="border-top: 1px solid var(--wp-border); padding-top: 15px; display: flex; justify-content: space-between; gap: 10px;">
-                        <a href="products.php?delete=<?php echo $product['id']; ?>" class="button button-danger delete-confirm" data-name="<?php echo sanitize_html($product['name']); ?>" style="padding: 6px 10px;">Delete</a>
-                        <button type="submit" class="button button-primary" style="flex: 1;">Update Product</button>
+                        <a href="products.php?delete=<?php echo $product['id']; ?>" class="button button-danger delete-confirm" data-name="<?php echo sanitize_html($product['name']); ?>" style="padding: 6px 12px; font-size: 12.5px;">
+                            <i class="fa-solid fa-trash-can"></i> Delete
+                        </a>
+                        <button type="submit" class="button button-primary" style="flex: 1; font-size: 12.5px;">
+                            <i class="fa-solid fa-check"></i> Update Product
+                        </button>
                     </div>
                 </div>
             </div>

@@ -393,47 +393,49 @@ require_once __DIR__ . '/includes/sidebar.php';
 </form>
 
 <style>
-/* Modern Styling */
+/* Modern ShadCN Light Styling */
 .pdf-maker-container {
     max-width: 1400px;
-    margin: 20px auto;
+    margin: 0 auto 24px auto;
     padding: 0 15px;
-    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    color: #1e293b;
+    font-family: inherit;
+    color: #09090b;
 }
 .pdf-maker-header {
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-    color: #ffffff;
-    padding: 22px 26px;
-    border-radius: 12px;
+    background: #ffffff;
+    color: #09090b;
+    padding: 16px 20px;
+    border-radius: 8px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.15);
+    border: 1px solid #e4e4e7;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
     margin-bottom: 20px;
 }
-.header-left { display: flex; align-items: center; gap: 16px; }
+.header-left { display: flex; align-items: center; gap: 14px; }
 .header-icon-box {
-    width: 48px;
-    height: 48px;
-    background: linear-gradient(135deg, #c8a55c 0%, #e9d5a1 100%);
-    color: #1e293b;
-    border-radius: 10px;
+    width: 40px;
+    height: 40px;
+    background: rgba(239, 68, 68, 0.08);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 22px;
+    font-size: 18px;
 }
-.pdf-maker-header h1 { font-size: 21px; font-weight: 700; margin: 0; color: #ffffff; }
-.header-sub { font-size: 13px; color: #94a3b8; margin: 3px 0 0 0; }
+.pdf-maker-header h1 { font-size: 18px; font-weight: 600; margin: 0; color: #09090b; letter-spacing: -0.02em; }
+.header-sub { font-size: 12.5px; color: #71717a; margin: 3px 0 0 0; }
 .selection-pill {
-    background: rgba(200, 165, 92, 0.18);
-    border: 1px solid #c8a55c;
-    color: #e9d5a1;
-    padding: 8px 16px;
-    border-radius: 30px;
-    font-weight: 600;
-    font-size: 13px;
+    background: #f4f4f5;
+    border: 1px solid #e4e4e7;
+    color: #09090b;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 12.5px;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -442,10 +444,11 @@ require_once __DIR__ . '/includes/sidebar.php';
     display: flex;
     align-items: center;
     background: #ffffff;
-    padding: 12px 22px;
-    border-radius: 10px;
-    border: 1px solid #e2e8f0;
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: 1px solid #e4e4e7;
     margin-bottom: 20px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 .step-item {
     display: flex;
@@ -479,32 +482,33 @@ require_once __DIR__ . '/includes/sidebar.php';
 
 .department-pills-bar { display: flex; gap: 10px; margin-bottom: 16px; }
 .dept-pill {
-    padding: 9px 20px;
-    border-radius: 30px;
-    border: 1px solid #cbd5e1;
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1px solid #e4e4e7;
     background: #ffffff;
-    color: #475569;
-    font-size: 13.5px;
-    font-weight: 600;
+    color: #71717a;
+    font-size: 12.5px;
+    font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.15s ease;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
 }
 .dept-pill.active {
-    background: #1e293b;
-    border-color: #1e293b;
-    color: #f8fafc;
+    background: #09090b;
+    border-color: #09090b;
+    color: #ffffff;
 }
-.dept-pill.active i { color: #c8a55c; }
+.dept-pill.active i { color: #ffffff; }
 
 .filter-card {
     background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 16px 18px;
+    border: 1px solid #e4e4e7;
+    border-radius: 8px;
+    padding: 16px;
     margin-bottom: 18px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 .filter-grid {
     display: grid;
@@ -516,65 +520,69 @@ require_once __DIR__ . '/includes/sidebar.php';
 @media (max-width: 600px) { .filter-grid { grid-template-columns: 1fr; } }
 .filter-col label {
     display: block;
-    font-size: 11.5px;
-    font-weight: 600;
-    color: #475569;
+    font-size: 11px;
+    font-weight: 500;
+    color: #71717a;
     margin-bottom: 5px;
     text-transform: uppercase;
+    letter-spacing: 0.03em;
 }
 .search-input-wrap { position: relative; }
 .clear-search-btn {
     position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
-    background: none; border: none; font-size: 18px; color: #94a3b8; cursor: pointer;
+    background: none; border: none; font-size: 16px; color: #a1a1aa; cursor: pointer;
 }
 .price-input-group { display: flex; align-items: center; gap: 5px; }
 .price-input { width: 85px; }
-.price-dash { color: #94a3b8; font-weight: bold; }
+.price-dash { color: #a1a1aa; font-weight: bold; }
 .btn-filter-apply {
-    background: #c8a55c; color: #ffffff; border: none; width: 34px; height: 34px;
-    border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    background: #09090b; color: #ffffff; border: none; width: 32px; height: 32px;
+    border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;
 }
 .price-presets-row {
     display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 12px;
-    padding-top: 10px; border-top: 1px solid #f1f5f9;
+    padding-top: 10px; border-top: 1px solid #f4f4f5;
 }
-.presets-label { font-size: 11.5px; font-weight: 600; color: #64748b; }
+.presets-label { font-size: 11.5px; font-weight: 500; color: #71717a; }
 .preset-pill {
-    background: #f1f5f9; border: 1px solid #e2e8f0; color: #475569; font-size: 11px;
-    padding: 3px 9px; border-radius: 20px; cursor: pointer;
+    background: #f4f4f5; border: 1px solid #e4e4e7; color: #52525b; font-size: 11px;
+    padding: 2px 8px; border-radius: 4px; cursor: pointer;
 }
 .reset-pill { margin-left: auto; background: #fff; color: #ef4444; border-color: #fecaca; }
 
 .selection-action-bar {
-    position: sticky; top: 45px; z-index: 100; background: #1e293b; color: #ffffff;
-    padding: 10px 18px; border-radius: 10px; display: flex; justify-content: space-between;
-    align-items: center; gap: 14px; margin-bottom: 18px; box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+    position: sticky; top: 55px; z-index: 100; background: #ffffff; color: #09090b;
+    padding: 10px 16px; border-radius: 8px; display: flex; justify-content: space-between;
+    align-items: center; gap: 14px; margin-bottom: 18px; border: 1px solid #e4e4e7;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 .selection-summary { display: flex; align-items: center; gap: 12px; flex: 1; overflow: hidden; }
 .selection-count-badge {
-    background: #c8a55c; color: #1e293b; padding: 5px 12px; border-radius: 20px;
-    font-weight: 700; font-size: 12.5px; white-space: nowrap; display: flex; align-items: center; gap: 5px;
+    background: #f4f4f5; color: #09090b; border: 1px solid #e4e4e7; padding: 4px 10px; border-radius: 6px;
+    font-weight: 500; font-size: 12px; white-space: nowrap; display: flex; align-items: center; gap: 5px;
 }
 .selection-tags-wrap { display: flex; gap: 5px; overflow-x: auto; white-space: nowrap; max-width: 500px; }
 .sel-chip {
-    background: rgba(255,255,255,0.12); color: #f8fafc; padding: 2px 7px; border-radius: 4px;
+    background: #f4f4f5; color: #09090b; border: 1px solid #e4e4e7; padding: 2px 7px; border-radius: 4px;
     font-size: 11px; display: inline-flex; align-items: center; gap: 4px;
 }
 .sel-chip-remove { cursor: pointer; font-weight: bold; }
 .selection-buttons { display: flex; gap: 8px; align-items: center; }
 
 .btn-gold-action {
-    background: linear-gradient(135deg, #c8a55c 0%, #b38e44 100%); color: #ffffff;
-    border: none; padding: 7px 16px; border-radius: 6px; font-weight: 600; font-size: 13px;
+    background: #09090b; color: #ffffff;
+    border: none; padding: 0 14px; height: 32px; border-radius: 6px; font-weight: 500; font-size: 12.5px;
     cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
 }
+.btn-gold-action:hover { background: #27272a; }
 .btn-secondary-custom {
-    background: rgba(255,255,255,0.1); color: #f8fafc; border: 1px solid rgba(255,255,255,0.2);
-    padding: 7px 12px; border-radius: 6px; font-weight: 500; font-size: 12.5px; cursor: pointer;
+    background: #f4f4f5; color: #09090b; border: 1px solid #e4e4e7;
+    padding: 0 12px; height: 32px; border-radius: 6px; font-weight: 500; font-size: 12px; cursor: pointer;
     display: inline-flex; align-items: center; gap: 5px;
 }
-.step-content-pane .btn-secondary-custom { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
-.btn-danger-custom { color: #fca5a5; border-color: rgba(239, 68, 68, 0.4); }
+.btn-secondary-custom:hover { background: #e4e4e7; }
+.step-content-pane .btn-secondary-custom { background: #f4f4f5; color: #09090b; border: 1px solid #e4e4e7; }
+.btn-danger-custom { color: #ef4444; border-color: #fecaca; }
 
 .results-meta-bar { display: flex; justify-content: space-between; font-size: 12.5px; color: #64748b; margin-bottom: 12px; }
 .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 15px; margin-bottom: 20px; }
@@ -668,25 +676,45 @@ require_once __DIR__ . '/includes/sidebar.php';
     gap: 14px;
 }
 .angle-card {
+    position: relative;
     background: #ffffff;
     border: 2px solid #e2e8f0;
     border-radius: 8px;
     overflow: hidden;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.15s ease-in-out;
     display: flex;
     flex-direction: column;
 }
 .angle-card:hover {
-    border-color: #cbd5e1;
+    border-color: #94a3b8;
+    transform: translateY(-2px);
+}
+.angle-card.primary-active {
+    border-color: #10b981; /* Green highlight for Main Image */
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2), 0 4px 12px rgba(16, 185, 129, 0.15);
 }
 .angle-card.active {
     border-color: #3b82f6; /* Blue highlight */
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2), 0 4px 12px rgba(59, 130, 246, 0.15);
 }
-.angle-card.primary-active {
-    border-color: #10b981; /* Green highlight for Angle 1 */
-    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+.main-angle-badge {
+    position: absolute;
+    top: 7px;
+    left: 7px;
+    background: #10b981;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 2px 7px;
+    border-radius: 9999px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.18);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    z-index: 2;
+    pointer-events: none;
 }
 .angle-img-wrap {
     height: 165px;
@@ -702,33 +730,61 @@ require_once __DIR__ . '/includes/sidebar.php';
     object-fit: contain;
 }
 .angle-card-footer {
-    padding: 8px 6px;
+    padding: 8px 10px;
     background: #ffffff;
     border-top: 1px solid #f1f5f9;
     text-align: center;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    font-size: 12.5px;
+    gap: 8px;
+    font-size: 12px;
     font-weight: 600;
     color: #334155;
+    user-select: none;
 }
-.angle-radio-dot {
-    width: 13px;
-    height: 13px;
-    border-radius: 50%;
-    border: 2px solid #cbd5e1;
-    display: inline-block;
-    position: relative;
+.angle-radio-input {
+    width: 15px;
+    height: 15px;
+    accent-color: #10b981;
+    cursor: pointer;
+    margin: 0;
 }
-.angle-card.active .angle-radio-dot {
-    border-color: #3b82f6;
-    background: #3b82f6;
+.angle-card.active .angle-radio-input {
+    accent-color: #3b82f6;
 }
-.angle-card.primary-active .angle-radio-dot {
-    border-color: #10b981;
-    background: #10b981;
+.angle-card.primary-active .angle-radio-input {
+    accent-color: #10b981;
+}
+.selected-status-badge {
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.selected-status-badge.is-main {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+.selected-status-badge.is-all {
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+}
+.selected-status-badge.is-other {
+    background: #f1f5f9;
+    color: #334155;
+    border: 1px solid #e2e8f0;
+}
+.btn-active-gold {
+    background: #fef3c7 !important;
+    border-color: #f59e0b !important;
+    color: #b45309 !important;
+    font-weight: 600 !important;
 }
 
 /* Step 3 Export Grid */
@@ -1162,13 +1218,56 @@ function goToPage(p) {
 }
 
 // =============================================================================
-// STEP 2: REVIEW SELECTION & ANGLE PICKER (MATCHING USER SCREENSHOT 1)
+// STEP 2: REVIEW SELECTION & ANGLE PICKER (MAIN PRODUCT IMAGE DEFAULT)
 // =============================================================================
+function ensureFullProductDetails() {
+    if (state.selectedProductIds.size === 0) {
+        state.fullProductDetails = [];
+        return;
+    }
+
+    const currentMap = new Map(state.fullProductDetails.map(p => [p.id, p]));
+    const updatedList = [];
+
+    state.selectedProductsMap.forEach((p, id) => {
+        if (currentMap.has(id)) {
+            const existing = currentMap.get(id);
+            if (!existing.selected_images || existing.selected_images.length === 0) {
+                const main = (existing.all_images && existing.all_images[0]) ? existing.all_images[0].path : formatImageUrl(existing.display_image || existing.main_image);
+                existing.selected_images = main ? [main] : [];
+            }
+            updatedList.push(existing);
+        } else {
+            const mainImg = formatImageUrl(p.display_image || p.main_image);
+            updatedList.push({
+                id: p.id,
+                name: p.name,
+                sku: p.sku,
+                price: p.price,
+                sale_price: p.sale_price,
+                category_name: p.primary_category_name || '',
+                main_image: p.main_image,
+                display_image: p.display_image,
+                selected_images: [mainImg], // Default: Main Product Image
+                all_images: [{
+                    id: 'main_' + p.id,
+                    path: mainImg,
+                    is_main: true,
+                    thumb: mainImg
+                }]
+            });
+        }
+    });
+
+    state.fullProductDetails = updatedList;
+}
+
 function goToStep2() {
     if (state.selectedProductIds.size === 0) {
         alert('Please select at least one product before proceeding to review.');
         return;
     }
+    ensureFullProductDetails();
     switchStep(2);
 }
 
@@ -1180,6 +1279,7 @@ function loadStep2Data() {
     if (state.selectedProductIds.size === 0) {
         if (emptyState) emptyState.style.display = 'block';
         if (list) list.innerHTML = '';
+        state.fullProductDetails = [];
         return;
     }
 
@@ -1195,10 +1295,18 @@ function loadStep2Data() {
             if (data.success && data.products) {
                 const existingMap = new Map(state.fullProductDetails.map(p => [p.id, p]));
                 state.fullProductDetails = data.products.map(p => {
+                    const allImgs = p.all_images || [];
+                    const mainImgObj = allImgs.find(i => i.is_main) || allImgs[0];
+                    const mainImgPath = mainImgObj ? mainImgObj.path : formatImageUrl(p.main_image);
+
                     if (existingMap.has(p.id)) {
                         const ex = existingMap.get(p.id);
                         p.name = ex.name || p.name;
-                        p.selected_images = ex.selected_images || p.selected_images;
+                        // Retain existing custom selection only if valid and not empty; otherwise default to main image
+                        p.selected_images = (ex.selected_images && ex.selected_images.length > 0) ? ex.selected_images : [mainImgPath];
+                    } else {
+                        // STRICT DEFAULT: Always the main product image (Angle 1)
+                        p.selected_images = [mainImgPath];
                     }
                     return p;
                 });
@@ -1208,6 +1316,8 @@ function loadStep2Data() {
         .catch(err => {
             if (loading) loading.style.display = 'none';
             console.error('Error fetching review images:', err);
+            ensureFullProductDetails();
+            renderReviewList();
         });
 }
 
@@ -1221,27 +1331,50 @@ function renderReviewList() {
         const selectedImgSet = new Set(prod.selected_images || []);
         const allImages = prod.all_images || [];
         const totalImagesCount = allImages.length;
+        
+        const mainImgObj = allImages.find(i => i.is_main) || allImages[0];
+        const mainImgPath = mainImgObj ? mainImgObj.path : formatImageUrl(prod.main_image);
+
+        const isMainSelected = selectedImgSet.has(mainImgPath) || selectedImgSet.has(formatImageUrl(mainImgPath));
+        const isMainOnly = selectedImgSet.size === 1 && isMainSelected;
+        const isAllSelected = selectedImgSet.size === totalImagesCount && totalImagesCount > 1;
+
+        let statusBadgeHtml = '';
+        if (isMainOnly) {
+            statusBadgeHtml = `<span class="selected-status-badge is-main"><i class="fa-solid fa-star"></i> Main Image (Default)</span>`;
+        } else if (isAllSelected) {
+            statusBadgeHtml = `<span class="selected-status-badge is-all"><i class="fa-solid fa-layer-group"></i> All ${totalImagesCount} Angles Selected</span>`;
+        } else {
+            statusBadgeHtml = `<span class="selected-status-badge is-other"><i class="fa-solid fa-check"></i> ${selectedImgSet.size} Angle(s) Selected</span>`;
+        }
 
         let anglesHtml = '';
         allImages.forEach((img, idx) => {
             const formattedImgUrl = formatImageUrl(img.path);
             const isImgSelected = selectedImgSet.has(img.path) || selectedImgSet.has(formattedImgUrl);
-            const isPrimary = (idx === 0);
+            const isMain = (idx === 0 || img.is_main);
             
             let activeClass = '';
             if (isImgSelected) {
-                activeClass = isPrimary ? 'primary-active' : 'active';
+                activeClass = isMain ? 'primary-active' : 'active';
             }
 
-            const angleLabel = 'Angle ' + (idx + 1);
+            const mainBadge = isMain ? `<div class="main-angle-badge"><i class="fa-solid fa-star"></i> Main Image</div>` : '';
+            const angleLabel = isMain ? 'Angle 1 (Main Image)' : ('Angle ' + (idx + 1));
 
             anglesHtml += `
-                <div class="angle-card ${activeClass}" onclick="toggleProductImage(${pId}, '${escapeJsString(img.path)}')">
+                <div class="angle-card ${activeClass}" onclick="selectProductAngle(${pId}, '${escapeJsString(img.path)}')">
+                    ${mainBadge}
                     <div class="angle-img-wrap">
                         <img src="${formattedImgUrl}" alt="${angleLabel}" onerror="this.onerror=null; this.src=DEFAULT_PLACEHOLDER_IMG;">
                     </div>
                     <div class="angle-card-footer">
-                        <span class="angle-radio-dot"></span>
+                        <input type="radio" 
+                               class="angle-radio-input" 
+                               name="angle_radio_${pId}" 
+                               value="${escapeHtml(img.path)}" 
+                               ${isImgSelected ? 'checked' : ''} 
+                               onclick="event.stopPropagation(); selectProductAngle(${pId}, '${escapeJsString(img.path)}')">
                         <span>${angleLabel}</span>
                     </div>
                 </div>
@@ -1250,14 +1383,17 @@ function renderReviewList() {
 
         html += `
             <div class="review-item-card" id="review_card_${pId}">
-                <!-- Header matching Screenshot 1 -->
+                <!-- Header with clear indication of default main image -->
                 <div class="review-header-bar">
                     <div class="review-sku-label">
-                        SKU: ${escapeHtml(prod.sku)} <span>(ID: ${pId})</span>
+                        SKU: <strong>${escapeHtml(prod.sku)}</strong> <span>(ID: ${pId})</span>
                     </div>
                     <div class="review-header-actions">
-                        <span class="image-found-badge">${totalImagesCount} Image(s) Found</span>
-                        <button type="button" class="btn-secondary-custom" style="padding: 4px 10px; font-size: 11.5px;" onclick="selectAllImagesForProduct(${pId})">
+                        ${statusBadgeHtml}
+                        <button type="button" class="btn-secondary-custom ${isMainOnly ? 'btn-active-gold' : ''}" style="padding: 4px 10px; font-size: 11.5px;" onclick="selectMainImageForProduct(${pId})">
+                            <i class="fa-solid fa-star"></i> Main Image Only
+                        </button>
+                        <button type="button" class="btn-secondary-custom ${isAllSelected ? 'btn-active-gold' : ''}" style="padding: 4px 10px; font-size: 11.5px;" onclick="selectAllImagesForProduct(${pId})">
                             <i class="fa-solid fa-images"></i> Select All Angles
                         </button>
                         <button type="button" class="btn-secondary-custom btn-danger-custom" style="padding: 4px 10px; font-size: 11.5px;" onclick="removeProductFromReview(${pId})">
@@ -1278,27 +1414,25 @@ function renderReviewList() {
     list.innerHTML = html;
 }
 
-function toggleProductImage(productId, imgPath) {
+// Single-angle selection (Radio behavior matching Sri Shringarr review_pdfmaker.php)
+function selectProductAngle(productId, imgPath) {
     const prod = state.fullProductDetails.find(p => p.id === productId);
     if (!prod) return;
-
-    let sel = prod.selected_images || [];
-    const formatted = formatImageUrl(imgPath);
-    
-    let idx = sel.indexOf(imgPath);
-    if (idx === -1) idx = sel.indexOf(formatted);
-
-    if (idx !== -1) {
-        if (sel.length === 1) {
-            alert('Each product in the catalogue must have at least 1 selected angle.');
-            return;
-        }
-        sel.splice(idx, 1);
-    } else {
-        sel.push(imgPath);
-    }
-    prod.selected_images = sel;
+    prod.selected_images = [imgPath];
     renderReviewList();
+    updateStep3Summary();
+}
+
+function selectMainImageForProduct(productId) {
+    const prod = state.fullProductDetails.find(p => p.id === productId);
+    if (!prod) return;
+    const allImages = prod.all_images || [];
+    const mainImg = allImages.find(i => i.is_main) || allImages[0];
+    if (mainImg) {
+        prod.selected_images = [mainImg.path];
+        renderReviewList();
+        updateStep3Summary();
+    }
 }
 
 function selectAllImagesForProduct(productId) {
@@ -1306,6 +1440,7 @@ function selectAllImagesForProduct(productId) {
     if (!prod) return;
     prod.selected_images = (prod.all_images || []).map(i => i.path);
     renderReviewList();
+    updateStep3Summary();
 }
 
 function removeProductFromReview(productId) {
@@ -1315,10 +1450,11 @@ function removeProductFromReview(productId) {
     updateSelectionUI();
     renderProductsGrid();
     renderReviewList();
+    updateStep3Summary();
 }
 
 // =============================================================================
-// STEP 3: PDF DESIGN, PREVIEW & EXPORT (MATCHING SCREENSHOT 2 & 3)
+// STEP 3: PDF DESIGN, PREVIEW & EXPORT
 // =============================================================================
 let currentLayout = 'showcase';
 
@@ -1327,6 +1463,7 @@ function goToStep3() {
         alert('Please select at least one product before proceeding.');
         return;
     }
+    ensureFullProductDetails();
     switchStep(3);
     updateStep3Summary();
 }
@@ -1346,6 +1483,7 @@ function selectLayout(layoutKey) {
 }
 
 function updateStep3Summary() {
+    ensureFullProductDetails();
     const totalProds = state.fullProductDetails.length;
     let totalImgs = 0;
     state.fullProductDetails.forEach(p => {
@@ -1364,12 +1502,16 @@ function updateStep3Summary() {
         estPages = coverPageCount + Math.ceil(totalProds / 4);
     }
 
-    document.getElementById('final_product_count').textContent = totalProds;
-    document.getElementById('final_image_count').textContent = totalImgs;
-    document.getElementById('final_page_est').textContent = estPages + ' Page' + (estPages > 1 ? 's' : '');
+    const countElem = document.getElementById('final_product_count');
+    const imgElem = document.getElementById('final_image_count');
+    const pageElem = document.getElementById('final_page_est');
+    if (countElem) countElem.textContent = totalProds;
+    if (imgElem) imgElem.textContent = totalImgs;
+    if (pageElem) pageElem.textContent = estPages + ' Page' + (estPages > 1 ? 's' : '');
 }
 
 function generatePdf(outputMode = 'pdf') {
+    ensureFullProductDetails();
     if (state.fullProductDetails.length === 0) {
         alert('No products selected to export.');
         return;
@@ -1416,6 +1558,7 @@ function switchStep(stepNum) {
     if (stepNum === 2) {
         loadStep2Data();
     } else if (stepNum === 3) {
+        ensureFullProductDetails();
         updateStep3Summary();
     }
 

@@ -327,18 +327,18 @@ require_once __DIR__ . '/includes/sidebar.php';
 </div>
 <?php endif; ?>
 
-<!-- WordPress Tab Navigation Bar -->
-<div style="border-bottom: 1px solid #ccc; margin-bottom: 20px; display: flex; gap: 5px;">
-    <a href="ecommerce.php?tab=shipping" class="button <?php echo $tab === 'shipping' ? 'button-primary' : 'button-secondary'; ?>" style="font-weight: 600; padding: 6px 16px;">
+<!-- ShadCN Filter Tab Navigation Bar -->
+<div class="shadcn-filter-tabs" style="margin-bottom: 20px;">
+    <a href="ecommerce.php?tab=shipping" class="shadcn-tab-item <?php echo $tab === 'shipping' ? 'active' : ''; ?>">
         <i class="fa-solid fa-truck-ramp-box"></i> Dynamic Shipping Charges
     </a>
-    <a href="ecommerce.php?tab=payment" class="button <?php echo $tab === 'payment' ? 'button-primary' : 'button-secondary'; ?>" style="font-weight: 600; padding: 6px 16px;">
+    <a href="ecommerce.php?tab=payment" class="shadcn-tab-item <?php echo $tab === 'payment' ? 'active' : ''; ?>">
         <i class="fa-solid fa-credit-card"></i> Payment Gateway (Razorpay)
     </a>
-    <a href="ecommerce.php?tab=discounts" class="button <?php echo $tab === 'discounts' ? 'button-primary' : 'button-secondary'; ?>" style="font-weight: 600; padding: 6px 16px;">
+    <a href="ecommerce.php?tab=discounts" class="shadcn-tab-item <?php echo $tab === 'discounts' ? 'active' : ''; ?>">
         <i class="fa-solid fa-tags"></i> Discount Architect (Rules)
     </a>
-    <a href="ecommerce.php?tab=coupons" class="button <?php echo $tab === 'coupons' ? 'button-primary' : 'button-secondary'; ?>" style="font-weight: 600; padding: 6px 16px;">
+    <a href="ecommerce.php?tab=coupons" class="shadcn-tab-item <?php echo $tab === 'coupons' ? 'active' : ''; ?>">
         <i class="fa-solid fa-ticket"></i> Coupons
     </a>
 </div>

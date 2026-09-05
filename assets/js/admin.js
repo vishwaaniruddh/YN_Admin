@@ -169,6 +169,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
     const adminMenuWrap = document.getElementById('adminmenuwrap');
     const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+    const sidebarCloseBtn = document.getElementById('sidebar-close-btn');
+
+    const closeMobileSidebar = function() {
+        if (adminMenuWrap) adminMenuWrap.classList.remove('mobile-open');
+        if (sidebarBackdrop) sidebarBackdrop.classList.remove('active');
+    };
 
     if (mobileMenuToggle && adminMenuWrap && sidebarBackdrop) {
         // Toggle mobile drawer on button click
@@ -178,10 +184,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // Close mobile drawer when clicking the backdrop overlay
-        sidebarBackdrop.addEventListener('click', function() {
-            adminMenuWrap.classList.remove('mobile-open');
-            sidebarBackdrop.classList.remove('active');
-        });
+        sidebarBackdrop.addEventListener('click', closeMobileSidebar);
+    }
+
+    if (sidebarCloseBtn) {
+        sidebarCloseBtn.addEventListener('click', closeMobileSidebar);
     }
 
     // 8. Auto-generate Slug from Name

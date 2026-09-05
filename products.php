@@ -154,33 +154,49 @@ try {
 }
 ?>
 
-<div class="wrap-header">
-    <h1>Products</h1>
-    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-        <a href="product-add.php" class="button button-primary"><i class="fa-solid fa-plus"></i> Add New</a>
-        <a href="import_archive.php" class="button" style="background: #4f46e5; color: #fff; border-color: #4338ca; font-weight: 600;"><i class="fa-solid fa-folder-tree"></i> Archive / Folder Import</a>
-        <a href="product-import.php" class="button button-secondary"><i class="fa-solid fa-file-csv"></i> CSV Import</a>
+<div class="dashboard-header-banner" style="margin-bottom: 20px;">
+    <div class="dashboard-header-info">
+        <div class="dashboard-greeting">
+            <h1>Products Catalog</h1>
+            <span class="shadcn-badge shadcn-badge-sky" style="font-size: 11px; padding: 3px 8px;">
+                <i class="fa-solid fa-boxes-stacked" style="margin-right: 4px;"></i> <?php echo number_format($total_items); ?> Items
+            </span>
+        </div>
+        <p class="dashboard-subtitle">
+            Manage your store inventory, pricing, SKUs, and category bindings.
+        </p>
+    </div>
+    <div class="dashboard-actions">
+        <a href="product-add.php" class="shadcn-btn shadcn-btn-primary">
+            <i class="fa-solid fa-plus"></i> Add Product
+        </a>
+        <a href="import_archive.php" class="shadcn-btn shadcn-btn-outline">
+            <i class="fa-solid fa-folder-tree"></i> Archive Import
+        </a>
+        <a href="product-import.php" class="shadcn-btn shadcn-btn-outline">
+            <i class="fa-solid fa-file-csv"></i> CSV Import
+        </a>
 
         <!-- Export Dropdown -->
         <div style="position: relative; display: inline-block;" id="export-dropdown-wrap">
-            <button type="button" onclick="document.getElementById('export-menu').classList.toggle('open')" class="button" style="display: inline-flex; align-items: center; gap: 7px; background: #16a34a; color: #fff; border-color: #15803d; font-weight: 600;">
+            <button type="button" onclick="document.getElementById('export-menu').classList.toggle('open')" class="shadcn-btn shadcn-btn-outline">
                 <i class="fa-solid fa-download"></i> Export
-                <i class="fa-solid fa-chevron-down" style="font-size: 10px;"></i>
+                <i class="fa-solid fa-chevron-down" style="font-size: 10px; margin-left: 2px;"></i>
             </button>
-            <ul id="export-menu" style="display:none; position: absolute; right: 0; top: calc(100% + 4px); background: #fff; border: 1px solid #c3c4c7; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); list-style: none; margin: 0; padding: 4px 0; z-index: 999; min-width: 220px;">
+            <ul id="export-menu" style="display:none; position: absolute; right: 0; top: calc(100% + 6px); background: #ffffff; border: 1px solid #e4e4e7; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08); list-style: none; margin: 0; padding: 6px 0; z-index: 999; min-width: 240px;">
                 <li>
-                    <a href="generate-yn-products-excel.php?download=1" style="display: flex; align-items: center; gap: 10px; padding: 9px 16px; text-decoration: none; color: #1e293b; font-size: 13px; font-weight: 600;">
-                        <i class="fa-solid fa-file-excel" style="color: #16a34a;"></i> YN Products Excel (yn_products.xlsx)
+                    <a href="generate-yn-products-excel.php?download=1" style="display: flex; align-items: center; gap: 10px; padding: 9px 16px; text-decoration: none; color: #09090b; font-size: 13px; font-weight: 500;">
+                        <i class="fa-solid fa-file-excel" style="color: #16a34a; width: 16px;"></i> YN Products Excel (Full)
                     </a>
                 </li>
-                <li style="border-top: 1px solid #f0f0f1;">
-                    <a href="export-products.php?format=excel<?php echo !empty($cat_filter) ? '&category_id=' . (int)$cat_filter : ''; ?>" style="display: flex; align-items: center; gap: 10px; padding: 9px 16px; text-decoration: none; color: #1e293b; font-size: 13px; font-weight: 500;">
-                        <i class="fa-solid fa-file-excel" style="color: #15803d;"></i> Standard Excel (.xlsx)
+                <li style="border-top: 1px solid #f4f4f5;">
+                    <a href="export-products.php?format=excel<?php echo !empty($cat_filter) ? '&category_id=' . (int)$cat_filter : ''; ?>" style="display: flex; align-items: center; gap: 10px; padding: 9px 16px; text-decoration: none; color: #09090b; font-size: 13px; font-weight: 500;">
+                        <i class="fa-solid fa-file-excel" style="color: #059669; width: 16px;"></i> Filtered Excel (.xlsx)
                     </a>
                 </li>
-                <li style="border-top: 1px solid #f0f0f1;">
-                    <a href="export-products.php?format=csv<?php echo !empty($cat_filter) ? '&category_id=' . (int)$cat_filter : ''; ?>" style="display: flex; align-items: center; gap: 10px; padding: 9px 16px; text-decoration: none; color: #1e293b; font-size: 13px; font-weight: 500;">
-                        <i class="fa-solid fa-file-csv" style="color: #0284c7;"></i> Export as CSV (.csv)
+                <li style="border-top: 1px solid #f4f4f5;">
+                    <a href="export-products.php?format=csv<?php echo !empty($cat_filter) ? '&category_id=' . (int)$cat_filter : ''; ?>" style="display: flex; align-items: center; gap: 10px; padding: 9px 16px; text-decoration: none; color: #09090b; font-size: 13px; font-weight: 500;">
+                        <i class="fa-solid fa-file-csv" style="color: #0284c7; width: 16px;"></i> Filtered CSV (.csv)
                     </a>
                 </li>
             </ul>
@@ -190,9 +206,9 @@ try {
 
 <style>
 #export-menu.open { display: block !important; }
+#export-menu a:hover { background-color: #f4f4f5; }
 </style>
 <script>
-// Close dropdown when clicking outside
 document.addEventListener('click', function(e) {
     var wrap = document.getElementById('export-dropdown-wrap');
     if (wrap && !wrap.contains(e.target)) {
@@ -204,185 +220,222 @@ document.addEventListener('click', function(e) {
 
 <?php if (!empty($message)): ?>
     <div class="notice notice-<?php echo $message_type; ?> auto-dismiss">
+        <i class="fa-solid fa-circle-info"></i>
         <p><?php echo sanitize_html($message); ?></p>
     </div>
 <?php endif; ?>
 
-<!-- Filters Form -->
-<div class="tablenav">
-    <form action="products.php" method="GET" class="alignleft">
-        <!-- Search Box -->
-        <input type="text" name="s" value="<?php echo sanitize_html($search); ?>" placeholder="Search products..." class="form-control" style="width: 180px; padding: 4px 8px;">
+<!-- Filters Card -->
+<div class="shadcn-card" style="margin-bottom: 16px;">
+    <div class="shadcn-card-padded" style="padding: 12px 16px;">
+        <form action="products.php" method="GET" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 0;">
+            <!-- Search Box -->
+            <div style="position: relative; flex: 1; min-width: 220px;">
+                <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #a1a1aa; font-size: 12px;"></i>
+                <input type="text" name="s" value="<?php echo sanitize_html($search); ?>" placeholder="Search name, SKU, description..." class="form-control" style="padding-left: 28px; width: 100%;">
+            </div>
 
-        <!-- Categories Dropdown -->
-        <select name="cat_id" class="form-control" style="width: 150px; padding: 4px 8px;">
-            <option value="">All Categories</option>
-            <option value="uncategorized" <?php echo ($cat_filter === 'uncategorized') ? 'selected' : ''; ?>>Uncategorized</option>
-            <?php foreach ($categories as $cat): ?>
-                <option value="<?php echo $cat['id']; ?>" <?php echo ($cat_filter == $cat['id']) ? 'selected' : ''; ?>>
-                    <?php echo str_repeat('&nbsp;&nbsp;&nbsp;', isset($cat['depth']) ? $cat['depth'] : 0) . sanitize_html($cat['name']); ?>
-                </option>
-            <?php endforeach; ?>
-        </select>
+            <!-- Categories Dropdown -->
+            <div style="min-width: 160px;">
+                <select name="cat_id" class="form-control" style="width: 100%;">
+                    <option value="">All Categories</option>
+                    <option value="uncategorized" <?php echo ($cat_filter === 'uncategorized') ? 'selected' : ''; ?>>Uncategorized</option>
+                    <?php foreach ($categories as $cat): ?>
+                        <option value="<?php echo $cat['id']; ?>" <?php echo ($cat_filter == $cat['id']) ? 'selected' : ''; ?>>
+                            <?php echo str_repeat('&nbsp;&nbsp;&nbsp;', isset($cat['depth']) ? $cat['depth'] : 0) . sanitize_html($cat['name']); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
 
-        <!-- Stock Status Dropdown -->
-        <select name="stock_status" class="form-control" style="width: 140px; padding: 4px 8px;">
-            <option value="">All Stock Status</option>
-            <option value="instock" <?php echo ($stock_filter == 'instock') ? 'selected' : ''; ?>>In Stock</option>
-            <option value="lowstock" <?php echo ($stock_filter == 'lowstock') ? 'selected' : ''; ?>>Low Stock</option>
-            <option value="outofstock" <?php echo ($stock_filter == 'outofstock') ? 'selected' : ''; ?>>Out of Stock</option>
-        </select>
+            <!-- Stock Status Dropdown -->
+            <div style="min-width: 140px;">
+                <select name="stock_status" class="form-control" style="width: 100%;">
+                    <option value="">All Stock Status</option>
+                    <option value="instock" <?php echo ($stock_filter == 'instock') ? 'selected' : ''; ?>>In Stock (&gt; 5)</option>
+                    <option value="lowstock" <?php echo ($stock_filter == 'lowstock') ? 'selected' : ''; ?>>Low Stock (1–5)</option>
+                    <option value="outofstock" <?php echo ($stock_filter == 'outofstock') ? 'selected' : ''; ?>>Out of Stock (0)</option>
+                </select>
+            </div>
 
-        <!-- Featured Status Dropdown -->
-        <select name="featured" class="form-control" style="width: 120px; padding: 4px 8px;">
-            <option value="">All Items</option>
-            <option value="1" <?php echo ($featured_filter === '1') ? 'selected' : ''; ?>>Featured</option>
-            <option value="0" <?php echo ($featured_filter === '0') ? 'selected' : ''; ?>>Not Featured</option>
-        </select>
+            <!-- Featured Status Dropdown -->
+            <div style="min-width: 120px;">
+                <select name="featured" class="form-control" style="width: 100%;">
+                    <option value="">All Items</option>
+                    <option value="1" <?php echo ($featured_filter === '1') ? 'selected' : ''; ?>>Starred Only</option>
+                    <option value="0" <?php echo ($featured_filter === '0') ? 'selected' : ''; ?>>Unstarred Only</option>
+                </select>
+            </div>
 
-        <button type="submit" class="button">Filter</button>
-        <?php if (!empty($search) || !empty($cat_filter) || !empty($stock_filter) || $featured_filter !== ''): ?>
-            <a href="products.php" class="button" title="Clear Filters"><i class="fa-solid fa-xmark"></i> Clear</a>
-        <?php endif; ?>
-    </form>
-</div>
-
-<!-- Result Count Info Bar -->
-<div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; margin-bottom: 4px;">
-    <div style="font-size: 13px; color: #50575e;">
-        <?php
-        $range_start = min(($current_page - 1) * $items_per_page + 1, $total_items);
-        $range_end   = min($current_page * $items_per_page, $total_items);
-        if ($total_items === 0):
-        ?>
-            <span>No products found.</span>
-        <?php elseif (!empty($search) || !empty($cat_filter) || !empty($stock_filter) || $featured_filter !== ''): ?>
-            <span>
-                Showing <strong><?php echo number_format($range_start); ?>–<?php echo number_format($range_end); ?></strong>
-                of <strong><?php echo number_format($total_items); ?></strong> filtered products
-                <?php if (!empty($search)): ?>
-                    &nbsp;<span style="background: #e8f0fe; color: #1a73e8; padding: 2px 8px; border-radius: 10px; font-weight: 600;">
-                        "<?php echo sanitize_html($search); ?>"
-                    </span>
-                <?php endif; ?>
-            </span>
-        <?php else: ?>
-            <span>
-                Showing <strong><?php echo number_format($range_start); ?>–<?php echo number_format($range_end); ?></strong>
-                of <strong><?php echo number_format($total_items); ?></strong> products
-            </span>
-        <?php endif; ?>
-    </div>
-    <div style="font-size: 12px; color: #8c8f94;">
-        Page <?php echo $current_page; ?> of <?php echo max(1, $total_pages); ?>
+            <button type="submit" class="shadcn-btn shadcn-btn-primary">
+                <i class="fa-solid fa-filter"></i> Filter
+            </button>
+            <?php if (!empty($search) || !empty($cat_filter) || !empty($stock_filter) || $featured_filter !== ''): ?>
+                <a href="products.php" class="shadcn-btn shadcn-btn-ghost" title="Clear Filters">
+                    <i class="fa-solid fa-xmark"></i> Reset
+                </a>
+            <?php endif; ?>
+        </form>
     </div>
 </div>
 
-<!-- Products Table -->
-<table class="wp-list-table">
-    <thead>
-        <tr>
-            <th class="column-thumbnail">Image</th>
-            <th>Name</th>
-            <th>SKU</th>
-            <th>Category</th>
-            <th>Price</th>
-            <th>Stock</th>
-            <th style="width: 80px; text-align: center;"><i class="fa-solid fa-star"></i></th>
-            <th>Date Added</th>
-        </tr>
-    </thead>
-    <tbody>
-        <?php if (empty($products)): ?>
-            <tr>
-                <td colspan="8" style="text-align: center; color: #646970; padding: 25px;">No products found matching filters.</td>
-            </tr>
-        <?php else: ?>
-            <?php foreach ($products as $prod): ?>
+<!-- Products Table Card -->
+<div class="shadcn-card">
+    <div class="shadcn-card-header">
+        <div style="font-size: 12.5px; color: #52525b;">
+            <?php
+            $range_start = min(($current_page - 1) * $items_per_page + 1, $total_items);
+            $range_end   = min($current_page * $items_per_page, $total_items);
+            if ($total_items === 0):
+            ?>
+                <span>No products found matching query.</span>
+            <?php else: ?>
+                <span>
+                    Showing <strong><?php echo number_format($range_start); ?>–<?php echo number_format($range_end); ?></strong> of <strong><?php echo number_format($total_items); ?></strong> products
+                    <?php if (!empty($search)): ?>
+                        &nbsp;<span class="shadcn-badge shadcn-badge-sky">"<?php echo sanitize_html($search); ?>"</span>
+                    <?php endif; ?>
+                </span>
+            <?php endif; ?>
+        </div>
+        <div style="font-size: 11.5px; color: #71717a;">
+            Page <?php echo $current_page; ?> of <?php echo max(1, $total_pages); ?>
+        </div>
+    </div>
+
+    <div class="shadcn-card-body" style="overflow-x: auto;">
+        <table class="shadcn-table">
+            <thead>
                 <tr>
-                    <td class="column-thumbnail">
-                        <?php if ($prod['main_image']): ?>
-                            <!-- Path points relative to server root since we stored it relative -->
-                            <img src="<?php echo sanitize_html($prod['main_image']); ?>" alt="Product">
-                        <?php else: ?>
-                            <div style="width: 50px; height: 50px; background: #f0f0f1; display: flex; align-items: center; justify-content: center; border-radius: 4px; border: 1px solid var(--wp-border); color: #8c8f94;">
-                                <i class="fa-solid fa-image"></i>
-                            </div>
-                        <?php endif; ?>
-                    </td>
-                    <td>
-                        <strong><a href="product-edit.php?id=<?php echo $prod['id']; ?>" style="font-size: 14px;"><?php echo sanitize_html($prod['name']); ?></a></strong>
-                        <?php if ($prod['status'] === 'draft'): ?>
-                            <span style="font-style: italic; color: #8c8f94; font-size: 12px; margin-left: 5px;">— Draft</span>
-                        <?php endif; ?>
-                        
-                        <div class="column-actions">
-                            <a href="product-edit.php?id=<?php echo $prod['id']; ?>">Edit Details</a> 
-                            <?php if (current_user_can('delete_products')): ?>
-                            | <a href="products.php?delete=<?php echo $prod['id']; ?>" class="delete delete-confirm" data-name="<?php echo sanitize_html($prod['name']); ?>">Delete</a>
-                            <?php endif; ?>
-                        </div>
-                    </td>
-                    <td><?php echo sanitize_html($prod['sku']); ?></td>
-                    <td><?php echo sanitize_html($prod['category_name'] ?: '—'); ?></td>
-                    <td>
-                        <?php if ($prod['sale_price']): ?>
-                            <span style="text-decoration: line-through; color: #8c8f94; font-size: 12px;">₹<?php echo number_format($prod['price'], 2); ?></span><br>
-                            <strong style="color: var(--wp-error-red);">₹<?php echo number_format($prod['sale_price'], 2); ?></strong>
-                        <?php else: ?>
-                            <strong>₹<?php echo number_format($prod['price'], 2); ?></strong>
-                        <?php endif; ?>
-                    </td>
-                    <td>
-                        <?php if ($prod['stock_qty'] <= 0): ?>
-                            <span class="badge badge-danger">Out of stock</span>
-                        <?php elseif ($prod['stock_qty'] <= 5): ?>
-                            <span class="badge badge-warning">Low Stock (<?php echo $prod['stock_qty']; ?>)</span>
-                        <?php else: ?>
-                            <span class="badge badge-success">In Stock (<?php echo $prod['stock_qty']; ?>)</span>
-                        <?php endif; ?>
-                    </td>
-                    <td style="text-align: center;">
-                        <?php if ($prod['is_featured']): ?>
-                            <span class="star-icon featured ajax-toggle" data-product-id="<?php echo $prod['id']; ?>">&#9733;</span>
-                        <?php else: ?>
-                            <span class="star-icon not-featured ajax-toggle" data-product-id="<?php echo $prod['id']; ?>">&#9734;</span>
-                        <?php endif; ?>
-                    </td>
-                    <td style="font-size: 12px; color: #646970;">
-                        <?php echo date('Y/m/d H:i', strtotime($prod['created_at'])); ?>
-                    </td>
+                    <th style="width: 50px;">Image</th>
+                    <th>Product Title & SKU</th>
+                    <th>Category</th>
+                    <th>Price</th>
+                    <th>Inventory</th>
+                    <th style="width: 60px; text-align: center;"><i class="fa-solid fa-star" title="Featured"></i></th>
+                    <th style="width: 110px;">Added On</th>
+                    <th style="width: 70px; text-align: center;">Actions</th>
                 </tr>
-            <?php endforeach; ?>
-        <?php endif; ?>
-    </tbody>
-</table>
+            </thead>
+            <tbody>
+                <?php if (empty($products)): ?>
+                    <tr>
+                        <td colspan="8" style="text-align: center; color: #71717a; padding: 40px;">
+                            <i class="fa-solid fa-boxes-stacked" style="font-size: 24px; display: block; margin-bottom: 8px; opacity: 0.4;"></i>
+                            No products found matching filters.
+                        </td>
+                    </tr>
+                <?php else: ?>
+                    <?php foreach ($products as $prod): ?>
+                        <tr>
+                            <td>
+                                <div style="width: 36px; height: 46px; border-radius: 4px; overflow: hidden; position: relative; background: #f4f4f5; border: 1px solid #e4e4e7;">
+                                    <?php if ($prod['main_image']): ?>
+                                        <img src="<?php echo sanitize_html($prod['main_image']); ?>" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                        <div style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center; color: #a1a1aa;">
+                                            <i class="fa-solid fa-gem" style="font-size: 12px;"></i>
+                                        </div>
+                                    <?php else: ?>
+                                        <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #a1a1aa;">
+                                            <i class="fa-solid fa-gem" style="font-size: 12px;"></i>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    <a href="product-edit.php?id=<?php echo $prod['id']; ?>" style="font-weight: 500; color: #09090b; text-decoration: none; font-size: 13px; line-height: 1.35; display: inline-block;">
+                                        <?php echo sanitize_html($prod['name']); ?>
+                                    </a>
+                                    <?php if ($prod['status'] === 'draft'): ?>
+                                        <span class="shadcn-badge" style="background: #f4f4f5; color: #71717a; margin-left: 6px;">Draft</span>
+                                    <?php endif; ?>
+                                </div>
+                                <div style="margin-top: 3px;">
+                                    <span style="font-size: 11px; font-family: monospace; color: #71717a; background: #f4f4f5; padding: 1px 5px; border-radius: 3px; border: 1px solid #e4e4e7;">
+                                        <?php echo sanitize_html($prod['sku'] ?: 'N/A'); ?>
+                                    </span>
+                                </div>
+                            </td>
+                            <td>
+                                <span style="font-size: 11px; color: #52525b; background: #f4f4f5; padding: 2px 7px; border-radius: 4px; border: 1px solid #e4e4e7; white-space: nowrap; display: inline-block;">
+                                    <?php echo sanitize_html($prod['category_name'] ?: 'Uncategorized'); ?>
+                                </span>
+                            </td>
+                            <td>
+                                <?php if ($prod['sale_price']): ?>
+                                    <span style="text-decoration: line-through; color: #a1a1aa; font-size: 11px;">₹<?php echo number_format($prod['price'], 2); ?></span>
+                                    <div style="color: #dc2626; font-weight: 600; font-size: 13px;">₹<?php echo number_format($prod['sale_price'], 2); ?></div>
+                                <?php else: ?>
+                                    <span style="color: #09090b; font-weight: 600; font-size: 13px;">₹<?php echo number_format($prod['price'], 2); ?></span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <?php if ($prod['stock_qty'] <= 0): ?>
+                                    <span class="stock-pill-out"><i class="fa-solid fa-circle-xmark"></i> Out of stock</span>
+                                <?php elseif ($prod['stock_qty'] <= 5): ?>
+                                    <span class="stock-pill-low"><i class="fa-solid fa-triangle-exclamation"></i> Low: <?php echo $prod['stock_qty']; ?></span>
+                                <?php else: ?>
+                                    <span class="stock-pill-in"><i class="fa-solid fa-check"></i> In Stock (<?php echo $prod['stock_qty']; ?>)</span>
+                                <?php endif; ?>
+                            </td>
+                            <td style="text-align: center;">
+                                <?php if ($prod['is_featured']): ?>
+                                    <span class="star-icon featured ajax-toggle" data-product-id="<?php echo $prod['id']; ?>" style="color: #f59e0b; cursor: pointer; font-size: 15px;" title="Click to unstar">&#9733;</span>
+                                <?php else: ?>
+                                    <span class="star-icon not-featured ajax-toggle" data-product-id="<?php echo $prod['id']; ?>" style="color: #d4d4d8; cursor: pointer; font-size: 15px;" title="Click to star">&#9734;</span>
+                                <?php endif; ?>
+                            </td>
+                            <td style="font-size: 11.5px; color: #71717a; white-space: nowrap;">
+                                <?php echo date('M d, Y', strtotime($prod['created_at'])); ?>
+                            </td>
+                            <td style="text-align: center; white-space: nowrap;">
+                                <div style="display: inline-flex; align-items: center; gap: 3px;">
+                                    <a href="product-edit.php?id=<?php echo $prod['id']; ?>" class="shadcn-btn-ghost" style="width: 26px; height: 26px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; color: #52525b;" title="Edit Product">
+                                        <i class="fa-solid fa-pen-to-square" style="font-size: 11px;"></i>
+                                    </a>
+                                    <?php if (current_user_can('delete_products')): ?>
+                                        <a href="products.php?delete=<?php echo $prod['id']; ?>" class="shadcn-btn-ghost delete-confirm" data-name="<?php echo sanitize_html($prod['name']); ?>" style="width: 26px; height: 26px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; color: #ef4444;" title="Delete Product">
+                                            <i class="fa-solid fa-trash-can" style="font-size: 11px;"></i>
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
 
+<!-- Pagination Controls -->
 <?php if ($total_pages > 1): ?>
-    <div class="pagination" style="margin-top: 20px; display: flex; gap: 5px;">
+    <div style="margin-top: 20px; display: flex; justify-content: center; gap: 6px;">
         <?php
         $query_params = $_GET;
         unset($query_params['p']);
         $q = http_build_query($query_params);
         $base_url = 'products.php?' . ($q ? $q . '&' : '') . 'p=';
         
-        // Show previous button
+        // Previous button
         if ($current_page > 1) {
-            echo '<a href="' . $base_url . ($current_page - 1) . '" class="button button-secondary">&laquo; Prev</a>';
+            echo '<a href="' . $base_url . ($current_page - 1) . '" class="shadcn-btn shadcn-btn-outline" style="height: 34px; padding: 0 12px;"><i class="fa-solid fa-chevron-left" style="font-size: 11px; margin-right: 4px;"></i> Prev</a>';
         }
 
-        // Show page numbers
+        // Page numbers
         for ($i = max(1, $current_page - 3); $i <= min($total_pages, $current_page + 3); $i++): 
+            $btnClass = ($i === $current_page) ? 'shadcn-btn-primary' : 'shadcn-btn-outline';
         ?>
-            <a href="<?php echo $base_url . $i; ?>" class="button <?php echo ($i === $current_page) ? 'button-primary' : 'button-secondary'; ?>">
+            <a href="<?php echo $base_url . $i; ?>" class="shadcn-btn <?php echo $btnClass; ?>" style="height: 34px; width: 34px; padding: 0;">
                 <?php echo $i; ?>
             </a>
         <?php 
         endfor; 
 
-        // Show next button
+        // Next button
         if ($current_page < $total_pages) {
-            echo '<a href="' . $base_url . ($current_page + 1) . '" class="button button-secondary">Next &raquo;</a>';
+            echo '<a href="' . $base_url . ($current_page + 1) . '" class="shadcn-btn shadcn-btn-outline" style="height: 34px; padding: 0 12px;">Next <i class="fa-solid fa-chevron-right" style="font-size: 11px; margin-left: 4px;"></i></a>';
         }
         ?>
     </div>

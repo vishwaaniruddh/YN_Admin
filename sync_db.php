@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/includes/auth.php';
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
@@ -490,117 +491,110 @@ function getRowCount($conn, $table)
     }
     return 0;
 }
+
+$page_title = "Database Sync";
+require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/includes/sidebar.php';
 ?>
-<!DOCTYPE html>
-<html lang="en">
+<style>
+.db-sync-wrap {
+    padding: 24px;
+    max-width: 1400px;
+}
+.db-card {
+    background: #ffffff;
+    border: 1px solid #e4e4e7;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+.db-card-header {
+    padding: 12px 16px;
+    background: #fafafa;
+    border-bottom: 1px solid #e4e4e7;
+    font-size: 13px;
+    font-weight: 600;
+    color: #09090b;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.db-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.db-table th {
+    background: #fafafa;
+    padding: 9px 14px;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #71717a;
+    border-bottom: 1px solid #e4e4e7;
+    text-align: left;
+}
+.db-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid #f4f4f5;
+    font-size: 13px;
+    color: #09090b;
+    vertical-align: middle;
+}
+.db-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 12px;
+    height: 28px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s ease;
+    text-decoration: none;
+}
+.db-btn-primary { background: #09090b; color: #ffffff; }
+.db-btn-primary:hover { background: #27272a; }
+.db-btn-emerald { background: #10b981; color: #ffffff; }
+.db-btn-emerald:hover { background: #059669; }
+.db-btn-amber { background: #f59e0b; color: #ffffff; }
+.db-btn-amber:hover { background: #d97706; }
+.db-btn-sky { background: #0ea5e9; color: #ffffff; }
+.db-btn-sky:hover { background: #0284c7; }
+.btn-sync {
+    background-color: #09090b;
+    color: white;
+    border: none;
+    padding: 4px 10px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 12px;
+}
+.btn-blue { background-color: #0ea5e9; }
+.btn-orange { background-color: #f59e0b; }
+.btn-danger { background-color: #ef4444; }
+.cell-danger { background-color: #fef2f2; color: #b91c1c; }
+.cell-warning { background-color: #fffbeb; color: #b45309; }
+.cell-success { background-color: #ecfdf5; color: #047857; }
+</style>
 
-<head>
-    <meta charset="UTF-8">
-    <title>DB Difference Viewer</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background: #f8f9fa;
-        }
-
-        h1,
-        h2 {
-            color: #333;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 30px;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        th,
-        td {
-            padding: 10px 15px;
-            border-bottom: 1px solid #ddd;
-            text-align: left;
-        }
-
-        th {
-            background: #343a40;
-            color: white;
-        }
-
-        .highlight {
-            background: #ffeeba;
-        }
-
-        .section-title {
-            background: #007bff;
-            color: #fff;
-            padding: 8px 10px;
-            font-weight: bold;
-        }
-
-        .cell-danger {
-            background-color: #f8d7da;
-        }
-
-        .cell-warning {
-            background-color: #fff3cd;
-        }
-
-        .cell-success {
-            background-color: #d4edda;
-        }
-
-        .btn-sync {
-            background-color: #28a745;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            cursor: pointer;
-            border-radius: 4px;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .btn-sync:hover {
-            background-color: #218838;
-        }
-
-        .btn-sm {
-            font-size: 10px;
-            padding: 2px 5px;
-            margin-left: 5px;
-        }
-
-        .btn-blue {
-            background-color: #17a2b8;
-        }
-
-        .btn-blue:hover {
-            background-color: #138496;
-        }
-
-        .btn-orange {
-            background-color: #e65100;
-        }
-
-        .btn-orange:hover {
-            background-color: #bf360c;
-        }
-
-        .btn-danger {
-            background-color: #dc3545;
-        }
-
-        .btn-danger:hover {
-            background-color: #c82333;
-        }
-    </style>
-</head>
-
-<body>
-
-    <h1>Database Schema Comparison</h1>
+<div class="db-sync-wrap">
+    <div class="dashboard-header-banner" style="margin-bottom: 24px;">
+        <div class="dashboard-header-info">
+            <div class="dashboard-greeting">
+                <h1>Database Synchronization</h1>
+                <span class="shadcn-badge shadcn-badge-sky" style="font-size: 11px; padding: 3px 8px;">
+                    <i class="fa-solid fa-database" style="margin-right: 4px;"></i> Schema &amp; Data
+                </span>
+            </div>
+            <p class="dashboard-subtitle">
+                Compare local development schema with remote production database and sync missing tables or records.
+            </p>
+        </div>
+    </div>
 
     <div class="section-title">Tables Only in Local DB</div>
     <table>
@@ -860,7 +854,6 @@ function getRowCount($conn, $table)
                 </tr>
         <?php endforeach; ?>
     </table>
+</div>
 
-</body>
-
-</html>
+<?php require_once __DIR__ . '/includes/footer.php'; ?>

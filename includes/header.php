@@ -11,11 +11,16 @@ require_once __DIR__ . '/functions.php';
     <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
     <title><?php echo isset($page_title) ? $page_title . " &lsaquo; " : ""; ?>YosshitaNeha Fashion Studio Admin</title>
     
+    <!-- Inter Font (Official ShadCN standard typography) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <!-- FontAwesome for Premium Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Custom Admin Panel CSS -->
-    <link rel="stylesheet" href="assets/css/admin-style.css">
+    <link rel="stylesheet" href="assets/css/admin-style.css?v=<?php echo filemtime(__DIR__ . '/../assets/css/admin-style.css'); ?>">
 </head>
 <body>
     <div id="wpwrap">
@@ -27,8 +32,8 @@ require_once __DIR__ . '/functions.php';
             </button>
 
             <div class="adminbar-brand">
-                <a href="index.php" style="color: #fff; display: flex; align-items: center;">
-                    <i class="fa-solid fa-gem" style="color: #ffb900; margin-right: 8px;"></i>
+                <a href="index.php" style="color: #09090b; display: flex; align-items: center; text-decoration: none;">
+                    <i class="fa-solid fa-gem" style="color: #f59e0b; margin-right: 8px;"></i>
                     <strong>YosshitaNeha Fashion Studio</strong>
                 </a>
             </div>
@@ -38,10 +43,9 @@ require_once __DIR__ . '/functions.php';
                 <form action="products.php" method="GET" class="adminbar-search-form" id="header_search_form">
                     <div class="adminbar-search-input-wrap">
                         <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                        <input type="text" name="s" id="header_search_input" placeholder="Search product by SKU, Name or ID..." autocomplete="off" value="<?php echo isset($_GET['s']) ? htmlspecialchars($_GET['s']) : ''; ?>">
+                        <input type="text" name="s" id="header_search_input" placeholder="Search product by SKU, Name or ID..." autocomplete="off" style="padding-left: 34px !important;" value="<?php echo isset($_GET['s']) ? htmlspecialchars($_GET['s']) : ''; ?>">
                         <button type="button" id="header_search_clear" class="search-clear-btn" style="display: none;" onclick="clearHeaderSearch()">&times;</button>
                     </div>
-                    <button type="submit" class="adminbar-search-btn"><i class="fa-solid fa-magnifying-glass"></i> <span class="btn-text">Search</span></button>
                 </form>
                 
                 <!-- Auto-complete Live Results Dropdown -->
@@ -49,11 +53,11 @@ require_once __DIR__ . '/functions.php';
             </div>
             
             <div class="adminbar-user">
-                <span style="color: #c3c4c7;">
+                <span>
                     Howdy, <strong><?php echo sanitize_html($_SESSION['admin_name'] ?? $_SESSION['username'] ?? 'Admin'); ?></strong>
                 </span>
-                <a href="logout.php">
-                    <i class="fa-solid fa-right-from-bracket"></i> Log Out
+                <a href="logout.php" title="Sign out of admin session">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i> Log Out
                 </a>
             </div>
         </header>
@@ -109,7 +113,7 @@ require_once __DIR__ . '/functions.php';
                                     `;
                                 });
                                 html += `
-                                    <a href="products.php?s=${encodeURIComponent(query)}" style="display: block; text-align: center; padding: 10px; font-size: 12px; font-weight: 600; color: #c8a55c; background: #14181b; text-decoration: none; border-top: 1px solid #2c3338;">
+                                    <a href="products.php?s=${encodeURIComponent(query)}" style="display: block; text-align: center; padding: 10px; font-size: 12px; font-weight: 600; color: #2563eb; background: #fafafa; text-decoration: none; border-top: 1px solid #e4e4e7;">
                                         View all matching products &rarr;
                                     </a>
                                 `;
