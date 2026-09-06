@@ -170,6 +170,9 @@ try {
         <a href="product-add.php" class="shadcn-btn shadcn-btn-primary">
             <i class="fa-solid fa-plus"></i> Add Product
         </a>
+        <a href="pos-price-sync.php" class="shadcn-btn shadcn-btn-outline" style="color: #4f46e5; border-color: #c7d2fe; font-weight: 600;">
+            <i class="fa-solid fa-tags"></i> POS Price Sync
+        </a>
         <a href="import_archive.php" class="shadcn-btn shadcn-btn-outline">
             <i class="fa-solid fa-folder-tree"></i> Archive Import
         </a>

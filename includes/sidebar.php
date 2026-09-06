@@ -41,7 +41,7 @@ $admin_initials = strtoupper(substr($admin_name, 0, 2));
             
             <!-- Catalog Group -->
             <?php 
-            $catalog_active = in_array($current_script, ['products.php', 'product-add.php', 'product-edit.php', 'categories.php', 'product-import.php', 'import_archive.php']);
+            $catalog_active = in_array($current_script, ['products.php', 'product-add.php', 'product-edit.php', 'categories.php', 'product-import.php', 'import_archive.php', 'pos-price-sync.php']);
             ?>
             <li class="menu-item has-submenu <?php echo $catalog_active ? 'open active-parent' : ''; ?>">
                 <a href="javascript:void(0);" class="submenu-toggle">
@@ -58,6 +58,11 @@ $admin_initials = strtoupper(substr($admin_name, 0, 2));
                     <li class="<?php echo ($current_script == 'product-add.php') ? 'active' : ''; ?>">
                         <a href="product-add.php">
                             <i class="fa-solid fa-plus"></i> Add Product
+                        </a>
+                    </li>
+                    <li class="<?php echo ($current_script == 'pos-price-sync.php') ? 'active' : ''; ?>">
+                        <a href="pos-price-sync.php">
+                            <i class="fa-solid fa-tags" style="color: #6366f1;"></i> POS Price Sync
                         </a>
                     </li>
                     <li class="<?php echo ($current_script == 'categories.php') ? 'active' : ''; ?>">
