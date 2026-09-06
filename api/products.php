@@ -209,6 +209,7 @@ try {
 
         foreach ($products as &$product) {
             $product['images'] = $imageMap[$product['id']] ?? [];
+            $product['is_outfit'] = is_outfit_category_or_product($product, $pdo);
             $discount = $discountMap[$product['id']] ?? false;
             if ($discount) {
                 $product['original_price'] = (float)$product['price'];
@@ -283,6 +284,7 @@ try {
 
         foreach ($paginated_products as &$product) {
             $product['images'] = $imageMap[$product['id']] ?? [];
+            $product['is_outfit'] = is_outfit_category_or_product($product, $pdo);
             $discount = $discountMap[$product['id']] ?? false;
             if ($discount) {
                 $product['original_price'] = (float)$product['price'];
