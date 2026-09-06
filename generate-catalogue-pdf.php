@@ -50,7 +50,14 @@ $itemsToDisplay = [];
 foreach ($products as $p) {
     $selectedImgs = !empty($p['selected_images']) && is_array($p['selected_images']) ? $p['selected_images'] : [$p['main_image']];
     $prodSlug = !empty($p['slug']) ? $p['slug'] : $p['sku'];
-    $prodUrl = !empty($p['product_url']) ? $p['product_url'] : ('https://yosshitaneha.com/product/' . urlencode($prodSlug));
+    $prodUrl = !empty($p['url']) ? $p['url'] : (!empty($p['product_url']) ? $p['product_url'] : '');
+    if (empty($prodUrl)) {
+        if (!empty($p['item_type']) && $p['item_type'] === 'collection') {
+            $prodUrl = 'https://yosshitaneha.com/collections/' . urlencode($prodSlug);
+        } else {
+            $prodUrl = 'https://yosshitaneha.com/product/' . urlencode($prodSlug);
+        }
+    }
 
     foreach ($selectedImgs as $img) {
         $itemsToDisplay[] = [
@@ -107,12 +114,19 @@ function get_image_base64_for_pdf($imageRelPath, $layout = 'showcase') {
     // 1. Clean path to check local filesystem
     $cleanPath = preg_replace('#^https?://(localhost(:[0-9]+)?|yosshitaneha\.com)(/yn)?(/admin)?/?#i', '', $imageRelPath);
     $cleanPath = ltrim($cleanPath, '/');
+    $decodedPath = rawurldecode($cleanPath);
 
     $possiblePaths = [
         __DIR__ . '/' . $cleanPath,
+        __DIR__ . '/' . $decodedPath,
         __DIR__ . '/../' . $cleanPath,
+        __DIR__ . '/../' . $decodedPath,
+        __DIR__ . '/uploads/collections/' . $cleanPath,
+        __DIR__ . '/uploads/collections/' . $decodedPath,
         __DIR__ . '/uploads/products/' . $cleanPath,
-        __DIR__ . '/assets/' . $cleanPath
+        __DIR__ . '/uploads/products/' . $decodedPath,
+        __DIR__ . '/assets/' . $cleanPath,
+        __DIR__ . '/assets/' . $decodedPath
     ];
 
     $rawContent = null;

@@ -61,13 +61,16 @@ require_once __DIR__ . '/includes/sidebar.php';
         <!-- Top Department Filter Switcher -->
         <div class="department-pills-bar">
             <button type="button" class="dept-pill active" data-dept="all" onclick="setDepartment('all')">
-                <i class="fa-solid fa-boxes-stacked"></i> All Collections
+                <i class="fa-solid fa-boxes-stacked"></i> All Products
             </button>
             <button type="button" class="dept-pill" data-dept="outfit" onclick="setDepartment('outfit')">
                 <i class="fa-solid fa-shirt"></i> Outfits &amp; Couture
             </button>
             <button type="button" class="dept-pill" data-dept="jewellery" onclick="setDepartment('jewellery')">
                 <i class="fa-solid fa-gem"></i> Jewellery &amp; Bridal Sets
+            </button>
+            <button type="button" class="dept-pill" data-dept="collections" onclick="setDepartment('collections')" style="border: 1px solid #c7d2fe;">
+                <i class="fa-solid fa-book-open" style="color: #6366f1;"></i> Lookbook Collections (collections.php)
             </button>
         </div>
 
@@ -76,24 +79,24 @@ require_once __DIR__ . '/includes/sidebar.php';
             <div class="filter-grid">
                 <!-- Search Input -->
                 <div class="filter-col search-col">
-                    <label><i class="fa-solid fa-magnifying-glass"></i> Search Products</label>
+                    <label><i class="fa-solid fa-magnifying-glass"></i> Search Items</label>
                     <div class="search-input-wrap">
-                        <input type="text" id="filter_search" class="form-control" placeholder="Search by SKU, Name or keyword..." oninput="onSearchInput(this.value)">
+                        <input type="text" id="filter_search" class="form-control" placeholder="Search by SKU, Name, Title or keyword..." oninput="onSearchInput(this.value)">
                         <button type="button" id="search_clear_btn" class="clear-search-btn" style="display:none;" onclick="clearSearch()">&times;</button>
                     </div>
                 </div>
 
                 <!-- Category Dropdown -->
                 <div class="filter-col">
-                    <label><i class="fa-solid fa-folder-tree"></i> Subcategory</label>
+                    <label id="category_filter_label"><i class="fa-solid fa-folder-tree"></i> Subcategory</label>
                     <select id="filter_category" class="form-control" onchange="onCategoryChange(this.value)">
                         <option value="">All Categories in Department</option>
                     </select>
                 </div>
 
                 <!-- Price Range Inputs -->
-                <div class="filter-col price-col">
-                    <label><i class="fa-solid fa-indian-rupee-sign"></i> Price Range (₹)</label>
+                <div class="filter-col price-col" id="price_filter_group">
+                    <label id="price_filter_label"><i class="fa-solid fa-indian-rupee-sign"></i> Price Range (₹)</label>
                     <div class="price-input-group">
                         <input type="number" id="filter_min_price" class="form-control price-input" placeholder="Min" min="0" step="500" onchange="onPriceChange()">
                         <span class="price-dash">&ndash;</span>
@@ -112,13 +115,13 @@ require_once __DIR__ . '/includes/sidebar.php';
                         <option value="price_asc">Price: Low to High</option>
                         <option value="price_desc">Price: High to Low</option>
                         <option value="sku_asc">SKU (A to Z)</option>
-                        <option value="name_asc">Name (A to Z)</option>
+                        <option value="name_asc">Name / Title (A to Z)</option>
                     </select>
                 </div>
             </div>
 
             <!-- Quick Price Preset Pills -->
-            <div class="price-presets-row">
+            <div class="price-presets-row" id="price_presets_row">
                 <span class="presets-label">Quick Price:</span>
                 <button type="button" class="preset-pill" onclick="setPricePreset(0, 3000)">Under ₹3,000</button>
                 <button type="button" class="preset-pill" onclick="setPricePreset(3000, 7000)">₹3,000 - ₹7,000</button>
@@ -842,6 +845,8 @@ const state = {
     page: 1,
     limit: 24,
     categoriesTree: [],
+    collectionCategories: [],
+    totalCollections: 0,
     priceStats: { min_price: 0, max_price: 50000 },
     selectedProductIds: new Set(),
     selectedProductsMap: new Map(),
@@ -879,6 +884,8 @@ function loadMetadata() {
         .then(data => {
             if (data.success) {
                 state.categoriesTree = data.categories || [];
+                state.collectionCategories = data.collection_categories || [];
+                state.totalCollections = data.total_collections || (data.stats && data.stats.total_collections) || 0;
                 state.priceStats = data.stats || { min_price: 0, max_price: 50000 };
                 renderCategoryDropdown();
             }
@@ -888,24 +895,80 @@ function loadMetadata() {
 
 function renderCategoryDropdown() {
     const select = document.getElementById('filter_category');
+    const label = document.getElementById('category_filter_label');
+    const priceGroup = document.getElementById('price_filter_group');
+    const pricePresets = document.getElementById('price_presets_row');
     if (!select) return;
 
-    let html = '<option value="">All Categories in Department</option>';
+    if (state.department === 'collections') {
+        if (label) label.innerHTML = '<i class="fa-solid fa-layer-group"></i> Lookbook Category';
+        if (priceGroup) priceGroup.style.display = 'none';
+        if (pricePresets) pricePresets.style.display = 'none';
+
+        let totalCollCount = state.totalCollections;
+        if (!totalCollCount && state.collectionCategories.length > 0) {
+            totalCollCount = state.collectionCategories.reduce((sum, c) => sum + (parseInt(c.count) || 0), 0);
+        }
+
+        let html = `<option value="">All Lookbook Categories (${totalCollCount})</option>`;
+        state.collectionCategories.forEach(c => {
+            const catName = c.category || c.name || '';
+            const countText = c.count > 0 ? ` (${c.count})` : '';
+            html += `<option value="${escapeHtml(catName)}">${escapeHtml(catName)}${countText}</option>`;
+        });
+        select.innerHTML = html;
+        select.value = state.categoryId;
+        return;
+    }
+
+    if (label) label.innerHTML = 'Category';
+    if (priceGroup) priceGroup.style.display = 'block';
+    if (pricePresets) pricePresets.style.display = 'flex';
+
+    let deptName = 'Department';
+    if (state.department === 'jewellery') deptName = 'Jewellery';
+    else if (state.department === 'outfit') deptName = 'Outfits';
+
+    let html = `<option value="">All Categories in ${deptName}</option>`;
     let targetCats = state.categoriesTree;
     if (state.department === 'jewellery') {
-        const jRoot = state.categoriesTree.find(c => c.slug === 'jewellery' || (c.name.toLowerCase().includes('jewellery') && !c.parent_id));
-        const jRootId = jRoot ? jRoot.id : 1;
-        targetCats = state.categoriesTree.filter(c => c.id == jRootId || c.parent_id == jRootId || (c.parent_id && state.categoriesTree.some(p => p.id == c.parent_id && (p.parent_id == jRootId || p.id == jRootId))));
+        const jRoot = state.categoriesTree.find(c => c.slug === 'jewellery' || (c.name.toLowerCase().includes('jewellery') && (!c.parent_id || c.parent_id == 0)));
+        const jRootId = jRoot ? parseInt(jRoot.id) : 1;
+
+        const jCatIds = new Set();
+        jCatIds.add(jRootId);
+        state.categoriesTree.forEach(c => {
+            if (c.parent_id && jCatIds.has(parseInt(c.parent_id))) {
+                jCatIds.add(parseInt(c.id));
+            }
+        });
+        targetCats = state.categoriesTree.filter(c => jCatIds.has(parseInt(c.id)));
     } else if (state.department === 'outfit') {
-        const oRoot = state.categoriesTree.find(c => c.slug === 'outfit' || (c.name.toLowerCase().includes('outfit') && !c.parent_id));
-        const oRootId = oRoot ? oRoot.id : 26;
-        targetCats = state.categoriesTree.filter(c => c.id == oRootId || c.parent_id == oRootId || (c.parent_id && state.categoriesTree.some(p => p.id == c.parent_id && (p.parent_id == oRootId || p.id == oRootId))));
+        const oRoot = state.categoriesTree.find(c => c.slug === 'outfit' || (c.name.toLowerCase().includes('outfit') && (!c.parent_id || c.parent_id == 0)));
+        const oRootId = oRoot ? parseInt(oRoot.id) : 26;
+
+        const oCatIds = new Set();
+        oCatIds.add(oRootId);
+        state.categoriesTree.forEach(c => {
+            if (c.parent_id && oCatIds.has(parseInt(c.parent_id))) {
+                oCatIds.add(parseInt(c.id));
+            }
+        });
+        targetCats = state.categoriesTree.filter(c => oCatIds.has(parseInt(c.id)));
     }
 
     targetCats.forEach(cat => {
-        const prefix = cat.parent_id ? '&nbsp;&nbsp;&bull; ' : '';
+        const depth = parseInt(cat.depth) || 0;
+        let prefix = '';
+        if (depth === 1) {
+            prefix = '&nbsp;&nbsp;&bull; ';
+        } else if (depth === 2) {
+            prefix = '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;— ';
+        } else if (depth > 2) {
+            prefix = '&nbsp;'.repeat(depth * 6) + '— ';
+        }
         const countText = cat.product_count > 0 ? ` (${cat.product_count})` : '';
-        html += `<option value="${cat.id}">${prefix}${cat.name}${countText}</option>`;
+        html += `<option value="${cat.id}">${prefix}${escapeHtml(cat.name)}${countText}</option>`;
     });
 
     select.innerHTML = html;
@@ -926,9 +989,10 @@ function loadProducts() {
         action: 'search_products',
         department: state.department,
         category_id: state.categoryId,
+        collection_category: (state.department === 'collections') ? state.categoryId : '',
         search: state.search,
-        min_price: state.minPrice,
-        max_price: state.maxPrice,
+        min_price: (state.department === 'collections') ? '' : state.minPrice,
+        max_price: (state.department === 'collections') ? '' : state.maxPrice,
         sort: state.sort,
         page: state.page,
         limit: state.limit
@@ -939,7 +1003,7 @@ function loadProducts() {
         .then(data => {
             if (loading) loading.style.display = 'none';
             if (!data.success) {
-                if (grid) grid.innerHTML = `<div class="empty-state-box"><p>${data.message || 'Error loading products.'}</p></div>`;
+                if (grid) grid.innerHTML = `<div class="empty-state-box"><p>${data.message || 'Error loading items.'}</p></div>`;
                 return;
             }
 
@@ -947,7 +1011,8 @@ function loadProducts() {
             const pagination = data.pagination;
 
             if (metaLabel) {
-                metaLabel.innerHTML = `Showing <strong>${state.currentProductsList.length}</strong> of <strong>${pagination.total}</strong> products`;
+                const itemNoun = (state.department === 'collections') ? 'collections' : 'products';
+                metaLabel.innerHTML = `Showing <strong>${state.currentProductsList.length}</strong> of <strong>${pagination.total}</strong> ${itemNoun}`;
             }
 
             renderProductsGrid();
@@ -955,7 +1020,7 @@ function loadProducts() {
         })
         .catch(err => {
             if (loading) loading.style.display = 'none';
-            if (grid) grid.innerHTML = `<div class="empty-state-box"><p>Failed to connect to product server.</p></div>`;
+            if (grid) grid.innerHTML = `<div class="empty-state-box"><p>Failed to connect to server.</p></div>`;
         });
 }
 
@@ -964,11 +1029,12 @@ function renderProductsGrid() {
     if (!grid) return;
 
     if (state.currentProductsList.length === 0) {
+        const itemNoun = (state.department === 'collections') ? 'collections' : 'products';
         grid.innerHTML = `
             <div class="empty-state-box" style="grid-column: 1 / -1;">
                 <i class="fa-solid fa-filter-circle-xmark empty-icon"></i>
-                <h3>No products match your filters</h3>
-                <p>Try resetting the price range, search query, or switching departments.</p>
+                <h3>No ${itemNoun} match your filters</h3>
+                <p>Try resetting the filters, search query, or switching departments.</p>
                 <button type="button" class="btn-gold-action" onclick="resetFilters()">Reset All Filters</button>
             </div>
         `;
@@ -977,30 +1043,46 @@ function renderProductsGrid() {
 
     let html = '';
     state.currentProductsList.forEach(prod => {
-        const isSelected = state.selectedProductIds.has(prod.id);
+        const itemKey = prod.item_key || ((prod.item_type === 'collection' ? 'c_' : 'p_') + prod.id);
+        const isSelected = state.selectedProductIds.has(itemKey);
         const selectedClass = isSelected ? 'selected' : '';
         const checkIcon = isSelected ? '<i class="fa-solid fa-check"></i>' : '';
         const galleryCount = prod.gallery_count > 0 ? `<div class="gallery-count-badge"><i class="fa-solid fa-images"></i> ${prod.gallery_count + 1}</div>` : '';
-        const catBadge = prod.primary_category_name ? `<div class="card-cat-badge">${escapeHtml(prod.primary_category_name)}</div>` : '';
+        
+        let catBadge = '';
+        if (prod.item_type === 'collection') {
+            catBadge = `<div class="card-cat-badge" style="background:#fef3c7; color:#92400e;"><i class="fa-solid fa-book-open"></i> ${escapeHtml(prod.category_name || 'Lookbook')}</div>`;
+        } else if (prod.primary_category_name) {
+            catBadge = `<div class="card-cat-badge">${escapeHtml(prod.primary_category_name)}</div>`;
+        }
+
         const imgUrl = formatImageUrl(prod.display_image || prod.main_image);
 
-        let priceHtml = `<div class="card-prod-price">${prod.effective_price_formatted}`;
-        if (prod.sale_price && prod.sale_price < prod.price) {
-            priceHtml += `<span class="strike">${prod.price_formatted}</span>`;
+        let priceHtml = '';
+        if (prod.item_type === 'collection') {
+            priceHtml = `<div class="card-prod-price" style="font-size:12px; color:#c8a55c;"><i class="fa-solid fa-camera-retro"></i> Lookbook Collection</div>`;
+        } else {
+            priceHtml = `<div class="card-prod-price">${prod.effective_price_formatted}`;
+            if (prod.sale_price && prod.sale_price < prod.price) {
+                priceHtml += `<span class="strike">${prod.price_formatted}</span>`;
+            }
+            priceHtml += `</div>`;
         }
-        priceHtml += `</div>`;
+
+        const nameDisplay = prod.name || prod.title || '';
+        const skuDisplay = prod.sku || (prod.item_type === 'collection' ? 'COLLECTION' : '');
 
         html += `
-            <div class="product-card ${selectedClass}" id="prod_card_${prod.id}" onclick="toggleProductSelect(${prod.id})">
+            <div class="product-card ${selectedClass}" id="prod_card_${itemKey}" onclick="toggleProductSelect('${escapeJsString(itemKey)}')">
                 <div class="product-card-img-wrap">
-                    <img src="${imgUrl}" class="product-card-img" alt="${escapeHtml(prod.name)}" loading="lazy" onerror="this.onerror=null; this.src=DEFAULT_PLACEHOLDER_IMG;">
+                    <img src="${imgUrl}" class="product-card-img" alt="${escapeHtml(nameDisplay)}" loading="lazy" onerror="this.onerror=null; this.src=DEFAULT_PLACEHOLDER_IMG;">
                     <div class="card-select-checkbox">${checkIcon}</div>
                     ${galleryCount}
                 </div>
                 <div class="product-card-body">
                     ${catBadge}
-                    <div class="card-prod-title" title="${escapeHtml(prod.name)}">${escapeHtml(prod.name)}</div>
-                    <div class="card-prod-sku"><i class="fa-solid fa-barcode"></i> ${escapeHtml(prod.sku)}</div>
+                    <div class="card-prod-title" title="${escapeHtml(nameDisplay)}">${escapeHtml(nameDisplay)}</div>
+                    <div class="card-prod-sku"><i class="fa-solid fa-barcode"></i> ${escapeHtml(skuDisplay)}</div>
                     ${priceHtml}
                 </div>
             </div>
@@ -1010,25 +1092,29 @@ function renderProductsGrid() {
     grid.innerHTML = html;
 }
 
-function toggleProductSelect(productId) {
-    productId = parseInt(productId);
-    const prod = state.currentProductsList.find(p => p.id === productId) || state.selectedProductsMap.get(productId);
+function toggleProductSelect(itemKey) {
+    if (typeof itemKey === 'number') {
+        itemKey = 'p_' + itemKey;
+    }
+    itemKey = String(itemKey);
 
-    if (state.selectedProductIds.has(productId)) {
-        state.selectedProductIds.delete(productId);
-        state.selectedProductsMap.delete(productId);
+    const prod = state.currentProductsList.find(p => (p.item_key || ((p.item_type === 'collection' ? 'c_' : 'p_') + p.id)) === itemKey) || state.selectedProductsMap.get(itemKey);
+
+    if (state.selectedProductIds.has(itemKey)) {
+        state.selectedProductIds.delete(itemKey);
+        state.selectedProductsMap.delete(itemKey);
     } else {
         if (prod) {
-            state.selectedProductIds.add(productId);
-            state.selectedProductsMap.set(productId, prod);
+            state.selectedProductIds.add(itemKey);
+            state.selectedProductsMap.set(itemKey, prod);
         }
     }
 
     updateSelectionUI();
     
-    const card = document.getElementById(`prod_card_${productId}`);
+    const card = document.getElementById(`prod_card_${itemKey}`);
     if (card) {
-        if (state.selectedProductIds.has(productId)) {
+        if (state.selectedProductIds.has(itemKey)) {
             card.classList.add('selected');
             card.querySelector('.card-select-checkbox').innerHTML = '<i class="fa-solid fa-check"></i>';
         } else {
@@ -1039,16 +1125,22 @@ function toggleProductSelect(productId) {
 }
 
 function toggleSelectAllFiltered() {
-    const allSelectedOnPage = state.currentProductsList.every(p => state.selectedProductIds.has(p.id));
+    const allSelectedOnPage = state.currentProductsList.every(p => {
+        const k = p.item_key || ((p.item_type === 'collection' ? 'c_' : 'p_') + p.id);
+        return state.selectedProductIds.has(k);
+    });
+
     if (allSelectedOnPage) {
         state.currentProductsList.forEach(p => {
-            state.selectedProductIds.delete(p.id);
-            state.selectedProductsMap.delete(p.id);
+            const k = p.item_key || ((p.item_type === 'collection' ? 'c_' : 'p_') + p.id);
+            state.selectedProductIds.delete(k);
+            state.selectedProductsMap.delete(k);
         });
     } else {
         state.currentProductsList.forEach(p => {
-            state.selectedProductIds.add(p.id);
-            state.selectedProductsMap.set(p.id, p);
+            const k = p.item_key || ((p.item_type === 'collection' ? 'c_' : 'p_') + p.id);
+            state.selectedProductIds.add(k);
+            state.selectedProductsMap.set(k, p);
         });
     }
     updateSelectionUI();
@@ -1057,7 +1149,7 @@ function toggleSelectAllFiltered() {
 
 function clearAllSelections() {
     if (state.selectedProductIds.size === 0) return;
-    if (confirm('Are you sure you want to clear all selected products from your PDF tray?')) {
+    if (confirm('Are you sure you want to clear all selected items from your PDF tray?')) {
         state.selectedProductIds.clear();
         state.selectedProductsMap.clear();
         updateSelectionUI();
@@ -1076,12 +1168,15 @@ function updateSelectionUI() {
     if (chipWrap) {
         let chipsHtml = '';
         let countShown = 0;
-        state.selectedProductsMap.forEach((prod, id) => {
+        state.selectedProductsMap.forEach((prod, itemKey) => {
             if (countShown < 10) {
+                const label = prod.sku || prod.name || prod.title || itemKey;
+                const isColl = prod.item_type === 'collection' || itemKey.startsWith('c_');
                 chipsHtml += `
-                    <span class="sel-chip">
-                        ${escapeHtml(prod.sku || prod.name)}
-                        <span class="sel-chip-remove" onclick="event.stopPropagation(); toggleProductSelect(${id})">&times;</span>
+                    <span class="sel-chip" ${isColl ? 'style="border-color:#fbbf24; background:#fffdf5;"' : ''}>
+                        ${isColl ? '<i class="fa-solid fa-book-open" style="font-size:10px; color:#d97706; margin-right:3px;"></i>' : ''}
+                        ${escapeHtml(label)}
+                        <span class="sel-chip-remove" onclick="event.stopPropagation(); toggleProductSelect('${escapeJsString(itemKey)}')">&times;</span>
                     </span>
                 `;
                 countShown++;
@@ -1218,7 +1313,7 @@ function goToPage(p) {
 }
 
 // =============================================================================
-// STEP 2: REVIEW SELECTION & ANGLE PICKER (MAIN PRODUCT IMAGE DEFAULT)
+// STEP 2: REVIEW SELECTION & ANGLE PICKER (MAIN PRODUCT IMAGE / COVER DEFAULT)
 // =============================================================================
 function ensureFullProductDetails() {
     if (state.selectedProductIds.size === 0) {
@@ -1226,34 +1321,46 @@ function ensureFullProductDetails() {
         return;
     }
 
-    const currentMap = new Map(state.fullProductDetails.map(p => [p.id, p]));
+    const currentMap = new Map(state.fullProductDetails.map(p => [p.item_key || ((p.item_type === 'collection' ? 'c_' : 'p_') + p.id), p]));
     const updatedList = [];
 
-    state.selectedProductsMap.forEach((p, id) => {
-        if (currentMap.has(id)) {
-            const existing = currentMap.get(id);
+    state.selectedProductsMap.forEach((p, itemKey) => {
+        if (currentMap.has(itemKey)) {
+            const existing = currentMap.get(itemKey);
             if (!existing.selected_images || existing.selected_images.length === 0) {
                 const main = (existing.all_images && existing.all_images[0]) ? existing.all_images[0].path : formatImageUrl(existing.display_image || existing.main_image);
                 existing.selected_images = main ? [main] : [];
             }
             updatedList.push(existing);
         } else {
-            const mainImg = formatImageUrl(p.display_image || p.main_image);
+            const isColl = p.item_type === 'collection' || itemKey.startsWith('c_');
+            const mainImg = formatImageUrl(p.display_image || p.main_image || p.cover_image);
+            const rawId = p.id || parseInt(itemKey.replace(/^[pc]_/, ''));
+            const nameVal = p.name || p.title || '';
+            const slugVal = p.slug || '';
+            const urlVal = p.url || (isColl ? ('https://yosshitaneha.com/collections/' + encodeURIComponent(slugVal || p.sku || rawId)) : ('https://yosshitaneha.com/product/' + encodeURIComponent(slugVal || p.sku || rawId)));
+            
             updatedList.push({
-                id: p.id,
-                name: p.name,
-                sku: p.sku,
-                price: p.price,
-                sale_price: p.sale_price,
-                category_name: p.primary_category_name || '',
-                main_image: p.main_image,
-                display_image: p.display_image,
-                selected_images: [mainImg], // Default: Main Product Image
+                id: rawId,
+                item_key: itemKey,
+                item_type: isColl ? 'collection' : 'product',
+                name: nameVal,
+                slug: slugVal,
+                url: urlVal,
+                sku: p.sku || '',
+                price: p.price || 0,
+                sale_price: p.sale_price || 0,
+                effective_price_formatted: p.effective_price_formatted || (isColl ? 'Lookbook Collection' : ''),
+                category_name: p.primary_category_name || p.category_name || '',
+                main_image: p.main_image || p.cover_image || '',
+                display_image: p.display_image || p.cover_image || '',
+                selected_images: [mainImg], // Default: Main Product Image or Collection Cover
                 all_images: [{
-                    id: 'main_' + p.id,
+                    id: 'main_' + itemKey,
                     path: mainImg,
                     is_main: true,
-                    thumb: mainImg
+                    thumb: mainImg,
+                    label: isColl ? 'Angle 1 (Cover View)' : 'Angle 1 (Main Image)'
                 }]
             });
         }
@@ -1264,7 +1371,7 @@ function ensureFullProductDetails() {
 
 function goToStep2() {
     if (state.selectedProductIds.size === 0) {
-        alert('Please select at least one product before proceeding to review.');
+        alert('Please select at least one item before proceeding to review.');
         return;
     }
     ensureFullProductDetails();
@@ -1293,19 +1400,20 @@ function loadStep2Data() {
         .then(data => {
             if (loading) loading.style.display = 'none';
             if (data.success && data.products) {
-                const existingMap = new Map(state.fullProductDetails.map(p => [p.id, p]));
+                const existingMap = new Map(state.fullProductDetails.map(p => [p.item_key || ((p.item_type === 'collection' ? 'c_' : 'p_') + p.id), p]));
                 state.fullProductDetails = data.products.map(p => {
+                    const itemKey = p.item_key || ((p.item_type === 'collection' ? 'c_' : 'p_') + p.id);
+                    p.item_key = itemKey;
                     const allImgs = p.all_images || [];
                     const mainImgObj = allImgs.find(i => i.is_main) || allImgs[0];
                     const mainImgPath = mainImgObj ? mainImgObj.path : formatImageUrl(p.main_image);
 
-                    if (existingMap.has(p.id)) {
-                        const ex = existingMap.get(p.id);
+                    if (existingMap.has(itemKey)) {
+                        const ex = existingMap.get(itemKey);
                         p.name = ex.name || p.name;
-                        // Retain existing custom selection only if valid and not empty; otherwise default to main image
                         p.selected_images = (ex.selected_images && ex.selected_images.length > 0) ? ex.selected_images : [mainImgPath];
                     } else {
-                        // STRICT DEFAULT: Always the main product image (Angle 1)
+                        // STRICT DEFAULT: Always the main product image / cover view (Angle 1)
                         p.selected_images = [mainImgPath];
                     }
                     return p;
@@ -1327,7 +1435,8 @@ function renderReviewList() {
 
     let html = '';
     state.fullProductDetails.forEach(prod => {
-        const pId = prod.id;
+        const itemKey = prod.item_key || ((prod.item_type === 'collection' ? 'c_' : 'p_') + prod.id);
+        const isColl = prod.item_type === 'collection' || itemKey.startsWith('c_');
         const selectedImgSet = new Set(prod.selected_images || []);
         const allImages = prod.all_images || [];
         const totalImagesCount = allImages.length;
@@ -1341,12 +1450,16 @@ function renderReviewList() {
 
         let statusBadgeHtml = '';
         if (isMainOnly) {
-            statusBadgeHtml = `<span class="selected-status-badge is-main"><i class="fa-solid fa-star"></i> Main Image (Default)</span>`;
+            statusBadgeHtml = `<span class="selected-status-badge is-main"><i class="fa-solid fa-star"></i> ${isColl ? 'Cover View (Default)' : 'Main Image (Default)'}</span>`;
         } else if (isAllSelected) {
             statusBadgeHtml = `<span class="selected-status-badge is-all"><i class="fa-solid fa-layer-group"></i> All ${totalImagesCount} Angles Selected</span>`;
         } else {
             statusBadgeHtml = `<span class="selected-status-badge is-other"><i class="fa-solid fa-check"></i> ${selectedImgSet.size} Angle(s) Selected</span>`;
         }
+
+        let typeBadgeHtml = isColl 
+            ? `<span class="badge" style="background:#fef3c7; color:#92400e; font-size:11px; padding:3px 8px; border-radius:4px; font-weight:600; display:inline-flex; align-items:center; gap:4px;"><i class="fa-solid fa-book-open"></i> Lookbook Collection</span>`
+            : `<span class="badge" style="background:#f1f5f9; color:#475569; font-size:11px; padding:3px 8px; border-radius:4px; font-weight:600; display:inline-flex; align-items:center; gap:4px;"><i class="fa-solid fa-tag"></i> Product</span>`;
 
         let anglesHtml = '';
         allImages.forEach((img, idx) => {
@@ -1359,44 +1472,45 @@ function renderReviewList() {
                 activeClass = isMain ? 'primary-active' : 'active';
             }
 
-            const mainBadge = isMain ? `<div class="main-angle-badge"><i class="fa-solid fa-star"></i> Main Image</div>` : '';
-            const angleLabel = isMain ? 'Angle 1 (Main Image)' : ('Angle ' + (idx + 1));
+            const mainBadge = isMain ? `<div class="main-angle-badge"><i class="fa-solid fa-star"></i> ${isColl ? 'Cover View' : 'Main Image'}</div>` : '';
+            const angleLabel = img.label || (isMain ? (isColl ? 'Angle 1 (Cover View)' : 'Angle 1 (Main Image)') : ('Angle ' + (idx + 1)));
 
             anglesHtml += `
-                <div class="angle-card ${activeClass}" onclick="selectProductAngle(${pId}, '${escapeJsString(img.path)}')">
+                <div class="angle-card ${activeClass}" onclick="selectProductAngle('${escapeJsString(itemKey)}', '${escapeJsString(img.path)}')">
                     ${mainBadge}
                     <div class="angle-img-wrap">
-                        <img src="${formattedImgUrl}" alt="${angleLabel}" onerror="this.onerror=null; this.src=DEFAULT_PLACEHOLDER_IMG;">
+                        <img src="${formattedImgUrl}" alt="${escapeHtml(angleLabel)}" onerror="this.onerror=null; this.src=DEFAULT_PLACEHOLDER_IMG;">
                     </div>
                     <div class="angle-card-footer">
                         <input type="radio" 
                                class="angle-radio-input" 
-                               name="angle_radio_${pId}" 
+                               name="angle_radio_${itemKey}" 
                                value="${escapeHtml(img.path)}" 
                                ${isImgSelected ? 'checked' : ''} 
-                               onclick="event.stopPropagation(); selectProductAngle(${pId}, '${escapeJsString(img.path)}')">
-                        <span>${angleLabel}</span>
+                               onclick="event.stopPropagation(); selectProductAngle('${escapeJsString(itemKey)}', '${escapeJsString(img.path)}')">
+                        <span>${escapeHtml(angleLabel)}</span>
                     </div>
                 </div>
             `;
         });
 
         html += `
-            <div class="review-item-card" id="review_card_${pId}">
-                <!-- Header with clear indication of default main image -->
+            <div class="review-item-card" id="review_card_${itemKey}">
                 <div class="review-header-bar">
                     <div class="review-sku-label">
-                        SKU: <strong>${escapeHtml(prod.sku)}</strong> <span>(ID: ${pId})</span>
+                        ${typeBadgeHtml}
+                        <strong style="margin-left:8px;">${escapeHtml(prod.name)}</strong>
+                        <span style="color:#64748b; margin-left:6px;">(SKU: ${escapeHtml(prod.sku || 'N/A')})</span>
                     </div>
                     <div class="review-header-actions">
                         ${statusBadgeHtml}
-                        <button type="button" class="btn-secondary-custom ${isMainOnly ? 'btn-active-gold' : ''}" style="padding: 4px 10px; font-size: 11.5px;" onclick="selectMainImageForProduct(${pId})">
-                            <i class="fa-solid fa-star"></i> Main Image Only
+                        <button type="button" class="btn-secondary-custom ${isMainOnly ? 'btn-active-gold' : ''}" style="padding: 4px 10px; font-size: 11.5px;" onclick="selectMainImageForProduct('${escapeJsString(itemKey)}')">
+                            <i class="fa-solid fa-star"></i> ${isColl ? 'Cover Only' : 'Main Image Only'}
                         </button>
-                        <button type="button" class="btn-secondary-custom ${isAllSelected ? 'btn-active-gold' : ''}" style="padding: 4px 10px; font-size: 11.5px;" onclick="selectAllImagesForProduct(${pId})">
+                        <button type="button" class="btn-secondary-custom ${isAllSelected ? 'btn-active-gold' : ''}" style="padding: 4px 10px; font-size: 11.5px;" onclick="selectAllImagesForProduct('${escapeJsString(itemKey)}')">
                             <i class="fa-solid fa-images"></i> Select All Angles
                         </button>
-                        <button type="button" class="btn-secondary-custom btn-danger-custom" style="padding: 4px 10px; font-size: 11.5px;" onclick="removeProductFromReview(${pId})">
+                        <button type="button" class="btn-secondary-custom btn-danger-custom" style="padding: 4px 10px; font-size: 11.5px;" onclick="removeProductFromReview('${escapeJsString(itemKey)}')">
                             <i class="fa-solid fa-trash"></i> Remove
                         </button>
                     </div>
@@ -1415,16 +1529,16 @@ function renderReviewList() {
 }
 
 // Single-angle selection (Radio behavior matching Sri Shringarr review_pdfmaker.php)
-function selectProductAngle(productId, imgPath) {
-    const prod = state.fullProductDetails.find(p => p.id === productId);
+function selectProductAngle(itemKey, imgPath) {
+    const prod = state.fullProductDetails.find(p => (p.item_key || ((p.item_type === 'collection' ? 'c_' : 'p_') + p.id)) === itemKey);
     if (!prod) return;
     prod.selected_images = [imgPath];
     renderReviewList();
     updateStep3Summary();
 }
 
-function selectMainImageForProduct(productId) {
-    const prod = state.fullProductDetails.find(p => p.id === productId);
+function selectMainImageForProduct(itemKey) {
+    const prod = state.fullProductDetails.find(p => (p.item_key || ((p.item_type === 'collection' ? 'c_' : 'p_') + p.id)) === itemKey);
     if (!prod) return;
     const allImages = prod.all_images || [];
     const mainImg = allImages.find(i => i.is_main) || allImages[0];
@@ -1435,18 +1549,18 @@ function selectMainImageForProduct(productId) {
     }
 }
 
-function selectAllImagesForProduct(productId) {
-    const prod = state.fullProductDetails.find(p => p.id === productId);
+function selectAllImagesForProduct(itemKey) {
+    const prod = state.fullProductDetails.find(p => (p.item_key || ((p.item_type === 'collection' ? 'c_' : 'p_') + p.id)) === itemKey);
     if (!prod) return;
     prod.selected_images = (prod.all_images || []).map(i => i.path);
     renderReviewList();
     updateStep3Summary();
 }
 
-function removeProductFromReview(productId) {
-    state.selectedProductIds.delete(productId);
-    state.selectedProductsMap.delete(productId);
-    state.fullProductDetails = state.fullProductDetails.filter(p => p.id !== productId);
+function removeProductFromReview(itemKey) {
+    state.selectedProductIds.delete(itemKey);
+    state.selectedProductsMap.delete(itemKey);
+    state.fullProductDetails = state.fullProductDetails.filter(p => (p.item_key || ((p.item_type === 'collection' ? 'c_' : 'p_') + p.id)) !== itemKey);
     updateSelectionUI();
     renderProductsGrid();
     renderReviewList();
