@@ -18,6 +18,14 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $row_index = isset($_POST['row_index']) ? (int)$_POST['row_index'] : 0;
 $file_name = isset($_POST['file_name']) ? $_POST['file_name'] : '';
+$active_folder_raw = isset($_POST['active_folder']) ? trim($_POST['active_folder']) : '';
+
+// Sanitize active folder path (prevent traversal)
+$active_folder = str_replace(['..', '\\'], ['', '/'], $active_folder_raw);
+$active_folder = trim($active_folder, '/');
+if (empty($active_folder)) {
+    $active_folder = 'uploads/products';
+}
 
 if ($row_index < 1 || empty($file_name)) {
     echo json_encode(['success' => false, 'error' => 'Missing parameters']);
@@ -31,11 +39,46 @@ if (!file_exists($file_path)) {
     exit;
 }
 
-// Image Downloader Helper
-function download_img($url, $target_dir, $filename_without_ext) {
-    $url = str_replace(' ', '%20', $url);
-    $context = stream_context_create(['http' => ['header' => "User-Agent: Mozilla/5.0\r\n"]]);
-    $image_data = @file_get_contents($url, false, $context);
+// Image Downloader Helper (Supports Web URLs & Local Files in Active Folder)
+function download_img($url, $target_dir, $filename_without_ext, $active_folder = 'uploads/products') {
+    $url = trim($url);
+    if (empty($url)) return false;
+
+    $image_data = false;
+
+    // Check if web URL or local file path
+    if (preg_match('/^https?:\/\//i', $url)) {
+        $clean_url = str_replace(' ', '%20', $url);
+        $context = stream_context_create([
+            'http' => [
+                'header' => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)\r\n",
+                'timeout' => 25
+            ],
+            'ssl' => [
+                'verify_peer' => false,
+                'verify_peer_name' => false
+            ]
+        ]);
+        $image_data = @file_get_contents($clean_url, false, $context);
+    } else {
+        // Search as local file relative to active folder, admin, or project root
+        $clean_local = ltrim(urldecode($url), '/\\');
+        $possible_paths = [
+            __DIR__ . '/../' . trim($active_folder, '/\\') . '/' . $clean_local,
+            __DIR__ . '/../../' . trim($active_folder, '/\\') . '/' . $clean_local,
+            __DIR__ . '/../' . $clean_local,
+            __DIR__ . '/../../' . $clean_local,
+            dirname(__DIR__, 2) . '/' . trim($active_folder, '/\\') . '/' . $clean_local,
+            dirname(__DIR__, 2) . '/' . $clean_local
+        ];
+        foreach ($possible_paths as $p) {
+            if (is_file($p) && file_exists($p)) {
+                $image_data = @file_get_contents($p);
+                break;
+            }
+        }
+    }
+
     if (!$image_data) return false;
     
     $absolute_target_dir = __DIR__ . '/../' . ltrim($target_dir, '/');
@@ -48,7 +91,7 @@ function download_img($url, $target_dir, $filename_without_ext) {
     $url_path = parse_url($url, PHP_URL_PATH);
     if ($url_path && preg_match('/\.([a-zA-Z0-9]+)$/i', $url_path, $matches)) {
         $ext = strtolower($matches[1]);
-        if (!in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) $ext = 'jpg';
+        if (!in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'])) $ext = 'jpg';
     }
     
     $filename = $filename_without_ext . '.' . $ext;
@@ -60,13 +103,13 @@ function download_img($url, $target_dir, $filename_without_ext) {
     $thumb_filename = 'thumb_' . $filename;
     $thumb_target = rtrim($thumb_dir, '/') . '/' . $thumb_filename;
     
-    if (!file_exists($thumb_target)) {
+    if (!file_exists($thumb_target) && function_exists('generate_square_thumbnail')) {
         generate_square_thumbnail($target_file, $thumb_target, 150);
     }
     
     return [
         'filepath' => rtrim(ltrim($target_dir, '/'), '/') . '/' . $filename,
-        'thumbpath' => rtrim(ltrim($target_dir, '/'), '/') . '/thumbs/' . $thumb_filename,
+        'thumbpath' => file_exists($thumb_target) ? (rtrim(ltrim($target_dir, '/'), '/') . '/thumbs/' . $thumb_filename) : (rtrim(ltrim($target_dir, '/'), '/') . '/' . $filename),
         'size' => $file_size
     ];
 }
@@ -236,9 +279,10 @@ try {
             if (empty($img_url)) continue;
             
             $filename_without_ext = generate_slug($name) . '-' . uniqid();
-            $target_dir = 'uploads/products/' . $sku;
+            $safe_sku = preg_replace('/[^a-zA-Z0-9_-]/', '_', $sku);
+            $target_dir = $active_folder . '/' . $safe_sku;
             
-            $img_data = download_img($img_url, $target_dir, $filename_without_ext);
+            $img_data = download_img($img_url, $target_dir, $filename_without_ext, $active_folder);
             if ($img_data) {
                 if ($sort_order === 0) {
                     $pdo->prepare("UPDATE products SET main_image = ? WHERE id = ?")->execute([$img_data['filepath'], $product_id]);
