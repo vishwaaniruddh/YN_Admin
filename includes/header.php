@@ -21,6 +21,9 @@ require_once __DIR__ . '/functions.php';
     
     <!-- Custom Admin Panel CSS -->
     <link rel="stylesheet" href="assets/css/admin-style.css?v=<?php echo filemtime(__DIR__ . '/../assets/css/admin-style.css'); ?>">
+    
+    <!-- ShadCN UI Toast & Alert Dialog Engine -->
+    <script src="assets/js/shadcn-ui.js?v=<?php echo filemtime(__DIR__ . '/../assets/js/shadcn-ui.js'); ?>"></script>
 </head>
 <body>
     <div id="wpwrap">

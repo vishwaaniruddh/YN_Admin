@@ -269,7 +269,7 @@ switch($order['status']) {
                                 <tr>
                                     <td>
                                         <?php if (!empty($item['main_image'])): ?>
-                                            <img src="<?php echo sanitize_html($item['main_image']); ?>" alt="item" style="width: 44px; height: 56px; object-fit: cover; border-radius: 6px; border: 1px solid #e4e4e7;">
+                                            <img src="<?php echo sanitize_html(get_product_image_url($item['main_image'])); ?>" alt="item" style="width: 44px; height: 56px; object-fit: cover; border-radius: 6px; border: 1px solid #e4e4e7;">
                                         <?php else: ?>
                                             <div style="width: 44px; height: 56px; background: #f4f4f5; border: 1px solid #e4e4e7; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #a1a1aa;">
                                                 <i class="fa-solid fa-image"></i>

@@ -32,7 +32,7 @@ require_once __DIR__ . '/includes/sidebar.php';
 $message = '';
 $message_type = 'success';
 
-// 2. Handle Delete Product Request (Soft Delete)
+// 2. Handle Delete / Restore / Empty Trash Requests
 if (isset($_GET['delete'])) {
     if (!current_user_can('delete_products')) {
         $message = "You do not have permission to delete products.";
@@ -40,35 +40,82 @@ if (isset($_GET['delete'])) {
     } else {
         $delete_id = (int)$_GET['delete'];
         try {
-        // Start Transaction
-        $pdo->beginTransaction();
-
-        // Soft delete from DB
-        $del_stmt = $pdo->prepare("UPDATE products SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?");
-        $del_stmt->execute([$delete_id]);
-        
-        // Log activity
-        log_activity($pdo, 'delete_product', 'product', $delete_id, "Soft deleted product ID $delete_id");
-
-        $pdo->commit();
-
-        $message = "Product successfully soft-deleted.";
-        $message_type = "success";
-    } catch (Exception $e) {
-        if ($pdo->inTransaction()) {
-            $pdo->rollBack();
-        }
-        $message = "Error deleting product: " . $e->getMessage();
+            $del_stmt = $pdo->prepare("UPDATE products SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?");
+            $del_stmt->execute([$delete_id]);
+            log_activity($pdo, 'delete_product', 'product', $delete_id, "Soft deleted product ID $delete_id");
+            $message = "Product successfully moved to trash.";
+            $message_type = "success";
+        } catch (Exception $e) {
+            $message = "Error deleting product: " . $e->getMessage();
             $message_type = "error";
         }
     }
 }
 
+if (isset($_GET['restore'])) {
+    $restore_id = (int)$_GET['restore'];
+    try {
+        $pdo->prepare("UPDATE products SET deleted_at = NULL WHERE id = ?")->execute([$restore_id]);
+        log_activity($pdo, 'restore_product', 'product', $restore_id, "Restored product ID $restore_id from trash");
+        $message = "Product successfully restored from trash.";
+        $message_type = "success";
+    } catch (Exception $e) {
+        $message = "Error restoring product: " . $e->getMessage();
+        $message_type = "error";
+    }
+}
+
+if (isset($_GET['force_delete'])) {
+    if (!current_user_can('delete_products')) {
+        $message = "You do not have permission to permanently delete products.";
+        $message_type = "error";
+    } else {
+        $force_id = (int)$_GET['force_delete'];
+        try {
+            $pdo->prepare("DELETE FROM product_images WHERE product_id = ?")->execute([$force_id]);
+            $pdo->prepare("DELETE FROM product_categories WHERE product_id = ?")->execute([$force_id]);
+            $pdo->prepare("DELETE FROM products WHERE id = ?")->execute([$force_id]);
+            log_activity($pdo, 'force_delete_product', 'product', $force_id, "Permanently deleted product ID $force_id");
+            $message = "Product permanently deleted from database.";
+            $message_type = "success";
+        } catch (Exception $e) {
+            $message = "Error deleting product permanently: " . $e->getMessage();
+            $message_type = "error";
+        }
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'empty_trash') {
+    if (!current_user_can('delete_products')) {
+        $message = "You do not have permission to empty trash.";
+        $message_type = "error";
+    } else {
+        try {
+            $pdo->exec("DELETE FROM product_images WHERE product_id IN (SELECT id FROM products WHERE deleted_at IS NOT NULL)");
+            $pdo->exec("DELETE FROM product_categories WHERE product_id IN (SELECT id FROM products WHERE deleted_at IS NOT NULL)");
+            $pdo->exec("DELETE FROM products WHERE deleted_at IS NOT NULL");
+            $message = "Trash emptied successfully.";
+            $message_type = "success";
+        } catch (Exception $e) {
+            $message = "Error emptying trash: " . $e->getMessage();
+            $message_type = "error";
+        }
+    }
+}
+
+// Global counts for tabs
+$all_active_count = (int)$pdo->query("SELECT COUNT(*) FROM products WHERE deleted_at IS NULL")->fetchColumn();
+$featured_count = (int)$pdo->query("SELECT COUNT(*) FROM products WHERE deleted_at IS NULL AND is_featured = 1")->fetchColumn();
+$trash_count = (int)$pdo->query("SELECT COUNT(*) FROM products WHERE deleted_at IS NOT NULL")->fetchColumn();
+
 // 3. Filters and Search Queries
+$status_filter = $_GET['status'] ?? '';
+$is_trash_view = ($status_filter === 'trash');
 $search = isset($_GET['s']) ? trim($_GET['s']) : '';
 $cat_filter = isset($_GET['cat_id']) ? $_GET['cat_id'] : '';
 $stock_filter = isset($_GET['stock_status']) ? $_GET['stock_status'] : '';
 $featured_filter = isset($_GET['featured']) ? $_GET['featured'] : '';
+$sale_filter = isset($_GET['sale_status']) ? $_GET['sale_status'] : (isset($_GET['sale']) ? $_GET['sale'] : '');
 
 // Build Query
 $query_parts = [];
@@ -105,9 +152,19 @@ if ($featured_filter === '1') {
     $query_parts[] = "p.is_featured = 1";
 } elseif ($featured_filter === '0') {
     $query_parts[] = "p.is_featured = 0";
+} elseif ($featured_filter === 'sale') {
+    $query_parts[] = "(p.sale_price IS NOT NULL AND p.sale_price > 0 AND (p.price IS NULL OR p.price = 0 OR p.sale_price < p.price))";
 }
 
-$where_clause = 'WHERE p.deleted_at IS NULL';
+if ($sale_filter === 'sale' || $sale_filter === '1') {
+    $query_parts[] = "(p.sale_price IS NOT NULL AND p.sale_price > 0 AND (p.price IS NULL OR p.price = 0 OR p.sale_price < p.price))";
+}
+
+if ($is_trash_view) {
+    $where_clause = 'WHERE p.deleted_at IS NOT NULL';
+} else {
+    $where_clause = 'WHERE p.deleted_at IS NULL';
+}
 if (!empty($query_parts)) {
     $where_clause .= " AND " . implode(" AND ", $query_parts);
 }
@@ -157,53 +214,67 @@ try {
 <div class="dashboard-header-banner" style="margin-bottom: 20px;">
     <div class="dashboard-header-info">
         <div class="dashboard-greeting">
-            <h1>Products Catalog</h1>
-            <span class="shadcn-badge shadcn-badge-sky" style="font-size: 11px; padding: 3px 8px;">
-                <i class="fa-solid fa-boxes-stacked" style="margin-right: 4px;"></i> <?php echo number_format($total_items); ?> Items
+            <h1><?php echo $is_trash_view ? 'Products Trash' : 'Products Catalog'; ?></h1>
+            <span class="shadcn-badge <?php echo $is_trash_view ? 'shadcn-badge-danger' : 'shadcn-badge-sky'; ?>" style="font-size: 11px; padding: 3px 8px; <?php echo $is_trash_view ? 'background: #fef2f2; color: #ef4444; border: 1px solid #fecaca;' : ''; ?>">
+                <i class="fa-solid <?php echo $is_trash_view ? 'fa-trash-can' : 'fa-boxes-stacked'; ?>" style="margin-right: 4px;"></i> <?php echo number_format($total_items); ?> <?php echo $is_trash_view ? 'Trashed Items' : 'Items'; ?>
             </span>
         </div>
         <p class="dashboard-subtitle">
-            Manage your store inventory, pricing, SKUs, and category bindings.
+            <?php echo $is_trash_view ? 'Soft-deleted items. You can restore them back to the active catalog or delete them permanently.' : 'Manage your store inventory, pricing, SKUs, and category bindings.'; ?>
         </p>
     </div>
     <div class="dashboard-actions">
-        <a href="product-add.php" class="shadcn-btn shadcn-btn-primary">
-            <i class="fa-solid fa-plus"></i> Add Product
-        </a>
-        <a href="pos-price-sync.php" class="shadcn-btn shadcn-btn-outline" style="color: #4f46e5; border-color: #c7d2fe; font-weight: 600;">
-            <i class="fa-solid fa-tags"></i> POS Price Sync
-        </a>
-        <a href="import_archive.php" class="shadcn-btn shadcn-btn-outline">
-            <i class="fa-solid fa-folder-tree"></i> Archive Import
-        </a>
-        <a href="product-import.php" class="shadcn-btn shadcn-btn-outline">
-            <i class="fa-solid fa-file-csv"></i> CSV Import
-        </a>
+        <?php if ($is_trash_view): ?>
+            <a href="products.php" class="shadcn-btn shadcn-btn-outline">
+                <i class="fa-solid fa-arrow-left"></i> Back to Products
+            </a>
+            <?php if ($trash_count > 0 && current_user_can('delete_products')): ?>
+                <form method="POST" action="products.php?status=trash" style="margin: 0;" onsubmit="return confirm('Permanently empty all <?php echo $trash_count; ?> items from trash? This action cannot be undone.');">
+                    <input type="hidden" name="action" value="empty_trash">
+                    <button type="submit" class="shadcn-btn shadcn-btn-danger" style="background: #ef4444; color: #ffffff; border-color: #ef4444;">
+                        <i class="fa-solid fa-trash-arrow-up"></i> Empty Trash
+                    </button>
+                </form>
+            <?php endif; ?>
+        <?php else: ?>
+            <a href="product-add.php" class="shadcn-btn shadcn-btn-primary">
+                <i class="fa-solid fa-plus"></i> Add Product
+            </a>
+            <a href="pos-price-sync.php" class="shadcn-btn shadcn-btn-outline">
+                <i class="fa-solid fa-tags"></i> POS Price Sync
+            </a>
+            <a href="import_archive.php" class="shadcn-btn shadcn-btn-outline">
+                <i class="fa-solid fa-folder-tree"></i> Archive Import
+            </a>
+            <a href="product-import.php" class="shadcn-btn shadcn-btn-outline">
+                <i class="fa-solid fa-file-csv"></i> CSV Import
+            </a>
 
-        <!-- Export Dropdown -->
-        <div style="position: relative; display: inline-block;" id="export-dropdown-wrap">
-            <button type="button" onclick="document.getElementById('export-menu').classList.toggle('open')" class="shadcn-btn shadcn-btn-outline">
-                <i class="fa-solid fa-download"></i> Export
-                <i class="fa-solid fa-chevron-down" style="font-size: 10px; margin-left: 2px;"></i>
-            </button>
-            <ul id="export-menu" style="display:none; position: absolute; right: 0; top: calc(100% + 6px); background: #ffffff; border: 1px solid #e4e4e7; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08); list-style: none; margin: 0; padding: 6px 0; z-index: 999; min-width: 240px;">
-                <li>
-                    <a href="generate-yn-products-excel.php?download=1" style="display: flex; align-items: center; gap: 10px; padding: 9px 16px; text-decoration: none; color: #09090b; font-size: 13px; font-weight: 500;">
-                        <i class="fa-solid fa-file-excel" style="color: #16a34a; width: 16px;"></i> YN Products Excel (Full)
-                    </a>
-                </li>
-                <li style="border-top: 1px solid #f4f4f5;">
-                    <a href="export-products.php?format=excel<?php echo !empty($cat_filter) ? '&category_id=' . (int)$cat_filter : ''; ?>" style="display: flex; align-items: center; gap: 10px; padding: 9px 16px; text-decoration: none; color: #09090b; font-size: 13px; font-weight: 500;">
-                        <i class="fa-solid fa-file-excel" style="color: #059669; width: 16px;"></i> Filtered Excel (.xlsx)
-                    </a>
-                </li>
-                <li style="border-top: 1px solid #f4f4f5;">
-                    <a href="export-products.php?format=csv<?php echo !empty($cat_filter) ? '&category_id=' . (int)$cat_filter : ''; ?>" style="display: flex; align-items: center; gap: 10px; padding: 9px 16px; text-decoration: none; color: #09090b; font-size: 13px; font-weight: 500;">
-                        <i class="fa-solid fa-file-csv" style="color: #0284c7; width: 16px;"></i> Filtered CSV (.csv)
-                    </a>
-                </li>
-            </ul>
-        </div>
+            <!-- Export Dropdown -->
+            <div style="position: relative; display: inline-block;" id="export-dropdown-wrap">
+                <button type="button" onclick="document.getElementById('export-menu').classList.toggle('open')" class="shadcn-btn shadcn-btn-outline">
+                    <i class="fa-solid fa-download"></i> Export
+                    <i class="fa-solid fa-chevron-down" style="font-size: 10px; margin-left: 2px;"></i>
+                </button>
+                <ul id="export-menu" style="display:none; position: absolute; right: 0; top: calc(100% + 6px); background: #ffffff; border: 1px solid #e4e4e7; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08); list-style: none; margin: 0; padding: 6px 0; z-index: 999; min-width: 240px;">
+                    <li>
+                        <a href="generate-yn-products-excel.php?download=1" style="display: flex; align-items: center; gap: 10px; padding: 9px 16px; text-decoration: none; color: #09090b; font-size: 13px; font-weight: 500;">
+                            <i class="fa-solid fa-file-excel" style="color: #16a34a; width: 16px;"></i> YN Products Excel (Full)
+                        </a>
+                    </li>
+                    <li style="border-top: 1px solid #f4f4f5;">
+                        <a href="export-products.php?format=excel<?php echo !empty($cat_filter) ? '&category_id=' . (int)$cat_filter : ''; ?>" style="display: flex; align-items: center; gap: 10px; padding: 9px 16px; text-decoration: none; color: #09090b; font-size: 13px; font-weight: 500;">
+                            <i class="fa-solid fa-file-excel" style="color: #059669; width: 16px;"></i> Filtered Excel (.xlsx)
+                        </a>
+                    </li>
+                    <li style="border-top: 1px solid #f4f4f5;">
+                        <a href="export-products.php?format=csv<?php echo !empty($cat_filter) ? '&category_id=' . (int)$cat_filter : ''; ?>" style="display: flex; align-items: center; gap: 10px; padding: 9px 16px; text-decoration: none; color: #09090b; font-size: 13px; font-weight: 500;">
+                            <i class="fa-solid fa-file-csv" style="color: #0284c7; width: 16px;"></i> Filtered CSV (.csv)
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -228,10 +299,37 @@ document.addEventListener('click', function(e) {
     </div>
 <?php endif; ?>
 
+<!-- Status & Trash Navigation Bar (Above Filter) -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+    <!-- Left: Status Tabs -->
+    <div style="display: flex; align-items: center; gap: 6px; font-size: 13px;">
+        <a href="products.php" class="shadcn-btn <?php echo !$is_trash_view && empty($featured_filter) ? 'shadcn-btn-primary' : 'shadcn-btn-outline'; ?>" style="height: 30px; font-size: 12px; padding: 0 12px; font-weight: 500; text-decoration: none;">
+            All <span style="opacity: 0.7; margin-left: 3px;">(<?php echo number_format($all_active_count); ?>)</span>
+        </a>
+        <a href="products.php?featured=1" class="shadcn-btn <?php echo $featured_filter === '1' ? 'shadcn-btn-primary' : 'shadcn-btn-outline'; ?>" style="height: 30px; font-size: 12px; padding: 0 12px; font-weight: 500; text-decoration: none;">
+            <i class="fa-solid fa-star" style="font-size: 10px; margin-right: 4px; color: <?php echo $featured_filter === '1' ? '#ffffff' : '#f59e0b'; ?>;"></i> Featured <span style="opacity: 0.7; margin-left: 2px;">(<?php echo number_format($featured_count); ?>)</span>
+        </a>
+    </div>
+
+    <!-- Right: Trash Button & Counter -->
+    <div style="display: flex; align-items: center; gap: 8px;">
+        <a href="products.php?status=trash" class="shadcn-btn <?php echo $is_trash_view ? 'shadcn-btn-primary' : 'shadcn-btn-outline'; ?>" style="height: 30px; font-size: 12px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; <?php echo !$is_trash_view && $trash_count > 0 ? 'color: #ef4444; border-color: #fca5a5; background: #fef2f2;' : ''; ?>" title="View Trashed Products">
+            <i class="fa-solid fa-trash-can" style="font-size: 11px;"></i>
+            <span>Trash</span>
+            <span style="background: <?php echo $is_trash_view ? '#ffffff' : ($trash_count > 0 ? '#ef4444' : '#e4e4e7'); ?>; color: <?php echo $is_trash_view ? '#09090b' : ($trash_count > 0 ? '#ffffff' : '#71717a'); ?>; font-size: 10.5px; padding: 1px 6px; border-radius: 999px; font-weight: 600;">
+                <?php echo number_format($trash_count); ?>
+            </span>
+        </a>
+    </div>
+</div>
+
 <!-- Filters Card -->
 <div class="shadcn-card" style="margin-bottom: 16px;">
     <div class="shadcn-card-padded" style="padding: 12px 16px;">
         <form action="products.php" method="GET" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 0;">
+            <?php if ($is_trash_view): ?>
+                <input type="hidden" name="status" value="trash">
+            <?php endif; ?>
             <!-- Search Box -->
             <div style="position: relative; flex: 1; min-width: 220px;">
                 <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #a1a1aa; font-size: 12px;"></i>
@@ -261,20 +359,21 @@ document.addEventListener('click', function(e) {
                 </select>
             </div>
 
-            <!-- Featured Status Dropdown -->
-            <div style="min-width: 120px;">
+            <!-- Featured / Sale Status Dropdown -->
+            <div style="min-width: 125px;">
                 <select name="featured" class="form-control" style="width: 100%;">
                     <option value="">All Items</option>
                     <option value="1" <?php echo ($featured_filter === '1') ? 'selected' : ''; ?>>Starred Only</option>
                     <option value="0" <?php echo ($featured_filter === '0') ? 'selected' : ''; ?>>Unstarred Only</option>
+                    <option value="sale" <?php echo ($featured_filter === 'sale') ? 'selected' : ''; ?>>Sale Only</option>
                 </select>
             </div>
 
             <button type="submit" class="shadcn-btn shadcn-btn-primary">
                 <i class="fa-solid fa-filter"></i> Filter
             </button>
-            <?php if (!empty($search) || !empty($cat_filter) || !empty($stock_filter) || $featured_filter !== ''): ?>
-                <a href="products.php" class="shadcn-btn shadcn-btn-ghost" title="Clear Filters">
+            <?php if (!empty($search) || !empty($cat_filter) || !empty($stock_filter) || $featured_filter !== '' || !empty($sale_filter)): ?>
+                <a href="products.php<?php echo $is_trash_view ? '?status=trash' : ''; ?>" class="shadcn-btn shadcn-btn-ghost" title="Clear Filters">
                     <i class="fa-solid fa-xmark"></i> Reset
                 </a>
             <?php endif; ?>
@@ -297,6 +396,9 @@ document.addEventListener('click', function(e) {
                     Showing <strong><?php echo number_format($range_start); ?>–<?php echo number_format($range_end); ?></strong> of <strong><?php echo number_format($total_items); ?></strong> products
                     <?php if (!empty($search)): ?>
                         &nbsp;<span class="shadcn-badge shadcn-badge-sky">"<?php echo sanitize_html($search); ?>"</span>
+                    <?php endif; ?>
+                    <?php if ($featured_filter === 'sale' || $sale_filter === 'sale'): ?>
+                        &nbsp;<span class="shadcn-badge" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; font-size: 11px; padding: 2px 7px;"><i class="fa-solid fa-tag" style="font-size: 10px; margin-right: 3px;"></i> On Sale</span>
                     <?php endif; ?>
                 </span>
             <?php endif; ?>
@@ -334,7 +436,7 @@ document.addEventListener('click', function(e) {
                             <td>
                                 <div style="width: 36px; height: 46px; border-radius: 4px; overflow: hidden; position: relative; background: #f4f4f5; border: 1px solid #e4e4e7;">
                                     <?php if ($prod['main_image']): ?>
-                                        <img src="<?php echo sanitize_html($prod['main_image']); ?>" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                        <img src="<?php echo sanitize_html(get_product_image_url($prod['main_image'])); ?>" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                                         <div style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center; color: #a1a1aa;">
                                             <i class="fa-solid fa-gem" style="font-size: 12px;"></i>
                                         </div>
@@ -394,13 +496,24 @@ document.addEventListener('click', function(e) {
                             </td>
                             <td style="text-align: center; white-space: nowrap;">
                                 <div style="display: inline-flex; align-items: center; gap: 3px;">
-                                    <a href="product-edit.php?id=<?php echo $prod['id']; ?>" class="shadcn-btn-ghost" style="width: 26px; height: 26px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; color: #52525b;" title="Edit Product">
-                                        <i class="fa-solid fa-pen-to-square" style="font-size: 11px;"></i>
-                                    </a>
-                                    <?php if (current_user_can('delete_products')): ?>
-                                        <a href="products.php?delete=<?php echo $prod['id']; ?>" class="shadcn-btn-ghost delete-confirm" data-name="<?php echo sanitize_html($prod['name']); ?>" style="width: 26px; height: 26px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; color: #ef4444;" title="Delete Product">
-                                            <i class="fa-solid fa-trash-can" style="font-size: 11px;"></i>
+                                    <?php if ($is_trash_view): ?>
+                                        <a href="products.php?status=trash&restore=<?php echo $prod['id']; ?>" class="shadcn-btn-ghost" style="width: 26px; height: 26px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; color: #10b981;" title="Restore Product">
+                                            <i class="fa-solid fa-rotate-left" style="font-size: 11px;"></i>
                                         </a>
+                                        <?php if (current_user_can('delete_products')): ?>
+                                            <a href="products.php?status=trash&force_delete=<?php echo $prod['id']; ?>" class="shadcn-btn-ghost delete-confirm" data-name="<?php echo sanitize_html($prod['name']); ?>" data-title="Permanently Delete Product" data-message="Are you sure you want to permanently delete <?php echo sanitize_html($prod['name']); ?> from the database? This action CANNOT be undone." style="width: 26px; height: 26px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; color: #ef4444;" title="Delete Permanently">
+                                                <i class="fa-solid fa-trash-can" style="font-size: 11px;"></i>
+                                            </a>
+                                        <?php endif; ?>
+                                    <?php else: ?>
+                                        <a href="product-edit.php?id=<?php echo $prod['id']; ?>" class="shadcn-btn-ghost" style="width: 26px; height: 26px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; color: #52525b;" title="Edit Product">
+                                            <i class="fa-solid fa-pen-to-square" style="font-size: 11px;"></i>
+                                        </a>
+                                        <?php if (current_user_can('delete_products')): ?>
+                                            <a href="products.php?delete=<?php echo $prod['id']; ?>" class="shadcn-btn-ghost delete-confirm" data-name="<?php echo sanitize_html($prod['name']); ?>" style="width: 26px; height: 26px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; color: #ef4444;" title="Move to Trash">
+                                                <i class="fa-solid fa-trash-can" style="font-size: 11px;"></i>
+                                            </a>
+                                        <?php endif; ?>
                                     <?php endif; ?>
                                 </div>
                             </td>

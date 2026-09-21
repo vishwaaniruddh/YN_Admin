@@ -210,7 +210,7 @@ try {
                                             <div style="display: flex; align-items: center; gap: 8px;">
                                                 <div style="width: 28px; height: 34px; border-radius: 4px; overflow: hidden; position: relative; background: #f4f4f5; border: 1px solid #e4e4e7; flex-shrink: 0;">
                                                     <?php if (!empty($ord['items'][0]['main_image'])): ?>
-                                                        <img src="<?php echo sanitize_html($ord['items'][0]['main_image']); ?>" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                        <img src="<?php echo sanitize_html(get_product_image_url($ord['items'][0]['main_image'])); ?>" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                                                         <div style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center; color: #a1a1aa;">
                                                             <i class="fa-solid fa-gem" style="font-size: 10px;"></i>
                                                         </div>
@@ -313,7 +313,7 @@ try {
                                     <td>
                                         <div style="width: 32px; height: 40px; border-radius: 4px; overflow: hidden; position: relative; background: #f4f4f5; border: 1px solid #e4e4e7;">
                                             <?php if ($prod['main_image']): ?>
-                                                <img src="<?php echo sanitize_html($prod['main_image']); ?>" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                <img src="<?php echo sanitize_html(get_product_image_url($prod['main_image'])); ?>" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                                                 <div style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center; color: #a1a1aa;">
                                                     <i class="fa-solid fa-gem" style="font-size: 11px;"></i>
                                                 </div>
@@ -430,7 +430,7 @@ try {
                             <li style="display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #f4f4f5; gap: 10px;">
                                 <div style="width: 36px; height: 46px; border-radius: 6px; overflow: hidden; border: 1px solid #e4e4e7; flex-shrink: 0; background: #f4f4f5;">
                                     <?php if ($fprod['main_image']): ?>
-                                        <img src="<?php echo sanitize_html($fprod['main_image']); ?>" style="width: 100%; height: 100%; object-fit: cover;" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                        <img src="<?php echo sanitize_html(get_product_image_url($fprod['main_image'])); ?>" style="width: 100%; height: 100%; object-fit: cover;" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                                         <div style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center; color: #a1a1aa;">
                                             <i class="fa-solid fa-gem" style="font-size: 12px;"></i>
                                         </div>

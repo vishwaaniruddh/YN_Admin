@@ -49,7 +49,8 @@ try {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = trim($_POST['name'] ?? '');
     $slug = trim($_POST['slug'] ?? '');
-    $sku = trim($_POST['sku'] ?? '');
+    // SKU is non-editable in edit mode; preserve product's existing SKU
+    $sku = $product['sku'];
     $price = (float)($_POST['price'] ?? 0.0);
     $sale_price = !empty($_POST['sale_price']) ? (float)$_POST['sale_price'] : null;
     $stock_qty = (int)($_POST['stock_qty'] ?? 0);
@@ -309,10 +310,10 @@ try {
                 <i class="fa-solid fa-arrow-left"></i>
             </a>
             <h1>Edit Product</h1>
-            <span class="shadcn-badge shadcn-badge-sky" style="font-size: 11px; padding: 3px 8px;">
+            <span class="shadcn-badge" style="font-size: 11px; padding: 3px 8px;">
                 <i class="fa-solid fa-hashtag" style="margin-right: 2px;"></i> ID #<?php echo $product['id']; ?>
             </span>
-            <span class="shadcn-badge" style="font-size: 11px; padding: 3px 8px; font-family: monospace; background: #f4f4f5; border: 1px solid #e4e4e7; color: #52525b;">
+            <span class="shadcn-badge" style="font-size: 11px; padding: 3px 8px; font-family: monospace;">
                 <?php echo sanitize_html($product['sku']); ?>
             </span>
         </div>
@@ -321,8 +322,8 @@ try {
         </p>
     </div>
     <div class="dashboard-actions">
-        <button type="button" class="shadcn-btn shadcn-btn-outline" onclick="openSyncModal()" style="border-color: #fecdd3; background: #fff1f2; color: #9f1239; font-weight: 600;">
-            <i class="fa-solid fa-cloud-arrow-down"></i> Sync API
+        <button type="button" class="shadcn-btn shadcn-btn-outline" onclick="openSyncModal()">
+            <i class="fa-solid fa-arrows-rotate"></i> Sync API
         </button>
         <a href="product-add.php" class="shadcn-btn shadcn-btn-outline">
             <i class="fa-solid fa-plus"></i> Add New
@@ -343,55 +344,65 @@ try {
     <!-- Hidden input to track gallery item deletions -->
     <input type="hidden" name="deleted_gallery_ids" id="deleted_gallery_ids" value="">
 
-    <div class="wp-editor-columns">
+    <div class="wp-editor-columns" style="display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap;">
         
         <!-- Left Main Content Column -->
-        <div class="main-column">
-            <!-- Title and Description -->
-            <div class="postbox">
-                <div class="postbox-header">
-                    <h2>Product Title & Description</h2>
+        <div class="main-column" style="flex: 1 1 580px; min-width: 320px;">
+            
+            <!-- Title and Description Card -->
+            <div class="shadcn-card" style="margin-bottom: 24px;">
+                <div class="shadcn-card-header">
+                    <h2 class="shadcn-card-title">
+                        <i class="fa-solid fa-pen-to-square" style="color: #71717a;"></i>
+                        Product Information
+                    </h2>
                 </div>
-                <div class="postbox-body">
+                <div class="shadcn-card-padded">
                     <div class="form-group">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <label for="p_name" style="margin-bottom: 0;">Product Name <span style="color: var(--wp-error-red);">*</span></label>
-                            <button type="button" onclick="aiGenerateNames()" id="aiNamesBtn" class="button" style="font-size: 11px; padding: 2px 8px; height: 26px;">
-                                <i class="fa-solid fa-wand-magic-sparkles" style="color: var(--wp-blue);"></i> AI Suggest Names
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+                            <label for="p_name" style="margin-bottom: 0;">
+                                Product Name <span style="color: #ef4444;">*</span>
+                            </label>
+                            <button type="button" onclick="aiGenerateNames()" id="aiNamesBtn" class="shadcn-btn shadcn-btn-outline" style="font-size: 11px; padding: 0 8px; height: 26px;">
+                                <i class="fa-solid fa-wand-magic-sparkles" style="color: #71717a;"></i> AI Suggest Names
                             </button>
                         </div>
-                        <input type="text" name="name" id="p_name" class="form-control" value="<?php echo sanitize_html($product['name']); ?>" required>
-                        <div id="aiNamesResult" style="display: none; margin-top: 8px; padding: 10px; background: #f6f7f7; border: 1px solid var(--wp-border); border-radius: 4px;">
-                            <p style="font-size: 11px; font-weight: 600; color: #50575e; margin-bottom: 6px;">Click to apply suggested name:</p>
+                        <input type="text" name="name" id="p_name" class="form-control" value="<?php echo sanitize_html($product['name']); ?>" required style="width: 100%; font-size: 14px;">
+                        <div id="aiNamesResult" style="display: none; margin-top: 8px; padding: 10px; background: #fafafa; border: 1px solid #e4e4e7; border-radius: 6px;">
+                            <p style="font-size: 11px; font-weight: 600; color: #71717a; margin-bottom: 6px;">Click to apply suggested name:</p>
                             <div id="aiNamesList" style="display: flex; flex-direction: column; gap: 4px;"></div>
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label for="p_slug">Slug (URL identifier)</label>
-                        <input type="text" name="slug" id="p_slug" class="form-control" value="<?php echo sanitize_html($product['slug']); ?>">
+                        <input type="text" name="slug" id="p_slug" class="form-control" value="<?php echo sanitize_html($product['slug']); ?>" style="width: 100%; font-family: monospace; color: #52525b;">
+                        <span style="font-size: 11.5px; color: #71717a; margin-top: 4px; display: block;">Leave blank to automatically regenerate from product name.</span>
                     </div>
 
-                    <div class="form-group">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
-                            <label for="p_desc" style="margin-bottom: 0;">Detailed Description</label>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <label for="p_desc" style="margin-bottom: 0;">Detailed Description</label>
+                                <span id="desc_length_counter" style="font-size: 11.5px; color: #71717a; font-weight: 500;">0 words &bull; 0 chars</span>
+                            </div>
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <span style="font-size: 11px; color: #50575e;">Words: <input type="number" id="aiDescMaxWords" value="100" min="10" max="500" class="form-control" style="width: 55px; height: 24px; padding: 1px 4px; font-size: 11px; display: inline-block;"></span>
-                                <button type="button" onclick="aiGenerateDescription()" id="aiDescBtn" class="button" style="font-size: 11px; padding: 2px 8px; height: 26px;">
-                                    <i class="fa-solid fa-wand-magic-sparkles" style="color: var(--wp-blue);"></i> AI Generate Description
+                                <span style="font-size: 11px; color: #71717a;">Words: <input type="number" id="aiDescMaxWords" value="100" min="10" max="500" class="form-control" style="width: 55px; height: 24px; padding: 1px 4px; font-size: 11px; display: inline-block;"></span>
+                                <button type="button" onclick="aiGenerateDescription()" id="aiDescBtn" class="shadcn-btn shadcn-btn-outline" style="font-size: 11px; padding: 0 8px; height: 26px;">
+                                    <i class="fa-solid fa-wand-magic-sparkles" style="color: #71717a;"></i> AI Generate Description
                                 </button>
                             </div>
                         </div>
-                        <textarea name="description" id="p_desc" class="form-control" rows="8"><?php echo sanitize_html($product['description']); ?></textarea>
+                        <textarea name="description" id="p_desc" class="form-control auto-expand-textarea" rows="5" style="width: 100%; line-height: 1.6; resize: vertical; overflow-y: hidden; box-sizing: border-box;"><?php echo sanitize_html($product['description']); ?></textarea>
                         
-                        <div id="aiLoading" style="display: none; align-items: center; gap: 6px; padding: 8px; font-size: 12px; color: #50575e; margin-top: 6px;">
-                            <i class="fa-solid fa-spinner fa-spin" style="color: var(--wp-blue);"></i> AI is generating description...
+                        <div id="aiLoading" style="display: none; align-items: center; gap: 6px; padding: 8px; font-size: 12px; color: #71717a; margin-top: 6px;">
+                            <i class="fa-solid fa-spinner fa-spin" style="color: #09090b;"></i> AI is generating description...
                         </div>
 
-                        <div id="aiDescResult" style="display: none; margin-top: 8px; padding: 10px; background: #f6f7f7; border: 1px solid var(--wp-border); border-radius: 4px;">
-                            <p style="font-size: 11px; font-weight: 600; color: #50575e; margin-bottom: 4px;">Generated Description Preview:</p>
-                            <textarea id="aiDescTextarea" rows="5" class="form-control" style="width: 100%; margin-bottom: 6px; font-size: 12px;"></textarea>
-                            <button type="button" onclick="applyAiDescription()" id="applyDescBtn" class="button button-primary" style="font-size: 11px; height: 26px; padding: 2px 10px;">
+                        <div id="aiDescResult" style="display: none; margin-top: 8px; padding: 10px; background: #fafafa; border: 1px solid #e4e4e7; border-radius: 6px;">
+                            <p style="font-size: 11px; font-weight: 600; color: #71717a; margin-bottom: 4px;">Generated Description Preview:</p>
+                            <textarea id="aiDescTextarea" rows="6" class="form-control" style="width: 100%; min-height: 140px; margin-bottom: 8px; font-size: 13px; line-height: 1.5;"></textarea>
+                            <button type="button" onclick="applyAiDescription()" id="applyDescBtn" class="shadcn-btn shadcn-btn-primary" style="font-size: 11px; height: 28px; padding: 0 10px;">
                                 Apply to Description Field
                             </button>
                         </div>
@@ -399,109 +410,138 @@ try {
                 </div>
             </div>
 
-            <!-- Short Description -->
-            <div class="postbox">
-                <div class="postbox-header">
-                    <h2>Product Short Description</h2>
+            <!-- Short Description Card -->
+            <div class="shadcn-card" style="margin-bottom: 24px;">
+                <div class="shadcn-card-header" style="flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <h2 class="shadcn-card-title">
+                            <i class="fa-solid fa-align-left" style="color: #71717a;"></i>
+                            Short Description &amp; Highlights
+                        </h2>
+                        <span id="short_desc_length_counter" style="font-size: 11.5px; color: #71717a; font-weight: 500;">0 words &bull; 0 chars</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 11px; color: #71717a;">Words: <input type="number" id="aiShortDescMaxWords" value="50" min="10" max="250" class="form-control" style="width: 55px; height: 24px; padding: 1px 4px; font-size: 11px; display: inline-block;"></span>
+                        <button type="button" onclick="aiGenerateShortDescription()" id="aiShortDescBtn" class="shadcn-btn shadcn-btn-outline" style="font-size: 11px; padding: 0 8px; height: 26px;">
+                            <i class="fa-solid fa-wand-magic-sparkles" style="color: #71717a;"></i> AI Generate Short Description
+                        </button>
+                    </div>
                 </div>
-                <div class="postbox-body">
-                    <div class="form-group">
-                        <textarea name="short_description" id="p_short_desc" class="form-control" rows="3"><?php echo sanitize_html($product['short_description']); ?></textarea>
+                <div class="shadcn-card-padded">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <textarea name="short_description" id="p_short_desc" class="form-control auto-expand-textarea" rows="3" style="width: 100%; line-height: 1.5; resize: vertical; overflow-y: hidden; box-sizing: border-box;"><?php echo sanitize_html($product['short_description']); ?></textarea>
+                        <div id="aiShortDescLoading" style="display: none; align-items: center; gap: 6px; padding: 8px; font-size: 12px; color: #71717a; margin-top: 6px;">
+                            <i class="fa-solid fa-spinner fa-spin" style="color: #09090b;"></i> AI is generating short description &amp; highlights...
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Pricing & Inventory Details -->
-            <div class="postbox">
-                <div class="postbox-header">
-                    <h2>Pricing & Inventory</h2>
+            <!-- Pricing & Inventory Details Card -->
+            <div class="shadcn-card" style="margin-bottom: 24px;">
+                <div class="shadcn-card-header">
+                    <h2 class="shadcn-card-title">
+                        <i class="fa-solid fa-tags" style="color: #71717a;"></i>
+                        Pricing &amp; Inventory
+                    </h2>
                 </div>
-                <div class="postbox-body">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                        <div class="form-group">
-                            <label for="p_price">Regular Price (₹) <span style="color: var(--wp-error-red);">*</span></label>
-                            <input type="number" step="0.01" name="price" id="p_price" class="form-control" value="<?php echo (float)$product['price']; ?>" required>
+                <div class="shadcn-card-padded">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 16px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="p_price">
+                                Regular Price (₹) <span style="color: #ef4444;">*</span>
+                            </label>
+                            <input type="number" step="0.01" name="price" id="p_price" class="form-control" value="<?php echo (float)$product['price']; ?>" required style="width: 100%;">
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" style="margin-bottom: 0;">
                             <label for="p_sale_price">Sale Price (₹)</label>
-                            <input type="number" step="0.01" name="sale_price" id="p_sale_price" class="form-control" value="<?php echo $product['sale_price'] ? (float)$product['sale_price'] : ''; ?>">
+                            <input type="number" step="0.01" name="sale_price" id="p_sale_price" class="form-control" value="<?php echo $product['sale_price'] ? (float)$product['sale_price'] : ''; ?>" style="width: 100%;">
                         </div>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
-                        <div class="form-group">
-                            <label for="p_sku">SKU (Stock Keeping Unit) <span style="color: var(--wp-error-red);">*</span></label>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="p_sku">
+                                SKU (Stock Keeping Unit) <span style="font-size: 11px; color: #71717a; font-weight: normal;">(Permanent / Non-editable)</span>
+                            </label>
                             <div style="display: flex; gap: 8px;">
-                                <input type="text" name="sku" id="p_sku" class="form-control" value="<?php echo sanitize_html($product['sku']); ?>" required style="flex: 1;">
-                                <button type="button" class="button" onclick="openSyncModal()" style="background-color: #8b2e3b; color: #fff; border-color: #72242e; white-space: nowrap;" title="Fetch product details from SriShringarr API">
+                                <input type="text" name="sku" id="p_sku" class="form-control" value="<?php echo sanitize_html($product['sku']); ?>" readonly style="flex: 1; background-color: #f4f4f5; color: #52525b; cursor: not-allowed; font-family: monospace; font-weight: 500;">
+                                <button type="button" class="shadcn-btn shadcn-btn-outline" onclick="openSyncModal()" title="Fetch product details from SriShringarr API" style="white-space: nowrap;">
                                     <i class="fa-solid fa-arrows-rotate"></i> Sync API
                                 </button>
                             </div>
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" style="margin-bottom: 0;">
                             <label for="p_stock">Stock Quantity</label>
-                            <input type="number" name="stock_qty" id="p_stock" class="form-control" value="<?php echo (int)$product['stock_qty']; ?>">
+                            <input type="number" name="stock_qty" id="p_stock" class="form-control" value="<?php echo (int)$product['stock_qty']; ?>" min="0" style="width: 100%;">
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Product Gallery (Multi-Image) -->
-            <div class="postbox">
-                <div class="postbox-header">
-                    <h2>Product Gallery (Multiple Images)</h2>
+            <!-- Product Gallery (Multi-Image) Card -->
+            <div class="shadcn-card" style="margin-bottom: 24px;">
+                <div class="shadcn-card-header">
+                    <h2 class="shadcn-card-title">
+                        <i class="fa-solid fa-images" style="color: #71717a;"></i>
+                        Product Gallery Images
+                    </h2>
                 </div>
-                <div class="postbox-body">
+                <div class="shadcn-card-padded">
                     <!-- Current Gallery Items -->
                     <?php if (!empty($gallery_images)): ?>
-                        <p style="font-weight: 500; margin-bottom: 8px;">Current Gallery Images:</p>
-                        <div class="gallery-grid" style="margin-bottom: 20px;">
+                        <p style="font-size: 12px; font-weight: 600; color: #09090b; margin-bottom: 8px;">Current Gallery Images:</p>
+                        <div class="gallery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 12px; margin-bottom: 20px;">
                             <?php foreach ($gallery_images as $gidx => $gimg): ?>
-                                <div class="gallery-item" id="gallery_item_<?php echo $gimg['id']; ?>" data-img-id="<?php echo $gimg['id']; ?>" data-img-path="<?php echo sanitize_html($gimg['image_path']); ?>" data-thumb-path="<?php echo sanitize_html($gimg['thumb_path'] ?: $gimg['image_path']); ?>" style="display: flex; flex-direction: column; align-items: center; background: #fff; padding: 6px; border: 1px solid var(--wp-border); border-radius: 4px;">
-                                    <div style="position: relative; width: 100%; aspect-ratio: 1/1; overflow: hidden; border-radius: 3px;">
-                                        <img src="<?php echo sanitize_html($gimg['thumb_path'] ?: $gimg['image_path']); ?>" alt="Gallery Image" style="width: 100%; height: 100%; object-fit: cover;">
+                                <div class="gallery-item" id="gallery_item_<?php echo $gimg['id']; ?>" data-img-id="<?php echo $gimg['id']; ?>" data-img-path="<?php echo sanitize_html($gimg['image_path']); ?>" data-thumb-path="<?php echo sanitize_html($gimg['thumb_path'] ?: $gimg['image_path']); ?>" style="display: flex; flex-direction: column; align-items: center; background: #ffffff; padding: 8px; border: 1px solid #e4e4e7; border-radius: 6px;">
+                                    <div style="position: relative; width: 100%; aspect-ratio: 1/1; overflow: hidden; border-radius: 4px;">
+                                        <img src="<?php echo sanitize_html(get_product_image_url($gimg['thumb_path'] ?: $gimg['image_path'])); ?>" alt="Gallery Image" style="width: 100%; height: 100%; object-fit: cover;">
                                         <div class="gallery-item-delete" onclick="markGalleryImageForDeletion(<?php echo $gimg['id']; ?>)" title="Remove this image">
                                             <i class="fa-solid fa-xmark"></i>
                                         </div>
                                     </div>
                                     <div style="margin-top: 6px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 4px;" title="Set rendering weight order on frontend">
-                                        <span style="font-size: 10px; color: #50575e; font-weight: 600;">Weight:</span>
-                                        <input type="number" min="0" name="image_weights[<?php echo $gimg['id']; ?>]" value="<?php echo (int)($gimg['sort_order'] ?? ($gidx + 1)); ?>" class="form-control" style="width: 50px; height: 24px; padding: 1px 4px; font-size: 11px; text-align: center;">
+                                        <span style="font-size: 10px; color: #71717a; font-weight: 600;">Weight:</span>
+                                        <input type="number" min="0" name="image_weights[<?php echo $gimg['id']; ?>]" value="<?php echo (int)($gimg['sort_order'] ?? ($gidx + 1)); ?>" class="form-control" style="width: 48px; height: 24px; padding: 1px 4px; font-size: 11px; text-align: center;">
                                     </div>
                                 </div>
                             <?php endforeach; ?>
                         </div>
                     <?php endif; ?>
 
-                    <div class="image-upload-wrapper">
-                        <i class="fa-solid fa-images"></i>
-                        <p>Drag and drop or click here to upload additional gallery images</p>
+                    <div class="image-upload-wrapper" style="border: 2px dashed #e4e4e7; background: #fafafa; border-radius: 8px; padding: 28px 16px; text-align: center; cursor: pointer; transition: all 0.2s ease;">
+                        <div style="width: 44px; height: 44px; border-radius: 10px; background: #ffffff; border: 1px solid #e4e4e7; display: inline-flex; align-items: center; justify-content: center; color: #71717a; font-size: 20px; margin-bottom: 10px;">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                        </div>
+                        <p style="font-size: 13px; font-weight: 500; color: #09090b; margin: 0 0 4px 0;">Click or drag &amp; drop to upload additional gallery images</p>
+                        <p style="font-size: 11.5px; color: #71717a; margin: 0;">PNG, JPG, WEBP up to 5MB each</p>
                         <input type="file" name="gallery_images[]" id="gallery_input" multiple accept="image/*">
                     </div>
                     <!-- Live Gallery Previews (New uploads) -->
-                    <div class="gallery-grid" id="gallery_preview_grid">
-                        <!-- JS inserted items here -->
-                    </div>
+                    <div class="gallery-grid" id="gallery_preview_grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; margin-top: 16px;"></div>
                 </div>
             </div>
 
-            <!-- AI Image Studio (Gemini) -->
-            <div class="postbox">
-                <div class="postbox-header">
-                    <h2>AI Image Studio</h2>
+            <!-- AI Image Studio Card -->
+            <div class="shadcn-card" style="margin-bottom: 24px;">
+                <div class="shadcn-card-header">
+                    <h2 class="shadcn-card-title">
+                        <i class="fa-solid fa-wand-magic-sparkles" style="color: #71717a;"></i>
+                        AI Image Studio
+                    </h2>
                 </div>
-                <div class="postbox-body">
-                    <p style="font-size: 12px; color: #50575e; margin-top: 0; margin-bottom: 15px;">Generate AI fashion model photos wearing this exact product.</p>
+                <div class="shadcn-card-padded">
+                    <p style="font-size: 12.5px; color: #71717a; margin-top: 0; margin-bottom: 15px;">Generate AI fashion model photos wearing this exact product.</p>
 
-                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <div style="display: flex; flex-direction: column; gap: 16px;">
                         <!-- Face Reference Models -->
                         <div>
-                            <label style="font-size: 12px; font-weight: 600; color: var(--wp-text-dark); margin-bottom: 6px; display: block;">Model Face (Optional)</label>
+                            <label style="font-size: 12px; font-weight: 600; color: #09090b; margin-bottom: 6px; display: block;">Model Face (Optional)</label>
                             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                                 <label class="ai-model-picker">
                                     <input type="radio" name="ai_model_face" value="" checked class="ai-radio-hidden">
-                                    <div class="ai-model-box" style="width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; background: #f6f7f7; border: 1px solid var(--wp-border); border-radius: 4px; cursor: pointer;">
-                                        <span style="font-size: 10px; color: #50575e; font-weight: 600;">NONE</span>
+                                    <div class="ai-model-box" style="width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; background: #fafafa; border: 1px solid #e4e4e7; border-radius: 6px; cursor: pointer;">
+                                        <span style="font-size: 10px; color: #71717a; font-weight: 600;">NONE</span>
                                     </div>
                                 </label>
                                 <?php
@@ -515,7 +555,7 @@ try {
                                 ?>
                                 <label class="ai-model-picker" style="position: relative;" title="<?php echo sanitize_html($dbm['name']); ?>">
                                     <input type="radio" name="ai_model_face" value="<?php echo sanitize_html($dbm['image_path']); ?>" data-shot="<?php echo sanitize_html($dbm['shot_type'] ?? 'Full Body'); ?>" data-hair="<?php echo sanitize_html($dbm['hair_style'] ?? 'As per product'); ?>" class="ai-radio-hidden">
-                                    <div class="ai-model-box" style="width: 56px; height: 56px; border: 1px solid var(--wp-border); border-radius: 4px; overflow: hidden; cursor: pointer;">
+                                    <div class="ai-model-box" style="width: 56px; height: 56px; border: 1px solid #e4e4e7; border-radius: 6px; overflow: hidden; cursor: pointer;">
                                         <img src="<?php echo sanitize_html($dbm['image_path']); ?>" alt="<?php echo sanitize_html($dbm['name']); ?>" style="width: 100%; height: 100%; object-fit: cover;">
                                     </div>
                                 </label>
@@ -526,7 +566,7 @@ try {
                                 ?>
                                 <label class="ai-model-picker" style="position: relative;">
                                     <input type="radio" name="ai_model_face" value="assets/models/model_<?= $i ?>.png" class="ai-radio-hidden">
-                                    <div class="ai-model-box" style="width: 56px; height: 56px; border: 1px solid var(--wp-border); border-radius: 4px; overflow: hidden; cursor: pointer;" title="Model <?= $i ?>">
+                                    <div class="ai-model-box" style="width: 56px; height: 56px; border: 1px solid #e4e4e7; border-radius: 6px; overflow: hidden; cursor: pointer;" title="Model <?= $i ?>">
                                         <img src="assets/models/model_<?= $i ?>.png" alt="Model <?= $i ?>" style="width: 100%; height: 100%; object-fit: cover;">
                                     </div>
                                 </label>
@@ -539,7 +579,7 @@ try {
 
                         <!-- Background Presets -->
                         <div>
-                            <label style="font-size: 12px; font-weight: 600; color: var(--wp-text-dark); margin-bottom: 6px; display: block;">Background / Props Preset</label>
+                            <label style="font-size: 12px; font-weight: 600; color: #09090b; margin-bottom: 6px; display: block;">Background / Props Preset</label>
                             <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="bg_preset_container">
                                 <?php
                                 $bgPresets = [
@@ -561,10 +601,10 @@ try {
                                 </label>
                                 <?php $first = false; endforeach; ?>
                             </div>
-                            <input type="text" id="ai_bg_custom" class="form-control" style="margin-top: 6px; width: 100%; font-size: 12px;" value="elegant royal palace with marble pillars and chandeliers" placeholder="Describe background and props...">
+                            <input type="text" id="ai_bg_custom" class="form-control" style="margin-top: 8px; width: 100%; font-size: 12px;" value="elegant royal palace with marble pillars and chandeliers" placeholder="Describe background and props...">
                         </div>
 
-                        <!-- Shot & Hair Controls (Dynamic from Masters DB) -->
+                        <!-- Shot & Hair Controls -->
                         <?php
                         $db_shot_types = [];
                         $db_hair_styles = [];
@@ -573,17 +613,17 @@ try {
                             $db_hair_styles = $pdo->query("SELECT * FROM ai_hair_styles WHERE is_active = 1 ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
                         } catch (Exception $e) {}
                         ?>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                             <div>
-                                <label style="font-size: 12px; font-weight: 600; color: var(--wp-text-dark); margin-bottom: 6px; display: block;">Shot Type Master</label>
-                                <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <label style="font-size: 12px; font-weight: 600; color: #09090b; margin-bottom: 6px; display: block;">Shot Type Master</label>
+                                <div style="display: flex; flex-direction: column; gap: 6px;">
                                     <?php
                                     if (!empty($db_shot_types)):
                                         $sIdx = 0;
                                         foreach ($db_shot_types as $st):
                                     ?>
-                                        <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);" title="<?php echo sanitize_html($st['prompt_text']); ?>">
-                                            <input type="radio" name="ai_shot_type" value="<?php echo sanitize_html($st['prompt_text']); ?>" data-name="<?php echo sanitize_html($st['name']); ?>" <?php echo $sIdx === 0 ? 'checked' : ''; ?>>
+                                        <label style="font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #09090b;" title="<?php echo sanitize_html($st['prompt_text']); ?>">
+                                            <input type="radio" name="ai_shot_type" value="<?php echo sanitize_html($st['prompt_text']); ?>" data-name="<?php echo sanitize_html($st['name']); ?>" <?php echo $sIdx === 0 ? 'checked' : ''; ?> style="accent-color: #09090b;">
                                             <?php echo sanitize_html($st['name']); ?>
                                         </label>
                                     <?php
@@ -591,23 +631,23 @@ try {
                                         endforeach;
                                     else:
                                     ?>
-                                        <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_shot_type" value="close-up portrait shot focusing on the face and details" data-name="Close-up Portrait"> Close-up Portrait</label>
-                                        <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_shot_type" value="half body shot from waist up, showing torso and face" data-name="Half Body"> Half Body</label>
-                                        <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_shot_type" value="full body head-to-toe shot showing the complete outfit/jewelry look" data-name="Full Body" checked> Full Body</label>
-                                        <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_shot_type" value="shot from behind showing the back design and details" data-name="Back View"> Back View</label>
+                                        <label style="font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #09090b;"><input type="radio" name="ai_shot_type" value="close-up portrait shot focusing on the face and details" data-name="Close-up Portrait" style="accent-color: #09090b;"> Close-up Portrait</label>
+                                        <label style="font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #09090b;"><input type="radio" name="ai_shot_type" value="half body shot from waist up, showing torso and face" data-name="Half Body" style="accent-color: #09090b;"> Half Body</label>
+                                        <label style="font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #09090b;"><input type="radio" name="ai_shot_type" value="full body head-to-toe shot showing the complete outfit/jewelry look" data-name="Full Body" checked style="accent-color: #09090b;"> Full Body</label>
+                                        <label style="font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #09090b;"><input type="radio" name="ai_shot_type" value="shot from behind showing the back design and details" data-name="Back View" style="accent-color: #09090b;"> Back View</label>
                                     <?php endif; ?>
                                 </div>
                             </div>
                             <div>
-                                <label style="font-size: 12px; font-weight: 600; color: var(--wp-text-dark); margin-bottom: 6px; display: block;">Hair Style Master</label>
-                                <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <label style="font-size: 12px; font-weight: 600; color: #09090b; margin-bottom: 6px; display: block;">Hair Style Master</label>
+                                <div style="display: flex; flex-direction: column; gap: 6px;">
                                     <?php
                                     if (!empty($db_hair_styles)):
                                         $hIdx = 0;
                                         foreach ($db_hair_styles as $hs):
                                     ?>
-                                        <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);" title="<?php echo sanitize_html($hs['prompt_text']); ?>">
-                                            <input type="radio" name="ai_hair_style" value="<?php echo sanitize_html($hs['prompt_text']); ?>" data-name="<?php echo sanitize_html($hs['name']); ?>" <?php echo $hIdx === 0 ? 'checked' : ''; ?>>
+                                        <label style="font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #09090b;" title="<?php echo sanitize_html($hs['prompt_text']); ?>">
+                                            <input type="radio" name="ai_hair_style" value="<?php echo sanitize_html($hs['prompt_text']); ?>" data-name="<?php echo sanitize_html($hs['name']); ?>" <?php echo $hIdx === 0 ? 'checked' : ''; ?> style="accent-color: #09090b;">
                                             <?php echo sanitize_html($hs['name']); ?>
                                         </label>
                                     <?php
@@ -615,10 +655,10 @@ try {
                                         endforeach;
                                     else:
                                     ?>
-                                        <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_hair_style" value="open flowing hair with soft waves" data-name="Open Flowing"> Open Flowing</label>
-                                        <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_hair_style" value="neatly tied bun with gajra flowers" data-name="Tied / Bun"> Tied / Bun</label>
-                                        <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_hair_style" value="traditional long braided hair" data-name="Traditional Braid"> Traditional Braid</label>
-                                        <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--wp-text-dark);"><input type="radio" name="ai_hair_style" value="" data-name="As per product" checked> Default</label>
+                                        <label style="font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #09090b;"><input type="radio" name="ai_hair_style" value="open flowing hair with soft waves" data-name="Open Flowing" style="accent-color: #09090b;"> Open Flowing</label>
+                                        <label style="font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #09090b;"><input type="radio" name="ai_hair_style" value="neatly tied bun with gajra flowers" data-name="Tied / Bun" style="accent-color: #09090b;"> Tied / Bun</label>
+                                        <label style="font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #09090b;"><input type="radio" name="ai_hair_style" value="traditional long braided hair" data-name="Traditional Braid" style="accent-color: #09090b;"> Traditional Braid</label>
+                                        <label style="font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #09090b;"><input type="radio" name="ai_hair_style" value="" data-name="As per product" checked style="accent-color: #09090b;"> Default</label>
                                     <?php endif; ?>
                                 </div>
                             </div>
@@ -626,14 +666,14 @@ try {
 
                         <!-- Final Prompt Textarea -->
                         <div>
-                            <label style="font-size: 12px; font-weight: 600; color: var(--wp-text-dark); margin-bottom: 6px; display: block;">Final Prompt (Auto-Assembled)</label>
-                            <textarea id="ai_final_prompt" rows="3" class="form-control" style="width: 100%; font-size: 12px;">A photorealistic beautiful Indian fashion model wearing this exact product. The background should have elegant royal palace with marble pillars and chandeliers. Shot type: full body head-to-toe shot showing the complete outfit/jewelry look. Aspect ratio: 2:3 vertical fashion portrait format.</textarea>
+                            <label style="font-size: 12px; font-weight: 600; color: #09090b; margin-bottom: 6px; display: block;">Final Prompt (Auto-Assembled)</label>
+                            <textarea id="ai_final_prompt" rows="3" class="form-control" style="width: 100%; font-size: 12px; line-height: 1.5;">A photorealistic beautiful Indian fashion model wearing this exact product. The background should have elegant royal palace with marble pillars and chandeliers. Shot type: full body head-to-toe shot showing the complete outfit/jewelry look. Aspect ratio: 2:3 vertical fashion portrait format.</textarea>
                         </div>
 
                         <!-- Action Bar -->
-                        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--wp-border); padding-top: 12px;">
-                            <div style="display: flex; align-items: center; gap: 6px;">
-                                <label style="font-size: 12px; font-weight: 500;">Variations:</label>
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e4e4e7; padding-top: 14px; flex-wrap: wrap; gap: 10px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="font-size: 12px; font-weight: 500; color: #71717a;">Variations:</label>
                                 <div style="display: flex; gap: 4px;">
                                     <?php for ($n = 1; $n <= 4; $n++): ?>
                                     <label class="ai-bg-picker">
@@ -644,26 +684,26 @@ try {
                                 </div>
                             </div>
 
-                            <button type="button" onclick="aiGenerateAdvancedImage()" id="aiImageBtn" class="button button-primary">
+                            <button type="button" onclick="aiGenerateAdvancedImage()" id="aiImageBtn" class="shadcn-btn shadcn-btn-primary">
                                 <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Model Image
                             </button>
                         </div>
 
                         <!-- Loading Indicator -->
-                        <div id="aiImageLoading" style="display: none; align-items: center; gap: 8px; padding: 10px; background: #f6f7f7; border: 1px solid var(--wp-border); border-radius: 4px; font-size: 12px; color: #50575e;">
-                            <i class="fa-solid fa-spinner fa-spin" style="font-size: 14px; color: var(--wp-blue);"></i>
+                        <div id="aiImageLoading" style="display: none; align-items: center; gap: 8px; padding: 12px; background: #fafafa; border: 1px solid #e4e4e7; border-radius: 6px; font-size: 12.5px; color: #71717a;">
+                            <i class="fa-solid fa-spinner fa-spin" style="font-size: 14px; color: #09090b;"></i>
                             <span>AI is generating image(s)... Please wait 15-20 seconds.</span>
                         </div>
 
                         <!-- Generated Results -->
-                        <div id="aiImageResult" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--wp-border);">
-                            <p style="font-size: 12px; font-weight: 600; margin-bottom: 8px;">Generated Images:</p>
+                        <div id="aiImageResult" style="display: none; margin-top: 12px; padding-top: 14px; border-top: 1px solid #e4e4e7;">
+                            <p style="font-size: 12.5px; font-weight: 600; color: #09090b; margin-bottom: 10px;">Generated Images:</p>
                             
-                            <div id="aiImageGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 10px;"></div>
+                            <div id="aiImageGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 12px;"></div>
                             
                             <div style="display: flex; justify-content: center;">
-                                <button type="button" onclick="resetAiImage()" class="button button-small">
-                                    <i class="fa-solid fa-rotate-left"></i> Clear & Try Again
+                                <button type="button" onclick="resetAiImage()" class="shadcn-btn shadcn-btn-outline">
+                                    <i class="fa-solid fa-rotate-left"></i> Clear &amp; Try Again
                                 </button>
                             </div>
                         </div>
@@ -673,82 +713,97 @@ try {
         </div>
 
         <!-- Right Side Column -->
-        <div class="side-column">
+        <div class="side-column" style="flex: 0 0 320px; min-width: 280px;">
             
-            <!-- Publish Actions -->
-            <div class="postbox">
-                <div class="postbox-header">
-                    <h2>Publish Settings</h2>
+            <!-- Publish Actions Card -->
+            <div class="shadcn-card" style="margin-bottom: 24px;">
+                <div class="shadcn-card-header">
+                    <h2 class="shadcn-card-title">
+                        <i class="fa-solid fa-paper-plane" style="color: #71717a;"></i>
+                        Publishing
+                    </h2>
                 </div>
-                <div class="postbox-body">
+                <div class="shadcn-card-padded">
                     <div class="form-group">
-                        <label for="p_status">Status</label>
-                        <select name="status" id="p_status" class="form-control">
-                            <option value="published" <?php echo ($product['status'] === 'published') ? 'selected' : ''; ?>>Published</option>
-                            <option value="draft" <?php echo ($product['status'] === 'draft') ? 'selected' : ''; ?>>Draft</option>
+                        <label for="p_status">Visibility Status</label>
+                        <select name="status" id="p_status" class="form-control" style="width: 100%; font-weight: 500;">
+                            <option value="published" <?php echo ($product['status'] === 'published') ? 'selected' : ''; ?>>Published (Live in Store)</option>
+                            <option value="draft" <?php echo ($product['status'] === 'draft') ? 'selected' : ''; ?>>Draft (Hidden)</option>
                         </select>
                     </div>
 
-                    <div class="form-group" style="margin: 15px 0;">
-                        <label style="display: flex; align-items: center; cursor: pointer; font-weight: normal;">
-                            <input type="checkbox" name="is_featured" value="1" style="margin-right: 8px;" <?php echo ($product['is_featured'] == 1) ? 'checked' : ''; ?>>
-                            <strong>Feature this product</strong>
+                    <div class="form-group" style="margin: 16px 0; background: #fafafa; padding: 12px; border-radius: 6px; border: 1px solid #e4e4e7;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0; font-size: 13px;">
+                            <input type="checkbox" name="is_featured" value="1" style="width: 16px; height: 16px; accent-color: #09090b;" <?php echo ($product['is_featured'] == 1) ? 'checked' : ''; ?>>
+                            <span style="font-weight: 600; color: #09090b;">
+                                <i class="fa-solid fa-star" style="color: #71717a; margin-right: 4px;"></i> Feature this product
+                            </span>
                         </label>
-                        <p style="font-size: 11px; color: #646970; margin-top: 4px;">Featured products show up in highlighted homepage widgets.</p>
+                        <p style="font-size: 11px; color: #71717a; margin: 6px 0 0 24px; line-height: 1.3;">
+                            Featured products appear on homepage showcases.
+                        </p>
                     </div>
 
-                    <div style="border-top: 1px solid var(--wp-border); padding-top: 15px; display: flex; justify-content: space-between; gap: 10px;">
-                        <a href="products.php?delete=<?php echo $product['id']; ?>" class="button button-danger delete-confirm" data-name="<?php echo sanitize_html($product['name']); ?>" style="padding: 6px 12px; font-size: 12.5px;">
+                    <div style="border-top: 1px solid #e4e4e7; padding-top: 16px; display: flex; justify-content: space-between; gap: 10px;">
+                        <a href="products.php?delete=<?php echo $product['id']; ?>" class="shadcn-btn shadcn-btn-danger delete-confirm" data-name="<?php echo sanitize_html($product['name']); ?>" style="padding: 0 12px; height: 38px;" title="Delete this product">
                             <i class="fa-solid fa-trash-can"></i> Delete
                         </a>
-                        <button type="submit" class="button button-primary" style="flex: 1; font-size: 12.5px;">
+                        <button type="submit" class="shadcn-btn shadcn-btn-primary" style="flex: 1; height: 38px;">
                             <i class="fa-solid fa-check"></i> Update Product
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- Categories -->
-            <div class="postbox">
-                <div class="postbox-header">
-                    <h2>Product Categories</h2>
+            <!-- Categories Card -->
+            <div class="shadcn-card" style="margin-bottom: 24px;">
+                <div class="shadcn-card-header">
+                    <h2 class="shadcn-card-title">
+                        <i class="fa-solid fa-folder-tree" style="color: #71717a;"></i>
+                        Categories
+                    </h2>
                 </div>
-                <div class="postbox-body">
-                    <div class="category-checklist-container" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--wp-border); padding: 12px; background: #fff; border-radius: 4px; margin-bottom: 10px;">
+                <div class="shadcn-card-padded">
+                    <div class="category-checklist-container" style="max-height: 240px; overflow-y: auto; border: 1px solid #e4e4e7; padding: 12px; background: #fafafa; border-radius: 6px; margin-bottom: 12px;">
                         <?php if (empty($categories)): ?>
-                            <p style="color: #646970; font-size: 13px; margin: 0;">No categories created yet. <a href="categories.php">Create categories</a>.</p>
+                            <p style="color: #71717a; font-size: 12.5px; margin: 0;">No categories created yet. <a href="categories.php">Create categories</a>.</p>
                         <?php else: ?>
                             <?php foreach ($categories as $cat): ?>
-                                <div class="category-checklist-item" style="margin-left: <?php echo (isset($cat['depth']) ? $cat['depth'] * 15 : 0); ?>px; margin-bottom: 6px;">
-                                    <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--wp-text-dark); cursor: pointer;">
-                                        <input type="checkbox" name="category_ids[]" id="cat_check_<?php echo $cat['id']; ?>" value="<?php echo $cat['id']; ?>" <?php echo in_array($cat['id'], $product_categories) ? 'checked' : ''; ?>>
-                                        <?php echo sanitize_html($cat['name']); ?>
+                                <div class="category-checklist-item" style="margin-left: <?php echo (isset($cat['depth']) ? $cat['depth'] * 14 : 0); ?>px; margin-bottom: 8px;">
+                                    <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #09090b; cursor: pointer;">
+                                        <input type="checkbox" name="category_ids[]" id="cat_check_<?php echo $cat['id']; ?>" value="<?php echo $cat['id']; ?>" <?php echo in_array($cat['id'], $product_categories) ? 'checked' : ''; ?> style="width: 15px; height: 15px; accent-color: #09090b;">
+                                        <span style="text-transform: capitalize;"><?php echo sanitize_html($cat['name']); ?></span>
                                     </label>
                                 </div>
                             <?php endforeach; ?>
                         <?php endif; ?>
                     </div>
                     <div>
-                        <a href="categories.php" style="text-decoration: none; font-size: 13px;"><i class="fa-solid fa-plus"></i> Add new category</a>
+                        <a href="categories.php" target="_blank" style="text-decoration: none; font-size: 12.5px; color: #09090b; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-plus" style="font-size: 11px;"></i> Manage Categories
+                        </a>
                     </div>
                 </div>
             </div>
 
-            <!-- Featured Image -->
-            <div class="postbox">
-                <div class="postbox-header">
-                    <h2>Main Product Image</h2>
+            <!-- Main Product Image Card -->
+            <div class="shadcn-card">
+                <div class="shadcn-card-header">
+                    <h2 class="shadcn-card-title">
+                        <i class="fa-regular fa-image" style="color: #71717a;"></i>
+                        Main Product Image
+                    </h2>
                 </div>
-                <div class="postbox-body">
-                    <div class="main-image-preview-container" style="text-align: center; margin-bottom: 12px;">
+                <div class="shadcn-card-padded">
+                    <div class="main-image-preview-container" style="text-align: center; margin-bottom: 14px;">
                         <?php if ($product['main_image']): ?>
-                            <img id="main_image_preview" src="<?php echo sanitize_html($product['main_image']); ?>" data-img-path="<?php echo sanitize_html($product['main_image']); ?>" alt="Main Image" style="max-width: 100%; max-height: 220px; border-radius: 4px; border: 1px solid var(--wp-border); object-fit: contain;">
+                            <img id="main_image_preview" src="<?php echo sanitize_html(get_product_image_url($product['main_image'])); ?>" data-img-path="<?php echo sanitize_html($product['main_image']); ?>" alt="Main Image" style="max-width: 100%; height: 220px; border-radius: 6px; border: 1px solid #e4e4e7; object-fit: contain; margin: 0 auto;">
                             <div id="main_image_placeholder" style="display: none;"></div>
                         <?php else: ?>
-                            <img id="main_image_preview" src="" data-img-path="" alt="Main Image Preview" style="display: none; max-width: 100%; max-height: 220px; border-radius: 4px; border: 1px solid var(--wp-border); object-fit: contain;">
-                            <div id="main_image_placeholder" style="color: #8c8f94; padding: 20px 0;">
-                                <i class="fa-regular fa-image" style="font-size: 40px; margin-bottom: 8px;"></i>
-                                <p>No product image set</p>
+                            <img id="main_image_preview" src="" data-img-path="" alt="Main Image Preview" style="display: none; max-width: 100%; height: 220px; border-radius: 6px; border: 1px solid #e4e4e7; object-fit: contain; margin: 0 auto;">
+                            <div id="main_image_placeholder" style="background: #fafafa; border: 1px dashed #e4e4e7; border-radius: 8px; padding: 32px 16px; color: #71717a;">
+                                <i class="fa-regular fa-image" style="font-size: 36px; margin-bottom: 8px; color: #a1a1aa; display: block;"></i>
+                                <span style="font-size: 12.5px;">No product image set</span>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -757,10 +812,10 @@ try {
 
                     <!-- 2 Replacement Options -->
                     <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <button type="button" class="button" onclick="openSelectMainImageModal()" style="width: 100%; justify-content: center; font-size: 12px; height: 32px;">
-                            <i class="fa-solid fa-images" style="color: var(--wp-blue);"></i> Replace from Available Images
+                        <button type="button" class="shadcn-btn shadcn-btn-outline" onclick="openSelectMainImageModal()" style="width: 100%; justify-content: center; font-size: 12px; height: 34px;">
+                            <i class="fa-solid fa-images" style="color: #71717a;"></i> Replace from Available Images
                         </button>
-                        <label class="button button-primary" style="width: 100%; text-align: center; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; height: 32px; margin: 0;">
+                        <label class="shadcn-btn shadcn-btn-primary" style="width: 100%; text-align: center; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; height: 34px; margin: 0;">
                             <i class="fa-solid fa-cloud-arrow-up"></i> Replace with New File
                             <input type="file" name="main_image" id="main_image_input" accept="image/*" style="display: none;" onchange="previewNewMainImage(this)">
                         </label>
@@ -820,36 +875,8 @@ function undoGalleryImageDeletion(imageId) {
 }
 </script>
 
-<!-- Sync Confirmation Modal -->
+<!-- Sync Confirmation Modal Styles -->
 <style>
-.wp-editor-columns {
-    display: flex;
-    gap: 20px;
-    align-items: flex-start;
-    width: 100%;
-}
-.main-column {
-    flex: 1 1 0%;
-    min-width: 0;
-}
-.side-column {
-    width: 280px;
-    min-width: 280px;
-    max-width: 280px;
-    flex: 0 0 280px;
-}
-@media (max-width: 991px) {
-    .wp-editor-columns {
-        flex-direction: column;
-    }
-    .side-column {
-        width: 100% !important;
-        min-width: 100% !important;
-        max-width: 100% !important;
-        flex: 1 1 auto !important;
-    }
-}
-
 .ai-radio-hidden {
     position: absolute;
     opacity: 0;
@@ -858,121 +885,124 @@ function undoGalleryImageDeletion(imageId) {
     pointer-events: none;
 }
 .ai-radio-hidden:checked + .ai-model-box {
-    border-color: #2271b1 !important;
-    box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.3);
+    border-color: #09090b !important;
+    box-shadow: 0 0 0 2px rgba(9, 9, 11, 0.3);
 }
 .ai-bg-pill {
-    padding: 4px 10px;
-    background: #f6f7f7;
-    border: 1px solid var(--wp-border);
-    border-radius: 4px;
-    font-size: 11px;
-    color: var(--wp-text-dark);
+    padding: 5px 12px;
+    background: #f4f4f5;
+    border: 1px solid #e4e4e7;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: #18181b;
     cursor: pointer;
     transition: all 0.15s ease;
 }
 .ai-bg-pill:hover {
-    background: #f0f0f1;
-    border-color: #8c8f94;
+    background: #e4e4e7;
+    color: #09090b;
 }
 .ai-radio-hidden:checked + .ai-bg-pill {
-    background: #2271b1;
-    color: #fff;
-    border-color: #135e96;
+    background: #09090b;
+    color: #ffffff;
+    border-color: #09090b;
 }
 
 .sync-modal-overlay {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(9, 9, 11, 0.65);
     z-index: 99999;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 20px;
-    backdrop-filter: blur(3px);
+    backdrop-filter: blur(4px);
 }
 .sync-modal-dialog {
-    background: #fff;
+    background: #ffffff;
     border-radius: 8px;
     width: 100%;
     max-width: 920px;
     max-height: 90vh;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    border: 1px solid #e4e4e7;
     overflow: hidden;
 }
 .sync-modal-header {
-    padding: 16px 24px;
-    background: #1d2327;
-    color: #fff;
+    padding: 16px 20px;
+    background: #09090b;
+    color: #ffffff;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 .sync-modal-header h3 {
     margin: 0;
-    font-size: 16px;
-    color: #c8a55c;
+    font-size: 14px;
+    color: #ffffff;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     font-weight: 600;
 }
 .sync-modal-close {
     background: none;
     border: none;
-    color: #a7aaad;
-    font-size: 24px;
+    color: #a1a1aa;
+    font-size: 20px;
     cursor: pointer;
     line-height: 1;
 }
-.sync-modal-close:hover { color: #fff; }
+.sync-modal-close:hover { color: #ffffff; }
 .sync-modal-body {
-    padding: 24px;
+    padding: 20px;
     overflow-y: auto;
     flex: 1;
 }
 .sync-modal-footer {
-    padding: 14px 24px;
-    background: #f6f7f7;
-    border-top: 1px solid #dcdcde;
+    padding: 14px 20px;
+    background: #fafafa;
+    border-top: 1px solid #e4e4e7;
     display: flex;
     justify-content: flex-end;
-    gap: 12px;
+    gap: 10px;
 }
 .sync-compare-table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 12px;
     font-size: 13px;
+    border: 1px solid #e4e4e7;
 }
 .sync-compare-table th {
-    background: #f0f0f1;
+    background: #fafafa;
     padding: 10px 12px;
-    border: 1px solid #c3c4c7;
+    border: 1px solid #e4e4e7;
     text-align: left;
     font-weight: 600;
-    color: #1d2327;
+    color: #09090b;
 }
 .sync-compare-table td {
     padding: 12px;
-    border: 1px solid #dcdcde;
+    border: 1px solid #e4e4e7;
     vertical-align: top;
 }
-.sync-val-old { color: #d63638; font-weight: 500; }
-.sync-val-new { color: #008a20; font-weight: 600; }
+.sync-val-old { color: #71717a; font-weight: 500; }
+.sync-val-new { color: #09090b; font-weight: 600; }
 .sync-text-box {
     max-height: 140px;
     overflow-y: auto;
     white-space: pre-wrap;
-    background: #f6f7f7;
+    background: #fafafa;
     padding: 10px;
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 12px;
     line-height: 1.5;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #e4e4e7;
 }
 .sync-img-grid {
     display: flex;
@@ -983,37 +1013,36 @@ function undoGalleryImageDeletion(imageId) {
     width: 64px;
     height: 64px;
     object-fit: cover;
-    border-radius: 4px;
-    border: 1px solid #dcdcde;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-radius: 6px;
+    border: 1px solid #e4e4e7;
 }
 </style>
 
 <div id="sync_api_modal" class="sync-modal-overlay" style="display: none;">
     <div class="sync-modal-dialog">
         <div class="sync-modal-header">
-            <h3><i class="fa-solid fa-cloud-arrow-down"></i> Sync Details from SriShringarr API</h3>
+            <h3><i class="fa-solid fa-arrows-rotate"></i> Sync Details from SriShringarr API</h3>
             <button type="button" class="sync-modal-close" onclick="closeSyncModal()">&times;</button>
         </div>
         
         <div class="sync-modal-body" id="sync_modal_body">
             <!-- Loading State -->
             <div id="sync_loading_state" style="text-align: center; padding: 40px;">
-                <i class="fa-solid fa-spinner fa-spin" style="font-size: 36px; color: #8b2e3b; margin-bottom: 15px;"></i>
-                <p style="font-size: 14px; color: #50575e; margin: 0;">Fetching details from SriShringarr API for SKU: <strong id="sync_sku_label"></strong>...</p>
+                <i class="fa-solid fa-spinner fa-spin" style="font-size: 36px; color: #09090b; margin-bottom: 15px;"></i>
+                <p style="font-size: 13.5px; color: #71717a; margin: 0;">Fetching details from SriShringarr API for SKU: <strong id="sync_sku_label" style="color: #09090b;"></strong>...</p>
             </div>
 
             <!-- Content Comparison State -->
             <div id="sync_content_state" style="display: none;">
-                <div style="background: #e8f0fe; border: 1px solid #aecbfa; border-radius: 6px; padding: 12px 16px; margin-bottom: 16px; font-size: 13px; color: #1a73e8; display: flex; align-items: center; gap: 10px;">
-                    <i class="fa-solid fa-circle-info" style="font-size: 16px;"></i>
-                    <span>Review the fetched external details below. Select the checkboxes for fields you wish to update in your database, then click <strong>Confirm & Update Product</strong>.</span>
+                <div style="background: #fafafa; border: 1px solid #e4e4e7; border-radius: 6px; padding: 12px 16px; margin-bottom: 16px; font-size: 12.5px; color: #09090b; display: flex; align-items: center; gap: 10px;">
+                    <i class="fa-solid fa-circle-info" style="font-size: 16px; color: #71717a;"></i>
+                    <span>Review the fetched external details below. Select the checkboxes for fields you wish to update in your database, then click <strong>Confirm &amp; Update Product</strong>.</span>
                 </div>
 
                 <table class="sync-compare-table">
                     <thead>
                         <tr>
-                            <th style="width: 40px; text-align: center;"><input type="checkbox" id="sync_check_all" checked onclick="toggleAllSyncChecks(this)" title="Select / Deselect All"></th>
+                            <th style="width: 40px; text-align: center;"><input type="checkbox" id="sync_check_all" checked onclick="toggleAllSyncChecks(this)" title="Select / Deselect All" style="accent-color: #09090b;"></th>
                             <th style="width: 130px;">Field</th>
                             <th style="width: 40%;">Current Local Data</th>
                             <th style="width: 50%;">Fetched API Data</th>
@@ -1023,7 +1052,7 @@ function undoGalleryImageDeletion(imageId) {
                         <!-- Product Name -->
                         <tr>
                             <td style="text-align: center;">
-                                <input type="checkbox" id="chk_sync_name" class="sync-field-check" checked>
+                                <input type="checkbox" id="chk_sync_name" class="sync-field-check" checked style="accent-color: #09090b;">
                             </td>
                             <td><strong>Product Name</strong></td>
                             <td><span id="sync_local_name" class="sync-val-old"></span></td>
@@ -1033,7 +1062,7 @@ function undoGalleryImageDeletion(imageId) {
                         <!-- Description -->
                         <tr>
                             <td style="text-align: center;">
-                                <input type="checkbox" id="chk_sync_desc" class="sync-field-check" checked>
+                                <input type="checkbox" id="chk_sync_desc" class="sync-field-check" checked style="accent-color: #09090b;">
                             </td>
                             <td><strong>Description</strong></td>
                             <td><div id="sync_local_desc" class="sync-val-old sync-text-box"></div></td>
@@ -1043,7 +1072,7 @@ function undoGalleryImageDeletion(imageId) {
                         <!-- Stock Quantity / Inventory -->
                         <tr>
                             <td style="text-align: center;">
-                                <input type="checkbox" id="chk_sync_stock" class="sync-field-check" checked>
+                                <input type="checkbox" id="chk_sync_stock" class="sync-field-check" checked style="accent-color: #09090b;">
                             </td>
                             <td><strong>Stock Quantity (Inventory)</strong></td>
                             <td><span id="sync_local_stock" class="sync-val-old"></span></td>
@@ -1053,9 +1082,9 @@ function undoGalleryImageDeletion(imageId) {
                         <!-- Images -->
                         <tr>
                             <td style="text-align: center;">
-                                <input type="checkbox" id="chk_sync_images" class="sync-field-check" checked>
+                                <input type="checkbox" id="chk_sync_images" class="sync-field-check" checked style="accent-color: #09090b;">
                             </td>
-                            <td><strong>Images & Gallery</strong></td>
+                            <td><strong>Images &amp; Gallery</strong></td>
                             <td>
                                 <div id="sync_local_images_preview" class="sync-img-grid"></div>
                             </td>
@@ -1068,23 +1097,23 @@ function undoGalleryImageDeletion(imageId) {
             </div>
 
             <!-- Error State -->
-            <div id="sync_error_state" style="display: none; padding: 30px; text-align: center; color: var(--wp-error-red);">
+            <div id="sync_error_state" style="display: none; padding: 30px; text-align: center; color: #ef4444;">
                 <i class="fa-solid fa-triangle-exclamation" style="font-size: 36px; margin-bottom: 12px;"></i>
                 <p id="sync_error_msg" style="font-weight: 600; font-size: 14px; margin: 0;"></p>
             </div>
 
             <!-- Applying Progress State -->
             <div id="sync_applying_state" style="display: none; text-align: center; padding: 40px;">
-                <i class="fa-solid fa-cloud-arrow-down fa-bounce" style="font-size: 40px; color: #8b2e3b; margin-bottom: 15px;"></i>
-                <p style="font-size: 15px; font-weight: bold; color: #1d2327; margin-bottom: 6px;">Updating Product & Downloading High-Res Images...</p>
-                <p style="font-size: 12px; color: #646970; margin: 0;">Please wait, downloading images from SriShringarr server into local product directory...</p>
+                <i class="fa-solid fa-cloud-arrow-down fa-bounce" style="font-size: 40px; color: #09090b; margin-bottom: 15px;"></i>
+                <p style="font-size: 14px; font-weight: 600; color: #09090b; margin-bottom: 6px;">Updating Product &amp; Downloading Images...</p>
+                <p style="font-size: 12px; color: #71717a; margin: 0;">Please wait, downloading images into local product directory...</p>
             </div>
         </div>
 
         <div class="sync-modal-footer">
-            <button type="button" class="button" onclick="closeSyncModal()">Cancel</button>
-            <button type="button" class="button button-primary" id="btn_confirm_sync" style="background-color: #8b2e3b; border-color: #72242e;" onclick="executeSyncApply()">
-                <i class="fa-solid fa-check"></i> Confirm & Update Product
+            <button type="button" class="shadcn-btn shadcn-btn-outline" onclick="closeSyncModal()">Cancel</button>
+            <button type="button" class="shadcn-btn shadcn-btn-primary" id="btn_confirm_sync" onclick="executeSyncApply()">
+                <i class="fa-solid fa-check"></i> Confirm &amp; Update Product
             </button>
         </div>
     </div>
@@ -1092,17 +1121,17 @@ function undoGalleryImageDeletion(imageId) {
 
 <!-- Modal: Select Main Image from Available Images -->
 <div id="selectMainImageModal" class="sync-modal-overlay" style="display: none;">
-    <div class="sync-modal-dialog" style="max-width: 600px; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid var(--wp-border); color: var(--wp-text-dark);">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--wp-border); padding-bottom: 12px; margin-bottom: 15px;">
-            <h3 style="margin: 0; font-size: 15px; font-weight: 600; color: var(--wp-text-dark); display: flex; align-items: center; gap: 8px;">
-                <i class="fa-solid fa-images" style="color: var(--wp-blue);"></i> Select Main Product Image
+    <div class="sync-modal-dialog" style="max-width: 600px; padding: 20px; background: #ffffff; border-radius: 8px; border: 1px solid #e4e4e7;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e4e4e7; padding-bottom: 12px; margin-bottom: 15px;">
+            <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #09090b; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-images" style="color: #71717a;"></i> Select Main Product Image
             </h3>
-            <button type="button" onclick="closeSelectMainImageModal()" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #646970;">
+            <button type="button" onclick="closeSelectMainImageModal()" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #71717a;">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
 
-        <p style="font-size: 12px; color: #50575e; margin-bottom: 12px;">Click any image below to set it as the primary product image:</p>
+        <p style="font-size: 12.5px; color: #71717a; margin-bottom: 12px;">Click any image below to set it as the primary product image:</p>
 
         <div id="available_images_grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; max-height: 320px; overflow-y: auto; padding: 4px;">
             <?php
@@ -1119,18 +1148,18 @@ function undoGalleryImageDeletion(imageId) {
             }
             foreach ($all_available_imgs as $aidx => $aimg):
             ?>
-            <div class="available-img-card" onclick="chooseMainImage('<?php echo sanitize_html($aimg['path']); ?>', this)" style="position: relative; aspect-ratio: 1/1; border: 2px solid var(--wp-border); border-radius: 4px; overflow: hidden; cursor: pointer; transition: all 0.15s ease;">
+            <div class="available-img-card" onclick="chooseMainImage('<?php echo sanitize_html($aimg['path']); ?>', this)" style="position: relative; aspect-ratio: 1/1; border: 2px solid #e4e4e7; border-radius: 6px; overflow: hidden; cursor: pointer; transition: all 0.15s ease;">
                 <img src="<?php echo sanitize_html($aimg['thumb'] ?: $aimg['path']); ?>" style="width: 100%; height: 100%; object-fit: cover;">
                 <?php if (!empty($aimg['is_main'])): ?>
-                    <span style="position: absolute; top: 4px; left: 4px; background: #2271b1; color: #fff; font-size: 9px; font-weight: 700; padding: 2px 5px; border-radius: 3px;">CURRENT MAIN</span>
+                    <span style="position: absolute; top: 4px; left: 4px; background: #09090b; color: #ffffff; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px;">CURRENT MAIN</span>
                 <?php endif; ?>
             </div>
             <?php endforeach; ?>
         </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; border-top: 1px solid var(--wp-border); padding-top: 12px;">
-            <button type="button" class="button" onclick="closeSelectMainImageModal()">Cancel</button>
-            <button type="button" id="confirmMainImgBtn" class="button button-primary" onclick="confirmSelectedMainImage()" disabled>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; border-top: 1px solid #e4e4e7; padding-top: 12px;">
+            <button type="button" class="shadcn-btn shadcn-btn-outline" onclick="closeSelectMainImageModal()">Cancel</button>
+            <button type="button" id="confirmMainImgBtn" class="shadcn-btn shadcn-btn-primary" onclick="confirmSelectedMainImage()" disabled>
                 <i class="fa-solid fa-check"></i> Set as Main Image
             </button>
         </div>
@@ -1168,9 +1197,9 @@ function renderAvailableImagesModal() {
         }
         let displaySrc = mainImgEl ? mainImgEl.src : currentMainPath;
         html += `
-            <div class="available-img-card" onclick="chooseMainImage('${cleanMain}', this)" style="position: relative; aspect-ratio: 1/1; border: 2px solid var(--wp-border); border-radius: 4px; overflow: hidden; cursor: pointer; transition: all 0.15s ease;">
+            <div class="available-img-card" onclick="chooseMainImage('${cleanMain}', this)" style="position: relative; aspect-ratio: 1/1; border: 2px solid #e4e4e7; border-radius: 6px; overflow: hidden; cursor: pointer; transition: all 0.15s ease;">
                 <img src="${displaySrc}" style="width: 100%; height: 100%; object-fit: cover;">
-                <span style="position: absolute; top: 4px; left: 4px; background: #2271b1; color: #fff; font-size: 9px; font-weight: 700; padding: 2px 5px; border-radius: 3px;">CURRENT MAIN</span>
+                <span style="position: absolute; top: 4px; left: 4px; background: #09090b; color: #ffffff; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px;">CURRENT MAIN</span>
             </div>
         `;
     }
@@ -1184,7 +1213,7 @@ function renderAvailableImagesModal() {
 
         if (imgPath && imgPath !== currentMainPath) {
             html += `
-                <div class="available-img-card" onclick="chooseMainImage('${imgPath}', this)" style="position: relative; aspect-ratio: 1/1; border: 2px solid var(--wp-border); border-radius: 4px; overflow: hidden; cursor: pointer; transition: all 0.15s ease;">
+                <div class="available-img-card" onclick="chooseMainImage('${imgPath}', this)" style="position: relative; aspect-ratio: 1/1; border: 2px solid #e4e4e7; border-radius: 6px; overflow: hidden; cursor: pointer; transition: all 0.15s ease;">
                     <img src="${imgSrc}" style="width: 100%; height: 100%; object-fit: cover;">
                 </div>
             `;
@@ -1199,11 +1228,11 @@ function renderAvailableImagesModal() {
 function chooseMainImage(imgPath, cardEl) {
     pendingMainImagePath = imgPath;
     document.querySelectorAll('.available-img-card').forEach(c => {
-        c.style.borderColor = 'var(--wp-border)';
+        c.style.borderColor = '#e4e4e7';
         c.style.boxShadow = 'none';
     });
-    cardEl.style.borderColor = '#2271b1';
-    cardEl.style.boxShadow = '0 0 0 2px rgba(34, 113, 177, 0.4)';
+    cardEl.style.borderColor = '#09090b';
+    cardEl.style.boxShadow = '0 0 0 2px rgba(9, 9, 11, 0.3)';
     document.getElementById('confirmMainImgBtn').disabled = false;
 }
 
@@ -1286,7 +1315,7 @@ function openSyncModal() {
     const sku = skuInput ? skuInput.value.trim() : '<?php echo sanitize_html($product['sku']); ?>';
     
     if (!sku) {
-        alert('Please enter a Product SKU first.');
+        toast.warning('SKU Required', 'Please enter a Product SKU first.');
         return;
     }
 
@@ -1382,7 +1411,7 @@ function executeSyncApply() {
     const syncImages = document.getElementById('chk_sync_images').checked;
 
     if (!syncName && !syncDesc && !syncStock && !syncImages) {
-        alert('Please select at least one field to sync.');
+        toast.warning('Selection Required', 'Please select at least one field to sync.');
         return;
     }
 
@@ -1445,18 +1474,18 @@ async function aiGenerateNames() {
         const data = await response.json();
         if (data.success && data.names) {
             document.getElementById('aiNamesList').innerHTML = data.names.map(name => `
-                <button type="button" onclick="applyProductName('${name.replace(/'/g, "\\'")}')" class="button button-small" style="width: 100%; text-align: left; background: #ffffff; color: var(--wp-text-dark); border-color: #c3c4c7; font-size: 11px; padding: 4px 8px; display: flex; justify-content: space-between; align-items: center;">
+                <button type="button" onclick="applyProductName('${name.replace(/'/g, "\\'")}')" class="shadcn-btn shadcn-btn-outline" style="width: 100%; text-align: left; justify-content: space-between; font-size: 11.5px; height: auto; padding: 6px 10px;">
                     <span style="white-space: normal; line-height: 1.3;">${name}</span>
-                    <i class="fa-solid fa-check" style="font-size: 10px; color: var(--wp-blue); flex-shrink: 0; margin-left: 6px;"></i>
+                    <i class="fa-solid fa-check" style="font-size: 10px; color: #71717a; flex-shrink: 0; margin-left: 6px;"></i>
                 </button>
             `).join('');
             document.getElementById('aiNamesResult').style.display = 'block';
         } else {
-            alert('Error: ' + (data.error || 'Failed to generate names'));
+            toast.error('Name Generation Failed', data.error || 'Failed to generate names');
         }
     } catch (err) {
         console.error(err);
-        alert('A network error occurred while generating product names.');
+        toast.error('Network Error', 'A network error occurred while generating product names.');
     } finally {
         btn.disabled = false;
         hideEl('aiLoading');
@@ -1469,8 +1498,9 @@ function applyProductName(newName) {
         nameInput.value = newName;
         nameInput.focus();
         nameInput.style.transition = 'all 0.3s ease';
-        nameInput.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.4)';
+        nameInput.style.boxShadow = '0 0 0 3px rgba(9, 9, 11, 0.2)';
         setTimeout(() => { nameInput.style.boxShadow = ''; }, 1000);
+        toast.success('Name Applied', 'Product name has been updated.');
     }
 }
 
@@ -1487,16 +1517,57 @@ async function aiGenerateDescription() {
         if (data.success && data.description) {
             document.getElementById('aiDescTextarea').value = data.description;
             document.getElementById('aiDescResult').style.display = 'block';
+            toast.success('Description Generated', 'Review the preview below and click apply.');
         } else {
-            alert('Error: ' + (data.error || 'Failed to generate description'));
+            toast.error('Description Failed', data.error || 'Failed to generate description');
         }
     } catch (err) {
         console.error(err);
-        alert('A network error occurred while generating description.');
+        toast.error('Network Error', 'A network error occurred while generating description.');
     } finally {
         btn.disabled = false;
         hideEl('aiLoading');
     }
+}
+
+function updateTextareaCounter(textarea, counterId) {
+    const counter = document.getElementById(counterId);
+    if (!counter || !textarea) return;
+    const val = textarea.value || '';
+    const trimmed = val.trim();
+    const words = trimmed ? trimmed.split(/\s+/).length : 0;
+    const chars = val.length;
+    counter.textContent = `${words} words • ${chars} chars`;
+}
+
+function autoResizeTextarea(textarea) {
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    const newHeight = Math.max(textarea.scrollHeight + 2, 70);
+    textarea.style.height = newHeight + 'px';
+}
+
+function initAutoExpandTextareas() {
+    const configs = [
+        { id: 'p_desc', counterId: 'desc_length_counter' },
+        { id: 'p_short_desc', counterId: 'short_desc_length_counter' }
+    ];
+
+    configs.forEach(({ id, counterId }) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+
+        const update = () => {
+            autoResizeTextarea(el);
+            updateTextareaCounter(el, counterId);
+        };
+
+        el.addEventListener('input', update);
+        el.addEventListener('change', update);
+        el.addEventListener('keyup', update);
+
+        update();
+    });
 }
 
 function applyAiDescription() {
@@ -1504,10 +1575,48 @@ function applyAiDescription() {
     const descInput = document.getElementById('p_desc');
     if (descInput && val) {
         descInput.value = val;
+        descInput.dispatchEvent(new Event('input', { bubbles: true }));
         descInput.focus();
         descInput.style.transition = 'all 0.3s ease';
-        descInput.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.4)';
+        descInput.style.boxShadow = '0 0 0 3px rgba(9, 9, 11, 0.2)';
         setTimeout(() => { descInput.style.boxShadow = ''; }, 1000);
+        toast.success('Description Applied', 'Detailed description field updated.');
+    }
+}
+
+async function aiGenerateShortDescription() {
+    const btn = document.getElementById('aiShortDescBtn');
+    const loading = document.getElementById('aiShortDescLoading');
+    const shortDescInput = document.getElementById('p_short_desc');
+    const maxWords = document.getElementById('aiShortDescMaxWords')?.value || 50;
+    if (!btn || !shortDescInput) return;
+
+    btn.disabled = true;
+    const origHTML = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
+    if (loading) loading.style.display = 'flex';
+
+    try {
+        const response = await fetch(`api/ai_product_api.php?action=ai_suggest_short_description&product_id=${currentProductId}&max_words=${maxWords}`);
+        const data = await response.json();
+        if (data.success && data.short_description) {
+            shortDescInput.value = data.short_description;
+            shortDescInput.dispatchEvent(new Event('input', { bubbles: true }));
+            shortDescInput.focus();
+            shortDescInput.style.transition = 'all 0.3s ease';
+            shortDescInput.style.boxShadow = '0 0 0 3px rgba(9, 9, 11, 0.2)';
+            setTimeout(() => { shortDescInput.style.boxShadow = ''; }, 1000);
+            toast.success('Short Description Generated', 'Short description and highlights have been updated.');
+        } else {
+            toast.error('Short Description Failed', data.error || 'Failed to generate short description');
+        }
+    } catch (err) {
+        console.error(err);
+        toast.error('Network Error', 'A network error occurred while generating short description.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = origHTML;
+        if (loading) loading.style.display = 'none';
     }
 }
 
@@ -1540,6 +1649,8 @@ function updateFinalPrompt() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    initAutoExpandTextareas();
+
     document.querySelectorAll('input[name="ai_model_face"], input[name="ai_bg_preset"], input[name="ai_shot_type"], input[name="ai_hair_style"]').forEach(input => {
         input.addEventListener('change', updateFinalPrompt);
     });
@@ -1573,6 +1684,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+window.addEventListener('load', () => {
+    setTimeout(initAutoExpandTextareas, 80);
+});
+
+window.addEventListener('resize', () => {
+    autoResizeTextarea(document.getElementById('p_desc'));
+    autoResizeTextarea(document.getElementById('p_short_desc'));
+});
+
+
 async function aiGenerateAdvancedImage() {
     const btn = document.getElementById('aiImageBtn');
     const faceInput = document.querySelector('input[name="ai_model_face"]:checked')?.value || '';
@@ -1601,21 +1722,22 @@ async function aiGenerateAdvancedImage() {
             const grid = document.getElementById('aiImageGrid');
             data.images_base64.forEach((b64, index) => {
                 grid.innerHTML += `
-                    <div style="display: flex; flex-direction: column; gap: 8px; background: #ffffff; border: 1px solid var(--wp-border); padding: 8px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                    <div style="display: flex; flex-direction: column; gap: 8px; background: #ffffff; border: 1px solid #e4e4e7; padding: 8px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
                         <img src="data:image/jpeg;base64,${b64}" style="width: 100%; aspect-ratio: 2/3; object-fit: cover; border-radius: 4px;">
-                        <button type="button" onclick="saveAiGeneratedImage(this, '${b64}')" class="button button-primary" style="width: 100%; justify-content: center; padding: 6px; font-size: 11px; background: #008a20; border-color: #00701a;">
+                        <button type="button" onclick="saveAiGeneratedImage(this, '${b64}')" class="shadcn-btn shadcn-btn-primary" style="width: 100%; justify-content: center; padding: 6px; font-size: 11px;">
                             <i class="fa-solid fa-floppy-disk"></i> Save Image ${index + 1}
                         </button>
                     </div>
                 `;
             });
             document.getElementById('aiImageResult').style.display = 'block';
+            toast.success('Images Generated', 'Review the generated photos and save them to the gallery.');
         } else {
-            alert('Error: ' + (data.error || 'Failed to generate model images'));
+            toast.error('Image Generation Failed', data.error || 'Failed to generate model images');
         }
     } catch (err) {
         console.error(err);
-        alert('A network error occurred while generating images.');
+        toast.error('Network Error', 'A network error occurred while generating images.');
     } finally {
         btn.disabled = false;
         hideEl('aiImageLoading');
@@ -1644,6 +1766,7 @@ async function saveAiGeneratedImage(btn, base64Str) {
         if (data.success && data.path) {
             btn.innerHTML = '<i class="fa-solid fa-check"></i> Saved!';
             btn.style.background = '#059669';
+            toast.success('Image Saved', 'AI model image was saved to the product gallery.');
 
             // Dynamically append into product gallery list!
             const galGrid = document.querySelector('.gallery-grid') || document.getElementById('gallery_preview_grid');
@@ -1660,13 +1783,13 @@ async function saveAiGeneratedImage(btn, base64Str) {
                 galGrid.appendChild(newItem);
             }
         } else {
-            alert('Error saving image: ' + (data.error || 'Unknown error'));
+            toast.error('Save Failed', data.error || 'Unknown error');
             btn.innerHTML = origHTML;
             btn.disabled = false;
         }
     } catch (err) {
         console.error(err);
-        alert('Network error while saving AI image.');
+        toast.error('Network Error', 'Network error while saving AI image.');
         btn.innerHTML = origHTML;
         btn.disabled = false;
     }

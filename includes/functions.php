@@ -20,6 +20,37 @@ if (!is_dir(THUMB_DIR)) {
     mkdir(THUMB_DIR, 0755, true);
 }
 
+// Remote Server Image Base URL
+define('PRODUCT_IMAGE_BASE_URL', 'https://yosshitaneha.com/admin/');
+
+/**
+ * Resolves product image URL:
+ * Returns local relative path if the file exists on the local machine;
+ * otherwise falls back to the server base URL: https://yosshitaneha.com/admin/
+ */
+function get_product_image_url($imagePath) {
+    if (empty($imagePath)) {
+        return '';
+    }
+    if (str_starts_with($imagePath, 'http://') || str_starts_with($imagePath, 'https://')) {
+        return $imagePath;
+    }
+
+    $clean = ltrim($imagePath, '/');
+    $localFile = __DIR__ . '/../' . $clean;
+    if (file_exists($localFile) && filesize($localFile) > 0) {
+        return $clean;
+    }
+
+    $localRoot = __DIR__ . '/../../' . $clean;
+    if (file_exists($localRoot) && filesize($localRoot) > 0) {
+        return '../' . $clean;
+    }
+
+    return PRODUCT_IMAGE_BASE_URL . $clean;
+}
+
+
 // 1. JWT Config and Helper
 define('JWT_SECRET', 'YosshitaNehaFashionStudioSecretKey_2026!');
 define('JWT_ALGO', 'HS256');
@@ -218,12 +249,27 @@ function redirect($url) {
     exit();
 }
 
+// Helper to format category names to Title / Camel Case
+function format_category_title($name) {
+    if (empty($name)) return '';
+    $parts = explode('/', $name);
+    $formatted = array_map(function($p) {
+        $commaParts = explode(',', $p);
+        $cleanComma = array_map(function($cp) {
+            return ucwords(strtolower(trim($cp)));
+        }, $commaParts);
+        return implode(', ', $cleanComma);
+    }, $parts);
+    return implode(' / ', $formatted);
+}
+
 // 5. Category Tree / Hierarchy Generator
 function get_category_tree($categories, $parentId = null, $depth = 0) {
     $branch = [];
     foreach ($categories as $category) {
         if ($category['parent_id'] == $parentId) {
             $category['depth'] = $depth;
+            $category['name'] = format_category_title($category['name']);
             $branch[] = $category;
             $children = get_category_tree($categories, $category['id'], $depth + 1);
             if ($children) {

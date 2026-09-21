@@ -214,23 +214,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
 
                     <div class="form-group" style="margin-bottom: 0;">
-                        <label for="p_desc">Detailed Description</label>
-                        <textarea name="description" id="p_desc" class="form-control" rows="8" placeholder="Provide a detailed description of the product, design craftsmanship, materials, and styling tips..." style="width: 100%; resize: vertical;"></textarea>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
+                            <label for="p_desc" style="margin-bottom: 0;">Detailed Description</label>
+                            <span id="desc_length_counter" style="font-size: 11.5px; color: #71717a; font-weight: 500;">0 words &bull; 0 chars</span>
+                        </div>
+                        <textarea name="description" id="p_desc" class="form-control auto-expand-textarea" rows="5" placeholder="Provide a detailed description of the product, design craftsmanship, materials, and styling tips..." style="width: 100%; line-height: 1.6; resize: vertical; overflow-y: hidden; box-sizing: border-box;"></textarea>
                     </div>
                 </div>
             </div>
 
             <!-- Short Description Card -->
             <div class="shadcn-card" style="margin-bottom: 24px;">
-                <div class="shadcn-card-header">
+                <div class="shadcn-card-header" style="justify-content: space-between; flex-wrap: wrap; gap: 8px;">
                     <h2 class="shadcn-card-title">
                         <i class="fa-solid fa-align-left" style="color: #71717a;"></i>
                         Short Description &amp; Highlights
                     </h2>
+                    <span id="short_desc_length_counter" style="font-size: 11.5px; color: #71717a; font-weight: 500;">0 words &bull; 0 chars</span>
                 </div>
                 <div class="shadcn-card-padded">
                     <div class="form-group" style="margin-bottom: 0;">
-                        <textarea name="short_description" id="p_short_desc" class="form-control" rows="3" placeholder="Brief summary (e.g. materials, dimensions, closure type, or key styling highlights)..." style="width: 100%; resize: vertical;"></textarea>
+                        <textarea name="short_description" id="p_short_desc" class="form-control auto-expand-textarea" rows="3" placeholder="Brief summary (e.g. materials, dimensions, closure type, or key styling highlights)..." style="width: 100%; line-height: 1.5; resize: vertical; overflow-y: hidden; box-sizing: border-box;"></textarea>
                     </div>
                 </div>
             </div>
@@ -427,6 +431,54 @@ document.getElementById('gallery_input')?.addEventListener('change', function(e)
         };
         reader.readAsDataURL(file);
     });
+});
+
+// Auto-expanding textareas & length counters
+function updateTextareaCounter(textarea, counterId) {
+    const counter = document.getElementById(counterId);
+    if (!counter || !textarea) return;
+    const val = textarea.value || '';
+    const trimmed = val.trim();
+    const words = trimmed ? trimmed.split(/\s+/).length : 0;
+    const chars = val.length;
+    counter.textContent = `${words} words • ${chars} chars`;
+}
+
+function autoResizeTextarea(textarea) {
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    const newHeight = Math.max(textarea.scrollHeight + 2, 70);
+    textarea.style.height = newHeight + 'px';
+}
+
+function initAutoExpandTextareas() {
+    const configs = [
+        { id: 'p_desc', counterId: 'desc_length_counter' },
+        { id: 'p_short_desc', counterId: 'short_desc_length_counter' }
+    ];
+
+    configs.forEach(({ id, counterId }) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+
+        const update = () => {
+            autoResizeTextarea(el);
+            updateTextareaCounter(el, counterId);
+        };
+
+        el.addEventListener('input', update);
+        el.addEventListener('change', update);
+        el.addEventListener('keyup', update);
+
+        update();
+    });
+}
+
+document.addEventListener('DOMContentLoaded', initAutoExpandTextareas);
+window.addEventListener('load', () => setTimeout(initAutoExpandTextareas, 80));
+window.addEventListener('resize', () => {
+    autoResizeTextarea(document.getElementById('p_desc'));
+    autoResizeTextarea(document.getElementById('p_short_desc'));
 });
 </script>
 

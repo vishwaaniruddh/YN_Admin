@@ -58,29 +58,54 @@ function getProductImageData($pdo, $productId) {
         return ['error' => 'Product has no main image or gallery images to analyze.'];
     }
 
-    // Resolve file locally or remotely
-    $localPath = __DIR__ . '/../' . ltrim($imagePath, '/');
+    // Base URL for remote product images
+    $serverBaseUrl = 'https://yosshitaneha.com/admin/';
+    $cleanRelPath = ltrim($imagePath, '/');
+    $localPath = __DIR__ . '/../' . $cleanRelPath;
+    $altPath = __DIR__ . '/../../' . $cleanRelPath;
+
     $imgContent = null;
     $mimeType = 'image/jpeg';
 
-    if (file_exists($localPath)) {
-        $imgContent = file_get_contents($localPath);
-        $mime = mime_content_type($localPath);
+    if (file_exists($localPath) && filesize($localPath) > 0) {
+        $imgContent = @file_get_contents($localPath);
+        $mime = @mime_content_type($localPath);
+        if ($mime) $mimeType = $mime;
+    } elseif (file_exists($altPath) && filesize($altPath) > 0) {
+        $imgContent = @file_get_contents($altPath);
+        $mime = @mime_content_type($altPath);
         if ($mime) $mimeType = $mime;
     } else {
-        // Fallback check: root directory
-        $altPath = __DIR__ . '/../../' . ltrim($imagePath, '/');
-        if (file_exists($altPath)) {
-            $imgContent = file_get_contents($altPath);
-            $mime = mime_content_type($altPath);
-            if ($mime) $mimeType = $mime;
-        } else {
-            // Try fetching via HTTP/HTTPS URL
-            $remoteUrl = (str_starts_with($imagePath, 'http')) ? $imagePath : 'http://yosshitaneha.com/admin/' . ltrim($imagePath, '/');
-            $imgContent = @file_get_contents($remoteUrl);
-            $ext = strtolower(pathinfo($imagePath, PATHINFO_EXTENSION));
-            if ($ext === 'png') $mimeType = 'image/png';
-            elseif ($ext === 'webp') $mimeType = 'image/webp';
+        // Fetch from production server
+        $remoteUrl = (str_starts_with($imagePath, 'http://') || str_starts_with($imagePath, 'https://'))
+            ? $imagePath 
+            : $serverBaseUrl . $cleanRelPath;
+
+        $ch = curl_init($remoteUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_TIMEOUT => 25,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => 0,
+            CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) YosshitaNehaAdmin/2.0'
+        ]);
+        $fetched = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $cType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+        curl_close($ch);
+
+        if ($httpCode === 200 && !empty($fetched)) {
+            $imgContent = $fetched;
+            if ($cType && str_contains($cType, 'image/')) {
+                $mimeType = explode(';', $cType)[0];
+            } else {
+                $ext = strtolower(pathinfo($imagePath, PATHINFO_EXTENSION));
+                if ($ext === 'png') $mimeType = 'image/png';
+                elseif ($ext === 'webp') $mimeType = 'image/webp';
+                elseif ($ext === 'gif') $mimeType = 'image/gif';
+                else $mimeType = 'image/jpeg';
+            }
         }
     }
 
@@ -297,6 +322,82 @@ switch ($action) {
         log_ai_analytics_to_parent_db($productId, 'fashion', 'description', $prompt, trim($description), 0, $promptTokens, $candidateTokens, $totalTokens, $costEstimate, 'yosshitaneha');
 
         echo json_encode(['success' => true, 'description' => trim($description)]);
+        break;
+
+    case 'ai_suggest_short_description':
+        if ($productId <= 0) {
+            echo json_encode(['error' => 'Product ID is required']);
+            exit;
+        }
+
+        $imgDataRes = getProductImageData($pdo, $productId);
+        if (isset($imgDataRes['error'])) {
+            echo json_encode(['error' => $imgDataRes['error']]);
+            exit;
+        }
+
+        $prodName = $imgDataRes['product']['name'] ?? 'fashion jewelry';
+        $maxWords = (int)($_GET['max_words'] ?? 50);
+        if ($maxWords < 10) $maxWords = 10;
+        if ($maxWords > 500) $maxWords = 500;
+
+        $prompt = "You are an expert luxury jewelry and fashion copywriter for Yosshita & Neha. " .
+                  "Analyze the product '$prodName' and the provided image. " .
+                  "Write a concise, high-impact 'Short Description & Highlights' for this item. " .
+                  "Requirements:\n" .
+                  "- Maximum $maxWords words total.\n" .
+                  "- Provide 3 to 4 concise bullet points highlighting key materials, craftsmanship, styling advice, and ideal occasion.\n" .
+                  "- FORMAT RULES: Plain text only. Use literal bullet symbol '• ' for each bullet. Do not use markdown bolding, asterisks, or hashes.\n" .
+                  "Return ONLY the clean short bulleted text.";
+
+        $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=' . $apiKey;
+        $payload = json_encode([
+            'contents' => [
+                [
+                    'parts' => [
+                        ['text' => $prompt],
+                        [
+                            'inlineData' => [
+                                'mimeType' => $imgDataRes['mime_type'],
+                                'data' => $imgDataRes['base64']
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ]);
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+            CURLOPT_POSTFIELDS => $payload,
+            CURLOPT_TIMEOUT => 25,
+            CURLOPT_SSL_VERIFYPEER => false,
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200) {
+            echo json_encode(['error' => 'Gemini API request failed: ' . $response]);
+            exit;
+        }
+
+        $decoded = json_decode($response, true);
+        $shortDescription = $decoded['candidates'][0]['content']['parts'][0]['text'] ?? '';
+        $shortDescription = str_replace(['**', '##', '*'], '', trim($shortDescription));
+
+        $promptTokens = (int)($decoded['usageMetadata']['promptTokenCount'] ?? 0);
+        $candidateTokens = (int)($decoded['usageMetadata']['candidatesTokenCount'] ?? 0);
+        $totalTokens = (int)($decoded['usageMetadata']['totalTokenCount'] ?? 0);
+        $costEstimate = max(0.01, (($promptTokens * 0.000000075) + ($candidateTokens * 0.0000003)) * 86);
+
+        log_ai_analytics_to_parent_db($productId, 'fashion', 'short_description', $prompt, $shortDescription, 0, $promptTokens, $candidateTokens, $totalTokens, $costEstimate, 'yosshitaneha');
+
+        echo json_encode(['success' => true, 'short_description' => $shortDescription]);
         break;
 
     case 'ai_generate_model_image':

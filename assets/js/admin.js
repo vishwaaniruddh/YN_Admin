@@ -134,16 +134,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 5000);
     });
 
-    // 5. Delete category/product verification link checks
-    const deleteLinks = document.querySelectorAll('a.delete-confirm');
-    deleteLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
-            const name = this.getAttribute('data-name') || 'this item';
-            if (!confirm('Are you sure you want to delete ' + name + '? This action cannot be undone.')) {
-                e.preventDefault();
-            }
-        });
-    });
+    // 5. Delete category/product verification handled globally by shadcn-ui.js
 
     // 6. Sidebar Submenu Toggle (Accordion behavior)
     const submenuToggles = document.querySelectorAll('.submenu-toggle');

@@ -1,5 +1,14 @@
 <?php
 // admin/includes/sidebar.php
+
+// SECONDARY MENU SWITCH:
+// Set to true to permanently use the new secondary menu, or test via URL ?preview_menu=2
+$use_secondary_menu = true;
+if ($use_secondary_menu || (isset($_GET['preview_menu']) && $_GET['preview_menu'] === '2')) {
+    require __DIR__ . '/sidebar-secondary.php';
+    return;
+}
+
 $current_script = basename($_SERVER['PHP_SELF']);
 $admin_name = $_SESSION['admin_name'] ?? $_SESSION['username'] ?? 'Admin';
 $admin_initials = strtoupper(substr($admin_name, 0, 2));
@@ -9,7 +18,7 @@ $admin_initials = strtoupper(substr($admin_name, 0, 2));
 
 <!-- Modern Administrative Sidebar - ShadCN Style -->
 <aside id="adminmenuwrap" class="shadcn-sidebar">
-    
+
     <!-- Workspace Brand Header -->
     <div class="sidebar-header-workspace">
         <a href="index.php" class="workspace-brand">
@@ -31,26 +40,27 @@ $admin_initials = strtoupper(substr($admin_name, 0, 2));
         <ul id="adminmenu">
             <!-- Platform Group -->
             <li class="menu-section-label">Platform</li>
-            
+
             <li class="menu-item <?php echo ($current_script == 'index.php') ? 'active' : ''; ?>">
                 <a href="index.php">
-                    <i class="fa-solid fa-chart-pie"></i> 
+                    <i class="fa-solid fa-chart-pie"></i>
                     <span>Dashboard</span>
                 </a>
             </li>
-            
+
             <!-- Catalog Group -->
-            <?php 
+            <?php
             $catalog_active = in_array($current_script, ['products.php', 'product-add.php', 'product-edit.php', 'categories.php', 'product-import.php', 'import_archive.php', 'pos-price-sync.php']);
             ?>
             <li class="menu-item has-submenu <?php echo $catalog_active ? 'open active-parent' : ''; ?>">
                 <a href="javascript:void(0);" class="submenu-toggle">
-                    <i class="fa-solid fa-store"></i> 
+                    <i class="fa-solid fa-store"></i>
                     <span>Catalog</span>
                     <i class="fa-solid fa-chevron-right submenu-arrow"></i>
                 </a>
                 <ul class="submenu">
-                    <li class="<?php echo ($current_script == 'products.php' || $current_script == 'product-edit.php') ? 'active' : ''; ?>">
+                    <li
+                        class="<?php echo ($current_script == 'products.php' || $current_script == 'product-edit.php') ? 'active' : ''; ?>">
                         <a href="products.php">
                             <i class="fa-solid fa-box"></i> All Products
                         </a>
@@ -62,7 +72,7 @@ $admin_initials = strtoupper(substr($admin_name, 0, 2));
                     </li>
                     <li class="<?php echo ($current_script == 'pos-price-sync.php') ? 'active' : ''; ?>">
                         <a href="pos-price-sync.php">
-                            <i class="fa-solid fa-tags" style="color: #6366f1;"></i> POS Price Sync
+                            <i class="fa-solid fa-tags"></i> POS Price Sync
                         </a>
                     </li>
                     <li class="<?php echo ($current_script == 'categories.php') ? 'active' : ''; ?>">
@@ -95,17 +105,18 @@ $admin_initials = strtoupper(substr($admin_name, 0, 2));
             <!-- Collections & Lookbook Group -->
             <li class="menu-section-label">Collections</li>
 
-            <?php 
-            $collections_active = in_array($current_script, ['collections.php', 'collection-add.php', 'collection-edit.php', 'collection-ai-sorter.php', 'sync-sold-out-collections.php']);
+            <?php
+            $collections_active = in_array($current_script, ['collections.php', 'collection-add.php', 'collection-edit.php', 'collection-ai-sorter.php']);
             ?>
             <li class="menu-item has-submenu <?php echo $collections_active ? 'open active-parent' : ''; ?>">
                 <a href="javascript:void(0);" class="submenu-toggle">
-                    <i class="fa-solid fa-camera-retro"></i> 
+                    <i class="fa-solid fa-camera-retro"></i>
                     <span>Outfit Styles</span>
                     <i class="fa-solid fa-chevron-right submenu-arrow"></i>
                 </a>
                 <ul class="submenu">
-                    <li class="<?php echo ($current_script == 'collections.php' || $current_script == 'collection-edit.php') ? 'active' : ''; ?>">
+                    <li
+                        class="<?php echo ($current_script == 'collections.php' || $current_script == 'collection-edit.php') ? 'active' : ''; ?>">
                         <a href="collections.php">
                             <i class="fa-solid fa-vest"></i> All Outfit Styles
                         </a>
@@ -115,16 +126,10 @@ $admin_initials = strtoupper(substr($admin_name, 0, 2));
                             <i class="fa-solid fa-plus"></i> Add Outfit Style
                         </a>
                     </li>
-                    <li class="<?php echo ($current_script == 'sync-sold-out-collections.php') ? 'active' : ''; ?>">
-                        <a href="sync-sold-out-collections.php">
-                            <i class="fa-solid fa-boxes-packing" style="color: #f59e0b;"></i> Sync Sold Out
-                            <span class="shadcn-badge shadcn-badge-amber" style="margin-left: auto;">POS</span>
-                        </a>
-                    </li>
                     <li class="<?php echo ($current_script == 'collection-ai-sorter.php') ? 'active' : ''; ?>">
                         <a href="collection-ai-sorter.php">
-                            <i class="fa-solid fa-wand-magic-sparkles" style="color: #c084fc;"></i> AI Sorter
-                            <span class="shadcn-badge shadcn-badge-gemini" style="margin-left: auto;">Gemini</span>
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> AI Sorter
+                            <span class="shadcn-badge" style="margin-left: auto;">AI</span>
                         </a>
                     </li>
                 </ul>
@@ -133,30 +138,30 @@ $admin_initials = strtoupper(substr($admin_name, 0, 2));
             <!-- AI & Tools Group -->
             <li class="menu-section-label">AI &amp; Tools</li>
 
-            <?php 
+            <?php
             $tools_active = in_array($current_script, ['desc-corrector.php', 'analytics.php', 'cache-manager.php', 'generate-yn-products-excel.php', 'sku-lookup.php', 'pos-price-sync.php', 'sync_db.php', 'bulk-ai-writer.php', 'pdf-maker.php']);
             ?>
             <li class="menu-item has-submenu <?php echo $tools_active ? 'open active-parent' : ''; ?>">
                 <a href="javascript:void(0);" class="submenu-toggle">
-                    <i class="fa-solid fa-screwdriver-wrench"></i> 
+                    <i class="fa-solid fa-screwdriver-wrench"></i>
                     <span>Tools &amp; AI</span>
                     <i class="fa-solid fa-chevron-right submenu-arrow"></i>
                 </a>
                 <ul class="submenu">
                     <li class="<?php echo ($current_script == 'bulk-ai-writer.php') ? 'active' : ''; ?>">
                         <a href="bulk-ai-writer.php">
-                            <i class="fa-solid fa-wand-magic-sparkles" style="color: #c084fc;"></i> Bulk AI Writer
-                            <span class="shadcn-badge shadcn-badge-gemini" style="margin-left: auto;">AI</span>
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Bulk AI Writer
+                            <span class="shadcn-badge" style="margin-left: auto;">AI</span>
                         </a>
                     </li>
                     <li class="<?php echo ($current_script == 'pos-price-sync.php') ? 'active' : ''; ?>">
                         <a href="pos-price-sync.php">
-                            <i class="fa-solid fa-arrow-rotate-right" style="color: #6366f1;"></i> POS Price Sync
+                            <i class="fa-solid fa-arrow-rotate-right"></i> POS Price Sync
                         </a>
                     </li>
                     <li class="<?php echo ($current_script == 'generate-yn-products-excel.php') ? 'active' : ''; ?>">
                         <a href="generate-yn-products-excel.php">
-                            <i class="fa-solid fa-file-excel" style="color: #10b981;"></i> Products Excel
+                            <i class="fa-solid fa-file-excel"></i> Products Excel
                         </a>
                     </li>
                     <li class="<?php echo ($current_script == 'sku-lookup.php') ? 'active' : ''; ?>">
@@ -171,7 +176,7 @@ $admin_initials = strtoupper(substr($admin_name, 0, 2));
                     </li>
                     <li class="<?php echo ($current_script == 'pdf-maker.php') ? 'active' : ''; ?>">
                         <a href="pdf-maker.php">
-                            <i class="fa-solid fa-file-pdf" style="color: #ef4444;"></i> PDF Maker
+                            <i class="fa-solid fa-file-pdf"></i> PDF Maker
                         </a>
                     </li>
                     <li class="<?php echo ($current_script == 'analytics.php') ? 'active' : ''; ?>">
@@ -181,12 +186,12 @@ $admin_initials = strtoupper(substr($admin_name, 0, 2));
                     </li>
                     <li class="<?php echo ($current_script == 'cache-manager.php') ? 'active' : ''; ?>">
                         <a href="cache-manager.php">
-                            <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> Cache Manager
+                            <i class="fa-solid fa-bolt"></i> Cache Manager
                         </a>
                     </li>
                     <li class="<?php echo ($current_script == 'sync_db.php') ? 'active' : ''; ?>">
                         <a href="sync_db.php">
-                            <i class="fa-solid fa-database" style="color: #0ea5e9;"></i> Database Sync
+                            <i class="fa-solid fa-database"></i> Database Sync
                         </a>
                     </li>
                 </ul>
@@ -195,12 +200,12 @@ $admin_initials = strtoupper(substr($admin_name, 0, 2));
             <!-- System & Configuration -->
             <li class="menu-section-label">System</li>
 
-            <?php 
+            <?php
             $settings_active = in_array($current_script, ['settings.php', 'mail-settings.php', 'masters.php', 'chatbot-settings.php']);
             ?>
             <li class="menu-item has-submenu <?php echo $settings_active ? 'open active-parent' : ''; ?>">
                 <a href="javascript:void(0);" class="submenu-toggle">
-                    <i class="fa-solid fa-gears"></i> 
+                    <i class="fa-solid fa-gears"></i>
                     <span>Settings</span>
                     <i class="fa-solid fa-chevron-right submenu-arrow"></i>
                 </a>
@@ -212,7 +217,7 @@ $admin_initials = strtoupper(substr($admin_name, 0, 2));
                     </li>
                     <li class="<?php echo ($current_script == 'chatbot-settings.php') ? 'active' : ''; ?>">
                         <a href="chatbot-settings.php">
-                            <i class="fa-solid fa-robot" style="color: #c084fc;"></i> AI Chatbot
+                            <i class="fa-solid fa-robot"></i> AI Chatbot
                         </a>
                     </li>
                     <li class="<?php echo ($current_script == 'mail-settings.php') ? 'active' : ''; ?>">
@@ -227,7 +232,7 @@ $admin_initials = strtoupper(substr($admin_name, 0, 2));
                     </li>
                 </ul>
             </li>
-            
+
             <!-- Marketing Group -->
             <li class="menu-item <?php echo ($current_script == 'newsletters.php') ? 'active' : ''; ?>">
                 <a href="newsletters.php">
@@ -235,20 +240,22 @@ $admin_initials = strtoupper(substr($admin_name, 0, 2));
                     <span>Newsletters</span>
                 </a>
             </li>
-            <li class="menu-item <?php echo ($current_script == 'blogs.php' || $current_script == 'blog-add.php' || $current_script == 'blog-edit.php') ? 'active' : ''; ?>">
+            <li
+                class="menu-item <?php echo ($current_script == 'blogs.php' || $current_script == 'blog-add.php' || $current_script == 'blog-edit.php') ? 'active' : ''; ?>">
                 <a href="blogs.php">
                     <i class="fa-solid fa-newspaper"></i>
                     <span>Blogs</span>
                 </a>
             </li>
-            
+
             <?php if (current_user_can('manage_users')): ?>
-            <li class="menu-item <?php echo ($current_script == 'users.php' || $current_script == 'user-add.php' || $current_script == 'user-edit.php') ? 'active' : ''; ?>">
-                <a href="users.php">
-                    <i class="fa-solid fa-users"></i>
-                    <span>Users</span>
-                </a>
-            </li>
+                <li
+                    class="menu-item <?php echo ($current_script == 'users.php' || $current_script == 'user-add.php' || $current_script == 'user-edit.php') ? 'active' : ''; ?>">
+                    <a href="users.php">
+                        <i class="fa-solid fa-users"></i>
+                        <span>Users</span>
+                    </a>
+                </li>
             <?php endif; ?>
         </ul>
     </div>
