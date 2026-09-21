@@ -81,6 +81,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'load_bulk_products') {
             $where[] = "(TRIM(p.description) = '1' OR p.description = '1' OR TRIM(p.short_description) = '1')";
         } elseif ($filterType === 'name_or_desc_is_1') {
             $where[] = "(TRIM(p.name) = '1' OR p.name = '1' OR TRIM(p.description) = '1' OR p.description = '1')";
+        } elseif ($filterType === 'title_is_sku') {
+            $where[] = "(p.sku IS NOT NULL AND p.sku != '' AND (TRIM(LOWER(p.name)) = TRIM(LOWER(p.sku)) OR TRIM(p.name) = TRIM(p.sku)))";
         } elseif ($filterType === 'needs_content') {
             $where[] = "(TRIM(p.name) = '1' OR p.name = '1' OR p.name = p.sku OR p.name LIKE 'YN%' OR p.short_description IS NULL OR p.short_description = '' OR TRIM(p.short_description) = '1' OR p.description IS NULL OR p.description = '' OR TRIM(p.description) = '1' OR p.description LIKE '%Srisringarr%' OR p.description LIKE '%Premium Quality Collection%')";
         } elseif ($filterType === 'missing_desc') {
@@ -112,6 +114,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'load_bulk_products') {
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($products as &$prodItem) {
+            if (!empty($prodItem['main_image'])) {
+                $prodItem['main_image'] = get_product_image_url($prodItem['main_image']);
+            }
+        }
+        unset($prodItem);
 
         // Fetch total count for summary
         $countSql = "SELECT COUNT(*) FROM products p WHERE $whereClause";
@@ -204,6 +212,7 @@ try {
                     <option value="name_or_desc_is_1">⚠️ Name or Description is '1' (Raw Imports)</option>
                     <option value="name_is_1">🎯 Exact Name is '1'</option>
                     <option value="desc_is_1">🎯 Exact Description is '1'</option>
+                    <option value="title_is_sku">🏷️ Product Title is Exact SKU</option>
                     <option value="needs_content" selected>⚠️ Needs AI Content (Name '1'/SKU/Missing Desc)</option>
                     <option value="missing_desc">📝 Missing Detailed Description</option>
                     <option value="missing_short_desc">📄 Missing Short Summary</option>

@@ -154,6 +154,8 @@ if ($featured_filter === '1') {
     $query_parts[] = "p.is_featured = 0";
 } elseif ($featured_filter === 'sale') {
     $query_parts[] = "(p.sale_price IS NOT NULL AND p.sale_price > 0 AND (p.price IS NULL OR p.price = 0 OR p.sale_price < p.price))";
+} elseif ($featured_filter === 'title_is_sku') {
+    $query_parts[] = "(p.sku IS NOT NULL AND p.sku != '' AND (TRIM(LOWER(p.name)) = TRIM(LOWER(p.sku)) OR TRIM(p.name) = TRIM(p.sku)))";
 }
 
 if ($sale_filter === 'sale' || $sale_filter === '1') {
@@ -366,6 +368,7 @@ document.addEventListener('click', function(e) {
                     <option value="1" <?php echo ($featured_filter === '1') ? 'selected' : ''; ?>>Starred Only</option>
                     <option value="0" <?php echo ($featured_filter === '0') ? 'selected' : ''; ?>>Unstarred Only</option>
                     <option value="sale" <?php echo ($featured_filter === 'sale') ? 'selected' : ''; ?>>Sale Only</option>
+                    <option value="title_is_sku" <?php echo ($featured_filter === 'title_is_sku') ? 'selected' : ''; ?>>Title = SKU Only</option>
                 </select>
             </div>
 
@@ -399,6 +402,9 @@ document.addEventListener('click', function(e) {
                     <?php endif; ?>
                     <?php if ($featured_filter === 'sale' || $sale_filter === 'sale'): ?>
                         &nbsp;<span class="shadcn-badge" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; font-size: 11px; padding: 2px 7px;"><i class="fa-solid fa-tag" style="font-size: 10px; margin-right: 3px;"></i> On Sale</span>
+                    <?php endif; ?>
+                    <?php if ($featured_filter === 'title_is_sku'): ?>
+                        &nbsp;<span class="shadcn-badge" style="background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; font-size: 11px; padding: 2px 7px;"><i class="fa-solid fa-tag" style="font-size: 10px; margin-right: 3px;"></i> Title = SKU</span>
                     <?php endif; ?>
                 </span>
             <?php endif; ?>
