@@ -261,6 +261,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     purge_cache();
                 }
 
+                // If outfit product stock changed or sold out, auto-bridge to Client Diary / Lookbook
+                if (function_exists('sync_sold_outfits_to_lookbook')) {
+                    sync_sold_outfits_to_lookbook($pdo);
+                }
+
                 // Reload the page with success message
                 redirect("product-edit.php?id=$product_id&message=updated");
             }

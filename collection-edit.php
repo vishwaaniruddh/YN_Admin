@@ -91,12 +91,56 @@ if ($uploadsPath && is_dir($uploadsPath)) {
     }
 }
 
+// Fetch AI Model Generator reference masters
+$db_ai_models = [];
+$db_shot_types = [];
+$db_hair_styles = [];
+try {
+    $db_ai_models = $pdo->query("SELECT * FROM ai_models WHERE is_active = 1 ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+    $db_shot_types = $pdo->query("SELECT * FROM ai_shot_types WHERE is_active = 1 ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+    $db_hair_styles = $pdo->query("SELECT * FROM ai_hair_styles WHERE is_active = 1 ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {}
+
 $page_title = "Edit Outfit Style - " . htmlspecialchars($collection['title']);
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 ?>
 
 <style>
+/* AI Studio Styles */
+.ai-radio-hidden {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+}
+.ai-radio-hidden:checked + .ai-model-box {
+    border-color: #0f172a !important;
+    box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.35);
+}
+.ai-bg-pill {
+    padding: 5px 12px;
+    background: #f4f4f5;
+    border: 1px solid #e4e4e7;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: #18181b;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+.ai-bg-pill:hover {
+    background: #e4e4e7;
+    color: #09090b;
+}
+.ai-radio-hidden:checked + .ai-bg-pill {
+    background: #0f172a;
+    color: #ffffff;
+    border-color: #0f172a;
+}
+
 /* Modern Lookbook Studio Layout */
 .edit-top-header {
     display: flex;
@@ -307,6 +351,167 @@ require_once __DIR__ . '/includes/sidebar.php';
                     </div>
                 </div>
             </div>
+
+            <!-- AI Image Studio Card (Gemini) -->
+            <div class="card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; margin-top: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 16px;">
+                    <div>
+                        <h3 style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 8px;">
+                            <i class="fa-solid fa-wand-magic-sparkles" style="color: #6366f1;"></i> AI Model Image Studio (Gemini)
+                        </h3>
+                        <div style="font-size: 12px; color: #64748b; margin-top: 2px;">Generate photorealistic fashion model photos wearing this exact outfit. Saved photos will automatically be added to the Photoshoot Media gallery above.</div>
+                    </div>
+                    <span style="font-size: 11px; font-weight: 700; background: #e0e7ff; color: #4338ca; padding: 3px 10px; border-radius: 9999px;">
+                        <i class="fa-solid fa-bolt"></i> Gemini Vision 3.1
+                    </span>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                    <!-- Model Face Picker -->
+                    <div>
+                        <label style="font-size: 12px; font-weight: 600; color: #0f172a; margin-bottom: 6px; display: block;">Model Face (Optional)</label>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <label class="ai-model-picker">
+                                <input type="radio" name="ai_model_face" value="" checked class="ai-radio-hidden">
+                                <div class="ai-model-box" style="width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; background: #fafafa; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer;">
+                                    <span style="font-size: 10px; color: #64748b; font-weight: 700;">NONE</span>
+                                </div>
+                            </label>
+                            <?php if (!empty($db_ai_models)): ?>
+                                <?php foreach ($db_ai_models as $dbm): ?>
+                                <label class="ai-model-picker" style="position: relative;" title="<?php echo htmlspecialchars($dbm['name']); ?>">
+                                    <input type="radio" name="ai_model_face" value="<?php echo htmlspecialchars($dbm['image_path']); ?>" data-shot="<?php echo htmlspecialchars($dbm['shot_type'] ?? 'Full Body'); ?>" data-hair="<?php echo htmlspecialchars($dbm['hair_style'] ?? 'As per product'); ?>" class="ai-radio-hidden">
+                                    <div class="ai-model-box" style="width: 56px; height: 56px; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; cursor: pointer;">
+                                        <img src="<?php echo htmlspecialchars($dbm['image_path']); ?>" alt="<?php echo htmlspecialchars($dbm['name']); ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                                    </div>
+                                </label>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <?php for ($i = 1; $i <= 5; $i++): ?>
+                                <label class="ai-model-picker" style="position: relative;">
+                                    <input type="radio" name="ai_model_face" value="assets/models/model_<?= $i ?>.png" class="ai-radio-hidden">
+                                    <div class="ai-model-box" style="width: 56px; height: 56px; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; cursor: pointer;" title="Model <?= $i ?>">
+                                        <img src="assets/models/model_<?= $i ?>.png" alt="Model <?= $i ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                                    </div>
+                                </label>
+                                <?php endfor; ?>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <!-- Background / Props Presets -->
+                    <div>
+                        <label style="font-size: 12px; font-weight: 600; color: #0f172a; margin-bottom: 6px; display: block;">Background / Props Preset</label>
+                        <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="bg_preset_container">
+                            <?php
+                            $bgPresets = [
+                                'Palace' => 'elegant royal palace with marble pillars and chandeliers',
+                                'Beach' => 'golden hour beach with soft waves and sunset sky',
+                                'Studio' => 'clean professional photography studio with soft gradient backdrop',
+                                'Mountains' => 'majestic Himalayan mountains with misty peaks',
+                                'Lake' => 'serene lake with reflections and lush greenery',
+                                'Garden' => 'blooming flower garden with roses and jasmine',
+                                'Haveli' => 'traditional Rajasthani haveli with jharokha windows',
+                                'City Night' => 'modern city skyline at night with bokeh lights'
+                            ];
+                            $first = true;
+                            foreach ($bgPresets as $label => $promptPart):
+                            ?>
+                            <label class="ai-bg-picker">
+                                <input type="radio" name="ai_bg_preset" value="<?= htmlspecialchars($promptPart) ?>" <?= $first ? 'checked' : '' ?> class="ai-radio-hidden">
+                                <div class="ai-bg-pill"><?= $label ?></div>
+                            </label>
+                            <?php $first = false; endforeach; ?>
+                        </div>
+                        <input type="text" id="ai_bg_custom" class="form-control" style="margin-top: 8px; width: 100%; font-size: 12px; padding: 7px 12px; border-radius: 6px;" value="elegant royal palace with marble pillars and chandeliers" placeholder="Describe background and props...">
+                    </div>
+
+                    <!-- Shot Type & Hair Controls -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div>
+                            <label style="font-size: 12px; font-weight: 600; color: #0f172a; margin-bottom: 6px; display: block;">Shot Type</label>
+                            <div style="display: flex; flex-direction: column; gap: 6px;">
+                                <?php if (!empty($db_shot_types)): ?>
+                                    <?php foreach ($db_shot_types as $sIdx => $st): ?>
+                                    <label style="font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #1e293b;" title="<?php echo htmlspecialchars($st['prompt_text']); ?>">
+                                        <input type="radio" name="ai_shot_type" value="<?php echo htmlspecialchars($st['prompt_text']); ?>" data-name="<?php echo htmlspecialchars($st['name']); ?>" <?php echo $sIdx === 0 ? 'checked' : ''; ?> style="accent-color: #0f172a;">
+                                        <?php echo htmlspecialchars($st['name']); ?>
+                                    </label>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <label style="font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #1e293b;"><input type="radio" name="ai_shot_type" value="close-up portrait shot focusing on the face and details" data-name="Close-up Portrait" style="accent-color: #0f172a;"> Close-up Portrait</label>
+                                    <label style="font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #1e293b;"><input type="radio" name="ai_shot_type" value="half body shot from waist up, showing torso and face" data-name="Half Body" style="accent-color: #0f172a;"> Half Body</label>
+                                    <label style="font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #1e293b;"><input type="radio" name="ai_shot_type" value="full body head-to-toe shot showing the complete outfit look" data-name="Full Body" checked style="accent-color: #0f172a;"> Full Body</label>
+                                    <label style="font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #1e293b;"><input type="radio" name="ai_shot_type" value="shot from behind showing the back design and details" data-name="Back View" style="accent-color: #0f172a;"> Back View</label>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style="font-size: 12px; font-weight: 600; color: #0f172a; margin-bottom: 6px; display: block;">Hair Style</label>
+                            <div style="display: flex; flex-direction: column; gap: 6px;">
+                                <?php if (!empty($db_hair_styles)): ?>
+                                    <?php foreach ($db_hair_styles as $hIdx => $hs): ?>
+                                    <label style="font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #1e293b;" title="<?php echo htmlspecialchars($hs['prompt_text']); ?>">
+                                        <input type="radio" name="ai_hair_style" value="<?php echo htmlspecialchars($hs['prompt_text']); ?>" data-name="<?php echo htmlspecialchars($hs['name']); ?>" <?php echo $hIdx === 0 ? 'checked' : ''; ?> style="accent-color: #0f172a;">
+                                        <?php echo htmlspecialchars($hs['name']); ?>
+                                    </label>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <label style="font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #1e293b;"><input type="radio" name="ai_hair_style" value="open flowing hair with soft waves" data-name="Open Flowing" style="accent-color: #0f172a;"> Open Flowing</label>
+                                    <label style="font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #1e293b;"><input type="radio" name="ai_hair_style" value="neatly tied bun with flowers" data-name="Tied / Bun" style="accent-color: #0f172a;"> Tied / Bun</label>
+                                    <label style="font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #1e293b;"><input type="radio" name="ai_hair_style" value="traditional long braided hair" data-name="Traditional Braid" style="accent-color: #0f172a;"> Traditional Braid</label>
+                                    <label style="font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #1e293b;"><input type="radio" name="ai_hair_style" value="" data-name="As per outfit" checked style="accent-color: #0f172a;"> Default</label>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Final Auto-Assembled Prompt -->
+                    <div>
+                        <label style="font-size: 12px; font-weight: 600; color: #0f172a; margin-bottom: 6px; display: block;">Final Prompt (Auto-Assembled)</label>
+                        <textarea id="ai_final_prompt" rows="3" class="form-control" style="width: 100%; font-size: 12px; line-height: 1.5; padding: 8px 12px; border-radius: 6px;">A photorealistic beautiful Indian fashion model wearing this exact <?php echo htmlspecialchars($collection['title']); ?>. The background should have elegant royal palace with marble pillars and chandeliers. Shot type: full body head-to-toe shot showing the complete outfit look. Aspect ratio: 2:3 vertical fashion portrait format.</textarea>
+                    </div>
+
+                    <!-- Action Bar -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f1f5f9; padding-top: 14px; flex-wrap: wrap; gap: 10px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-size: 12px; font-weight: 600; color: #64748b;">Variations:</label>
+                            <div style="display: flex; gap: 4px;">
+                                <?php for ($n = 1; $n <= 4; $n++): ?>
+                                <label class="ai-bg-picker">
+                                    <input type="radio" name="ai_num_images" value="<?= $n ?>" <?= $n === 1 ? 'checked' : '' ?> class="ai-radio-hidden">
+                                    <div class="ai-bg-pill"><?= $n ?> <?= $n === 1 ? 'Image' : 'Images' ?></div>
+                                </label>
+                                <?php endfor; ?>
+                            </div>
+                        </div>
+
+                        <button type="button" onclick="aiGenerateAdvancedImage()" id="aiImageBtn" class="button button-primary" style="background: #6366f1; border-color: #4f46e5; padding: 8px 18px; font-weight: 700; font-size: 13px;">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Model Image
+                        </button>
+                    </div>
+
+                    <!-- Loading Indicator -->
+                    <div id="aiImageLoading" style="display: none; align-items: center; gap: 10px; padding: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; color: #334155;">
+                        <i class="fa-solid fa-spinner fa-spin" style="font-size: 16px; color: #6366f1;"></i>
+                        <span>AI is generating model image(s)... Please wait 15-20 seconds.</span>
+                    </div>
+
+                    <!-- Generated Results -->
+                    <div id="aiImageResult" style="display: none; margin-top: 12px; padding-top: 14px; border-top: 1px solid #f1f5f9;">
+                        <p style="font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 12px;">Generated Fashion Model Images:</p>
+                        
+                        <div id="aiImageGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 14px;"></div>
+                        
+                        <div style="display: flex; justify-content: center;">
+                            <button type="button" onclick="resetAiImage()" class="button" style="font-size: 12px; padding: 6px 16px;">
+                                <i class="fa-solid fa-rotate-left"></i> Clear &amp; Try Again
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- RIGHT COLUMN: Publishing & Hero Cover Card -->
@@ -370,6 +575,38 @@ const angleOptions = ['Front View', 'Back View', 'Close-up Detail', 'Side View',
 
 document.addEventListener('DOMContentLoaded', () => {
     loadPhotos();
+
+    document.querySelectorAll('input[name="ai_model_face"], input[name="ai_bg_preset"], input[name="ai_shot_type"], input[name="ai_hair_style"]').forEach(input => {
+        input.addEventListener('change', updateFinalPrompt);
+    });
+
+    document.querySelectorAll('input[name="ai_model_face"]').forEach(input => {
+        input.addEventListener('change', function() {
+            const shotVal = this.getAttribute('data-shot');
+            const hairVal = this.getAttribute('data-hair');
+            if (shotVal) {
+                const shotRadio = Array.from(document.querySelectorAll('input[name="ai_shot_type"]')).find(r => (r.getAttribute('data-name') || r.value).toLowerCase().includes(shotVal.toLowerCase()));
+                if (shotRadio) shotRadio.checked = true;
+            }
+            if (hairVal) {
+                const hairRadio = Array.from(document.querySelectorAll('input[name="ai_hair_style"]')).find(r => (r.getAttribute('data-name') || r.value).toLowerCase().includes(hairVal.toLowerCase()));
+                if (hairRadio) hairRadio.checked = true;
+            }
+            updateFinalPrompt();
+        });
+    });
+
+    document.getElementById('ai_bg_custom')?.addEventListener('input', updateFinalPrompt);
+
+    document.querySelectorAll('input[name="ai_bg_preset"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const customInput = document.getElementById('ai_bg_custom');
+            if (customInput) {
+                customInput.value = e.target.value;
+                updateFinalPrompt();
+            }
+        });
+    });
 });
 
 async function loadPhotos() {
@@ -540,6 +777,139 @@ function getImageUrl(path) {
     if (path.startsWith('http://') || path.startsWith('https://')) return path;
     const clean = path.replace(/^\/+/, '').replace(/^admin\//, '');
     return clean.split('/').map(encodeURIComponent).join('/');
+}
+
+// -----------------------------------------------------------------------------
+// Gemini AI Model Image Generator Functions
+// -----------------------------------------------------------------------------
+const collectionTitle = <?php echo json_encode($collection['title'] ?? 'outfit'); ?>;
+
+function notifyMsg(type, title, text) {
+    if (typeof toast !== 'undefined' && typeof toast[type] === 'function') {
+        toast[type](title, text);
+    } else {
+        alert(title + ': ' + text);
+    }
+}
+
+function updateFinalPrompt() {
+    const faceInput = document.querySelector('input[name="ai_model_face"]:checked')?.value || '';
+    const customBg = document.getElementById('ai_bg_custom')?.value.trim() || 'clean studio background';
+    const shotType = document.querySelector('input[name="ai_shot_type"]:checked')?.value || '';
+    const hairStyle = document.querySelector('input[name="ai_hair_style"]:checked')?.value || '';
+
+    let promptParts = [
+        `A photorealistic beautiful Indian fashion model wearing this exact ${collectionTitle}.`,
+        `The background should have ${customBg}.`,
+        `Shot type: ${shotType}.`,
+        `Do not change the outfit details, embroidery, silhouette or color scheme.`,
+        `Aspect ratio: 2:3 vertical fashion portrait format.`
+    ];
+
+    if (hairStyle) {
+        promptParts.push(`The model should have ${hairStyle}.`);
+    }
+    if (faceInput) {
+        promptParts.push(`The model's face must match the reference photo exactly.`);
+    }
+
+    const finalBox = document.getElementById('ai_final_prompt');
+    if (finalBox) {
+        finalBox.value = promptParts.join(' ');
+    }
+}
+
+async function aiGenerateAdvancedImage() {
+    const btn = document.getElementById('aiImageBtn');
+    const faceInput = document.querySelector('input[name="ai_model_face"]:checked')?.value || '';
+    const finalPrompt = document.getElementById('ai_final_prompt')?.value.trim() || '';
+    const numImages = document.querySelector('input[name="ai_num_images"]:checked')?.value || 1;
+
+    if (!btn) return;
+    btn.disabled = true;
+    document.getElementById('aiImageLoading').style.display = 'flex';
+    document.getElementById('aiImageResult').style.display = 'none';
+    document.getElementById('aiImageGrid').innerHTML = '';
+
+    try {
+        const response = await fetch(`api/ai_product_api.php?action=ai_generate_model_image&collection_id=${collectionId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                prompt: finalPrompt,
+                face_reference: faceInput,
+                num_images: parseInt(numImages)
+            })
+        });
+        const data = await response.json();
+
+        if (data.success && data.images_base64 && data.images_base64.length > 0) {
+            const grid = document.getElementById('aiImageGrid');
+            data.images_base64.forEach((b64, index) => {
+                grid.innerHTML += `
+                    <div style="display: flex; flex-direction: column; gap: 8px; background: #ffffff; border: 1px solid #e2e8f0; padding: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        <div style="width: 100%; aspect-ratio: 2/3; overflow: hidden; border-radius: 6px; background: #f8fafc;">
+                            <img src="data:image/jpeg;base64,${b64}" alt="Generated Model" style="width: 100%; height: 100%; object-fit: cover;">
+                        </div>
+                        <button type="button" onclick="saveAiGeneratedImage(this, '${b64}')" class="button button-primary" style="width: 100%; justify-content: center; padding: 7px; font-size: 12px; font-weight: 700; background: #059669; border-color: #047857;">
+                            <i class="fa-solid fa-floppy-disk"></i> Save to Media Gallery
+                        </button>
+                    </div>
+                `;
+            });
+            document.getElementById('aiImageResult').style.display = 'block';
+            notifyMsg('success', 'Images Generated', 'Review the generated photos and save them to the Photoshoot Media gallery.');
+        } else {
+            const msg = data.error || 'Failed to generate model images';
+            notifyMsg('error', 'Image Generation Failed', msg);
+        }
+    } catch (err) {
+        console.error(err);
+        notifyMsg('error', 'Network Error', 'A network error occurred while generating images.');
+    } finally {
+        btn.disabled = false;
+        document.getElementById('aiImageLoading').style.display = 'none';
+    }
+}
+
+function resetAiImage() {
+    document.getElementById('aiImageResult').style.display = 'none';
+    document.getElementById('aiImageGrid').innerHTML = '';
+    document.getElementById('ai_final_prompt')?.focus();
+}
+
+async function saveAiGeneratedImage(btn, base64Str) {
+    const origHTML = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+    btn.disabled = true;
+
+    try {
+        const response = await fetch(`api/ai_product_api.php?action=save_ai_image&collection_id=${collectionId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image_base64: base64Str })
+        });
+        const data = await response.json();
+
+        if (data.success && data.path) {
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Saved!';
+            btn.style.background = '#059669';
+            btn.style.borderColor = '#047857';
+            notifyMsg('success', 'Image Saved', 'AI model photo added to Photoshoot Media gallery.');
+            // Reload photoshoot media angles gallery
+            loadPhotos();
+        } else {
+            const msg = data.error || 'Unknown error';
+            notifyMsg('error', 'Save Failed', msg);
+            btn.innerHTML = origHTML;
+            btn.disabled = false;
+        }
+    } catch (err) {
+        console.error(err);
+        notifyMsg('error', 'Network Error', 'Network error while saving AI image.');
+        btn.innerHTML = origHTML;
+        btn.disabled = false;
+    }
 }
 </script>
 

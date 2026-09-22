@@ -230,15 +230,24 @@ try {
         id INT AUTO_INCREMENT PRIMARY KEY,
         title VARCHAR(255) NOT NULL,
         slug VARCHAR(255) NOT NULL UNIQUE,
+        sku VARCHAR(100) DEFAULT NULL,
+        product_id INT DEFAULT NULL,
         subtitle VARCHAR(255) DEFAULT NULL,
         category VARCHAR(100) NOT NULL DEFAULT 'Client Diaries',
         description TEXT DEFAULT NULL,
+        fabric VARCHAR(150) DEFAULT NULL,
+        work_type VARCHAR(150) DEFAULT NULL,
+        color VARCHAR(100) DEFAULT NULL,
         cover_image VARCHAR(255) DEFAULT NULL,
+        video_url VARCHAR(500) DEFAULT NULL,
         is_featured TINYINT(1) DEFAULT 0,
+        is_sold TINYINT(1) DEFAULT 0,
         sort_order INT DEFAULT 0,
         status ENUM('draft', 'published') DEFAULT 'published',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_collections_product_id (product_id),
+        INDEX idx_collections_is_sold (is_sold)
     ) ENGINE=InnoDB");
 
     // Collection Images Table

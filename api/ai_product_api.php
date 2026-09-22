@@ -20,12 +20,16 @@ if (empty($apiKey)) {
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 $productId = (int)($_GET['product_id'] ?? $_GET['id'] ?? 0);
+$collectionId = (int)($_GET['collection_id'] ?? 0);
 
-if ($productId <= 0) {
+if ($productId <= 0 && $collectionId <= 0) {
     // Attempt to read from JSON payload if not in query params
     $rawInput = json_decode(file_get_contents('php://input'), true);
     if (!empty($rawInput['product_id'])) {
         $productId = (int)$rawInput['product_id'];
+    }
+    if (!empty($rawInput['collection_id'])) {
+        $collectionId = (int)$rawInput['collection_id'];
     }
 }
 
@@ -115,6 +119,98 @@ function getProductImageData($pdo, $productId) {
 
     return [
         'product' => $product,
+        'image_content' => $imgContent,
+        'mime_type' => $mimeType,
+        'base64' => base64_encode($imgContent)
+    ];
+}
+
+/**
+ * Helper to fetch collection primary image (cover_image or first gallery image)
+ */
+function getCollectionImageData($pdo, $collectionId) {
+    // 1. Check cover_image in collections table
+    $stmt = $pdo->prepare("SELECT id, title, sku, slug, category, cover_image FROM collections WHERE id = ?");
+    $stmt->execute([$collectionId]);
+    $coll = $stmt->fetch();
+
+    if (!$coll) {
+        return ['error' => 'Outfit / Collection not found.'];
+    }
+
+    $imagePath = $coll['cover_image'];
+
+    // 2. Fallback to collection_images table if cover_image is empty
+    if (empty($imagePath)) {
+        $gstmt = $pdo->prepare("SELECT image_path FROM collection_images WHERE collection_id = ? ORDER BY sort_order ASC, id ASC LIMIT 1");
+        $gstmt->execute([$collectionId]);
+        $gimg = $gstmt->fetch();
+        if ($gimg && !empty($gimg['image_path'])) {
+            $imagePath = $gimg['image_path'];
+        }
+    }
+
+    if (empty($imagePath)) {
+        return ['error' => 'Outfit collection has no cover image or gallery photos to analyze.'];
+    }
+
+    // Base URL for remote collection images
+    $serverBaseUrl = 'https://yosshitaneha.com/admin/';
+    $cleanRelPath = ltrim($imagePath, '/');
+    $localPath = __DIR__ . '/../' . $cleanRelPath;
+    $altPath = __DIR__ . '/../../' . $cleanRelPath;
+
+    $imgContent = null;
+    $mimeType = 'image/jpeg';
+
+    if (file_exists($localPath) && filesize($localPath) > 0) {
+        $imgContent = @file_get_contents($localPath);
+        $mime = @mime_content_type($localPath);
+        if ($mime) $mimeType = $mime;
+    } elseif (file_exists($altPath) && filesize($altPath) > 0) {
+        $imgContent = @file_get_contents($altPath);
+        $mime = @mime_content_type($altPath);
+        if ($mime) $mimeType = $mime;
+    } else {
+        // Fetch from production server
+        $remoteUrl = (str_starts_with($imagePath, 'http://') || str_starts_with($imagePath, 'https://'))
+            ? $imagePath 
+            : $serverBaseUrl . $cleanRelPath;
+
+        $ch = curl_init($remoteUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_TIMEOUT => 25,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => 0,
+            CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) YosshitaNehaAdmin/2.0'
+        ]);
+        $fetched = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $cType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+        curl_close($ch);
+
+        if ($httpCode === 200 && !empty($fetched)) {
+            $imgContent = $fetched;
+            if ($cType && str_contains($cType, 'image/')) {
+                $mimeType = explode(';', $cType)[0];
+            } else {
+                $ext = strtolower(pathinfo($imagePath, PATHINFO_EXTENSION));
+                if ($ext === 'png') $mimeType = 'image/png';
+                elseif ($ext === 'webp') $mimeType = 'image/webp';
+                elseif ($ext === 'gif') $mimeType = 'image/gif';
+                else $mimeType = 'image/jpeg';
+            }
+        }
+    }
+
+    if (empty($imgContent)) {
+        return ['error' => 'Failed to load collection image content for AI analysis: ' . $imagePath];
+    }
+
+    return [
+        'collection' => $coll,
         'image_content' => $imgContent,
         'mime_type' => $mimeType,
         'base64' => base64_encode($imgContent)
@@ -401,19 +497,23 @@ switch ($action) {
         break;
 
     case 'ai_generate_model_image':
-        if ($productId <= 0) {
-            echo json_encode(['error' => 'Product ID is required']);
+        if ($productId <= 0 && $collectionId <= 0) {
+            echo json_encode(['error' => 'Product ID or Collection ID is required']);
             exit;
         }
 
         $input = json_decode(file_get_contents('php://input'), true);
-        $basePrompt = $input['prompt'] ?? 'A photorealistic beautiful Indian fashion model wearing this exact product. The model should have open flowing hair. The background should have elegant props like a palace or traditional setting that compliments the jewelry perfectly. Do not change the product details.';
+        $basePrompt = $input['prompt'] ?? 'A photorealistic beautiful Indian fashion model wearing this exact outfit. The model should have open flowing hair. The background should have elegant props like a palace or traditional setting that compliments the outfit perfectly. Do not change the outfit details.';
         $faceReference = $input['face_reference'] ?? '';
         $numImages = (int)($input['num_images'] ?? 1);
         if ($numImages < 1) $numImages = 1;
         if ($numImages > 4) $numImages = 4;
 
-        $imgDataRes = getProductImageData($pdo, $productId);
+        if ($collectionId > 0) {
+            $imgDataRes = getCollectionImageData($pdo, $collectionId);
+        } else {
+            $imgDataRes = getProductImageData($pdo, $productId);
+        }
         if (isset($imgDataRes['error'])) {
             echo json_encode(['error' => $imgDataRes['error']]);
             exit;
@@ -515,7 +615,7 @@ switch ($action) {
         $opType = 'image';
         $genOutput = $actualGeneratedCount . " image(s) generated";
 
-        log_ai_analytics_to_parent_db($productId, 'fashion', $opType, $basePrompt, $genOutput, $actualGeneratedCount, $totalPromptTokens, $totalCandidateTokens, $totalTokensSum, $costEstimate, 'yosshitaneha');
+        log_ai_analytics_to_parent_db($productId > 0 ? $productId : $collectionId, 'fashion', $opType, $basePrompt, $genOutput, $actualGeneratedCount, $totalPromptTokens, $totalCandidateTokens, $totalTokensSum, $costEstimate, 'yosshitaneha');
 
         if (count($generatedImages) > 0) {
             echo json_encode(['success' => true, 'images_base64' => $generatedImages, 'partial_errors' => $errors]);
@@ -530,8 +630,8 @@ switch ($action) {
             exit;
         }
 
-        if ($productId <= 0) {
-            echo json_encode(['error' => 'Product ID is required']);
+        if ($productId <= 0 && $collectionId <= 0) {
+            echo json_encode(['error' => 'Product ID or Collection ID is required']);
             exit;
         }
 
@@ -547,6 +647,61 @@ switch ($action) {
         if (!$imgBinary) {
             echo json_encode(['error' => 'Invalid image base64 data']);
             exit;
+        }
+
+        // Support collection image saving
+        if ($collectionId > 0) {
+            $stmt = $pdo->prepare("SELECT slug, category FROM collections WHERE id = ?");
+            $stmt->execute([$collectionId]);
+            $coll = $stmt->fetch();
+            $collCategory = !empty($coll['category']) ? $coll['category'] : 'Blouse';
+            $collSlug = !empty($coll['slug']) ? $coll['slug'] : ('collection_' . $collectionId);
+
+            $uploadFolder = __DIR__ . '/../uploads/collections/' . $collCategory . '/' . $collSlug;
+            $thumbFolder = $uploadFolder . '/thumbs';
+
+            if (!file_exists($uploadFolder)) {
+                mkdir($uploadFolder, 0777, true);
+            }
+            if (!file_exists($thumbFolder)) {
+                mkdir($thumbFolder, 0777, true);
+            }
+
+            $filename = 'ai_model_' . time() . '_' . rand(100, 999) . '.jpg';
+            $fullSavePath = $uploadFolder . '/' . $filename;
+
+            if (file_put_contents($fullSavePath, $imgBinary) === false) {
+                echo json_encode(['error' => 'Failed to write image file to disk']);
+                exit;
+            }
+
+            $relativePath = 'uploads/collections/' . $collCategory . '/' . $collSlug . '/' . $filename;
+            $thumbFilename = 'thumb_' . $filename;
+            $fullThumbPath = $thumbFolder . '/' . $thumbFilename;
+            $relativeThumbPath = $relativePath;
+
+            if (function_exists('generate_square_thumbnail')) {
+                if (generate_square_thumbnail($fullSavePath, $fullThumbPath, 150)) {
+                    $relativeThumbPath = 'uploads/collections/' . $collCategory . '/' . $collSlug . '/thumbs/' . $thumbFilename;
+                }
+            }
+
+            $soStmt = $pdo->prepare("SELECT MAX(sort_order) FROM collection_images WHERE collection_id = ?");
+            $soStmt->execute([$collectionId]);
+            $maxSort = (int)$soStmt->fetchColumn();
+
+            $insStmt = $pdo->prepare("INSERT INTO collection_images (collection_id, image_path, thumb_path, caption, outfit_type, angle_type, is_cover, sort_order) VALUES (?, ?, ?, ?, ?, ?, 0, ?)");
+            $insStmt->execute([$collectionId, $relativePath, $relativeThumbPath, 'AI Model Shoot', $collCategory, 'Model Shot', $maxSort + 1]);
+            $newId = $pdo->lastInsertId();
+
+            echo json_encode([
+                'success' => true,
+                'id' => $newId,
+                'path' => $relativePath,
+                'thumb_path' => $relativeThumbPath,
+                'image_url' => get_collection_image_url($relativePath)
+            ]);
+            break;
         }
 
         // Get product SKU to structure directory

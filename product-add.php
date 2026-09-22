@@ -143,6 +143,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         purge_cache();
                     }
 
+                    if (function_exists('sync_sold_outfits_to_lookbook')) {
+                        sync_sold_outfits_to_lookbook($pdo);
+                    }
+
                     redirect('products.php?message=added');
                 }
             }

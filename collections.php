@@ -1,5 +1,5 @@
 <?php
-// admin/collections.php
+// admin/collections.php - Minimalist 4-Column Shadcn UI Lookbook & Collections Manager
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/includes/functions.php';
 
@@ -8,573 +8,657 @@ require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 ?>
 
+<!-- Inter Font -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
 <style>
-:root {
-    --lookbook-accent: #6366f1;
-    --lookbook-accent-dark: #4f46e5;
-    --lookbook-bg: #f8fafc;
-    --lookbook-card-border: #e2e8f0;
+/* ==========================================================================
+   MINIMALIST SHADCN UI DESIGN (HIGH-DENSITY 4-COLUMN DASHBOARD)
+   ========================================================================== */
+.shadcn-wrap {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #09090b;
+    background-color: #fafafa;
+    min-height: calc(100vh - 65px);
+    padding: 16px 24px 48px 24px;
 }
 
-/* Page Header & AI Callout */
-.lookbook-page-header {
+/* Minimal Single-Row Header */
+.shadcn-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 16px;
-    margin-bottom: 20px;
-}
-
-.lookbook-title-group h1 {
-    font-size: 24px;
-    font-weight: 800;
-    color: #0f172a;
-    margin: 0 0 4px 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.lookbook-subtitle {
-    font-size: 13px;
-    color: #64748b;
-    margin: 0;
-}
-
-.ai-banner-strip {
-    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-    border-radius: 10px;
-    padding: 16px 20px;
-    color: #ffffff;
-    margin-bottom: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 16px;
-    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.25);
-}
-
-.ai-banner-content {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-}
-
-.ai-banner-icon {
-    width: 44px;
-    height: 44px;
-    background: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(8px);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    flex-shrink: 0;
-}
-
-/* Monitor Bar */
-.api-monitor-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 10px 18px;
-    margin-bottom: 20px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     flex-wrap: wrap;
     gap: 12px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e4e4e7;
 }
 
-.api-stat-item {
+.shadcn-title-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.header-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #09090b;
+    letter-spacing: -0.02em;
+    margin: 0;
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 13px;
-    color: #475569;
 }
 
-.api-stat-item strong {
-    color: #0f172a;
-    font-weight: 700;
-}
-
-.api-badge-live {
-    background: #ecfdf5;
-    color: #047857;
-    border: 1px solid #a7f3d0;
-    padding: 2px 10px;
-    border-radius: 12px;
+.header-count-badge {
+    background: #f4f4f5;
+    color: #52525b;
+    border: 1px solid #e4e4e7;
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 9999px;
+}
+
+.header-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #71717a;
+}
+.header-meta-sep {
+    color: #d4d4d8;
+    font-size: 10px;
+}
+.header-meta-item {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
 }
 
-.api-badge-live .pulse-dot {
+.pulse-dot {
     width: 6px;
     height: 6px;
     border-radius: 50%;
     background: #10b981;
-    animation: pulseGlow 1.5s infinite;
+    display: inline-block;
+    animation: pulse 1.5s infinite;
+}
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(1.3); }
 }
 
-@keyframes pulseGlow {
-    0%, 100% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.4); opacity: 0.5; }
+/* Minimal Shadcn Action Buttons */
+.btn-shadcn-sm {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    height: 32px;
+    padding: 0 10px;
+    border-radius: 6px;
+    transition: all 0.15s ease;
+    cursor: pointer;
+    text-decoration: none;
+    line-height: 1;
+    white-space: nowrap;
 }
 
-/* Category Filter Tabs */
-.cat-tabs-container {
+.btn-shadcn-primary {
+    background: #09090b;
+    color: #ffffff;
+    border: 1px solid #09090b;
+}
+.btn-shadcn-primary:hover {
+    background: #27272a;
+    color: #ffffff;
+}
+
+.btn-shadcn-outline {
+    background: #ffffff;
+    color: #09090b;
+    border: 1px solid #e4e4e7;
+}
+.btn-shadcn-outline:hover {
+    background: #f4f4f5;
+    border-color: #d4d4d8;
+    color: #09090b;
+}
+
+.btn-shadcn-secondary {
+    background: #f4f4f5;
+    color: #18181b;
+    border: 1px solid transparent;
+}
+.btn-shadcn-secondary:hover {
+    background: #e4e4e7;
+}
+
+.tag-sold-mini {
+    font-size: 9.5px;
+    font-weight: 700;
+    color: #92400e;
+    background: #fef3c7;
+    border: 1px solid #fde68a;
+    padding: 1px 5px;
+    border-radius: 4px;
+}
+
+/* Compact Category Filter Tabs */
+.shadcn-tabs-track {
+    background: #f4f4f5;
+    padding: 3px;
+    border-radius: 8px;
+    border: 1px solid #e4e4e7;
     display: flex;
-    gap: 8px;
+    gap: 2px;
     overflow-x: auto;
-    padding-bottom: 8px;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
     scrollbar-width: thin;
 }
 
-.cat-tab-btn {
-    background: #ffffff;
-    border: 1px solid #cbd5e1;
-    border-radius: 20px;
-    padding: 6px 14px;
-    font-size: 13px;
-    font-weight: 600;
-    color: #475569;
+.shadcn-tab-item {
+    background: transparent;
+    border: none;
+    padding: 4px 10px;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: #71717a;
+    border-radius: 6px;
     cursor: pointer;
     white-space: nowrap;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    transition: all 0.2s ease;
+    gap: 5px;
+    transition: all 0.15s ease;
+}
+.shadcn-tab-item:hover {
+    color: #09090b;
+}
+.shadcn-tab-item.active {
+    background: #ffffff;
+    color: #09090b;
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-.cat-tab-btn:hover {
-    border-color: var(--lookbook-accent);
-    color: var(--lookbook-accent-dark);
-}
-
-.cat-tab-btn.active {
-    background: #0f172a;
-    border-color: #0f172a;
-    color: #ffffff;
-    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2);
-}
-
-.cat-tab-count {
-    background: rgba(0, 0, 0, 0.08);
-    padding: 1px 6px;
-    border-radius: 10px;
-    font-size: 11px;
+.shadcn-tab-count {
+    background: #e4e4e7;
+    color: #52525b;
+    padding: 0 5px;
+    border-radius: 9999px;
+    font-size: 9.5px;
     font-weight: 700;
 }
-
-.cat-tab-btn.active .cat-tab-count {
-    background: rgba(255, 255, 255, 0.25);
-    color: #ffffff;
+.shadcn-tab-item.active .shadcn-tab-count {
+    background: #f4f4f5;
+    color: #09090b;
 }
 
-/* Toolbar */
-.lookbook-toolbar {
+/* Compact Toolbar */
+.shadcn-toolbar {
     background: #ffffff;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #e4e4e7;
     border-radius: 8px;
-    padding: 12px 16px;
-    margin-bottom: 20px;
+    padding: 8px 12px;
+    margin-bottom: 16px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 8px;
 }
 
-.toolbar-left, .toolbar-right {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.search-input-box {
+.shadcn-search-input-wrap {
     position: relative;
-    min-width: 260px;
+    width: 280px;
+    max-width: 100%;
 }
-
-.search-input-box input {
-    width: 100%;
-    padding: 6px 12px 6px 32px;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    font-size: 13px;
-}
-
-.search-input-box i {
+.shadcn-search-input-wrap i {
     position: absolute;
     left: 10px;
     top: 50%;
     transform: translateY(-50%);
-    color: #94a3b8;
-    font-size: 13px;
+    color: #a1a1aa;
+    font-size: 11px;
 }
-
-/* Grid Layout */
-.collection-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 22px;
-    margin-top: 10px;
+.shadcn-search-input-wrap input {
+    width: 100%;
+    height: 30px;
+    padding: 0 10px 0 28px;
+    background: #fafafa;
+    border: 1px solid #e4e4e7;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #09090b;
+    transition: all 0.15s;
 }
-
-.collection-card {
+.shadcn-search-input-wrap input:focus {
     background: #ffffff;
-    border: 1px solid #e2e8f0;
+    outline: none;
+    border-color: #09090b;
+}
+
+.shadcn-select {
+    height: 30px;
+    padding: 0 8px;
+    border: 1px solid #e4e4e7;
+    border-radius: 6px;
+    background: #ffffff;
+    font-size: 11.5px;
+    color: #09090b;
+    font-weight: 500;
+    cursor: pointer;
+}
+.shadcn-select:focus {
+    outline: none;
+    border-color: #09090b;
+}
+
+/* ==========================================================================
+   4-COLUMN CARD GRID
+   ========================================================================== */
+.shadcn-grid-4col {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+}
+
+@media (max-width: 1360px) {
+    .shadcn-grid-4col {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+@media (max-width: 960px) {
+    .shadcn-grid-4col {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (max-width: 580px) {
+    .shadcn-grid-4col {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* High-Density Shadcn Card */
+.shadcn-card {
+    background: #ffffff;
+    border: 1px solid #e4e4e7;
     border-radius: 10px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
     overflow: hidden;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s;
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
 }
-
-.collection-card:hover {
-    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
-    transform: translateY(-3px);
+.shadcn-card:hover {
     border-color: #cbd5e1;
+    box-shadow: 0 6px 14px -3px rgba(0, 0, 0, 0.06);
+    transform: translateY(-2px);
 }
 
-.card-media-wrap {
+.shadcn-card-media {
     position: relative;
-    aspect-ratio: 16 / 11;
-    background: #f1f5f9;
+    aspect-ratio: 4 / 3;
+    background: #f4f4f5;
     overflow: hidden;
 }
 
-.card-media-img {
+.shadcn-card-img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
-    transition: transform 0.5s ease;
+    transition: transform 0.3s ease, opacity 0.2s ease;
+}
+.shadcn-card:hover .shadcn-card-img {
+    transform: scale(1.03);
 }
 
-.collection-card:hover .card-media-img {
-    transform: scale(1.04);
-}
-
-.card-cat-badge {
+/* Over-Image Floating Badges */
+.badge-category {
     position: absolute;
-    top: 10px;
-    left: 10px;
-    background: rgba(15, 23, 42, 0.85);
-    color: #f8fafc;
-    font-size: 10px;
-    font-weight: 700;
-    padding: 3px 8px;
-    border-radius: 4px;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
+    top: 8px;
+    left: 8px;
+    background: rgba(9, 9, 11, 0.85);
     backdrop-filter: blur(4px);
+    color: #ffffff;
+    font-size: 9.5px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 9999px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
 }
 
-.card-photos-badge {
+.badge-angles {
     position: absolute;
-    top: 10px;
-    right: 10px;
+    top: 8px;
+    right: 8px;
     background: rgba(255, 255, 255, 0.95);
-    color: #0f172a;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 3px 8px;
-    border-radius: 4px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    backdrop-filter: blur(4px);
+    color: #18181b;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 9999px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 3px;
 }
 
-.card-star-btn {
+.btn-favorite-star {
     position: absolute;
-    bottom: 10px;
-    right: 10px;
-    width: 32px;
-    height: 32px;
+    bottom: 8px;
+    right: 8px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
     background: #ffffff;
-    border: none;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    border: 1px solid #e4e4e7;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #cbd5e1;
+    color: #a1a1aa;
     cursor: pointer;
-    transition: transform 0.2s, color 0.2s;
+    transition: all 0.15s;
 }
-
-.card-star-btn.active {
+.btn-favorite-star.active {
     color: #eab308;
+    background: #fefce8;
+    border-color: #fef08a;
+}
+.btn-favorite-star:hover {
+    transform: scale(1.1);
 }
 
-.card-star-btn:hover {
-    transform: scale(1.15);
-}
-
-/* Multi-Angle Thumbnails */
-.card-thumbs-strip {
+/* Mini Thumbnails Strip */
+.shadcn-thumb-strip {
     display: flex;
     gap: 4px;
     padding: 6px 10px;
-    background: #f8fafc;
-    border-top: 1px solid #f1f5f9;
-    border-bottom: 1px solid #f1f5f9;
-    min-height: 46px;
+    background: #fafafa;
+    border-top: 1px solid #f4f4f5;
+    border-bottom: 1px solid #f4f4f5;
+    min-height: 38px;
 }
 
-.card-mini-thumb {
-    flex: 1;
-    height: 40px;
+.shadcn-mini-thumb {
+    width: 30px;
+    height: 30px;
     border-radius: 4px;
     overflow: hidden;
-    background: #e2e8f0;
+    background: #e4e4e7;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex-shrink: 0;
 }
-
-.card-mini-thumb img {
+.shadcn-mini-thumb:hover, .shadcn-mini-thumb.active {
+    border-color: #09090b;
+    transform: scale(1.05);
+}
+.shadcn-mini-thumb img {
     width: 100%;
     height: 100%;
     object-fit: cover;
 }
 
-.card-info {
-    padding: 14px 16px;
+/* Card Body Content */
+.shadcn-card-body {
+    padding: 12px;
     flex-grow: 1;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
 }
 
-.card-title {
-    font-size: 15px;
-    font-weight: 700;
-    color: #0f172a;
-    margin: 0 0 4px 0;
-    line-height: 1.35;
-}
-
-.card-title a {
-    color: inherit;
-    text-decoration: none;
-}
-
-.card-title a:hover {
-    color: var(--lookbook-accent);
-}
-
-.card-tags-row {
+.shadcn-tag-row {
     display: flex;
-    gap: 6px;
+    align-items: center;
+    gap: 4px;
     flex-wrap: wrap;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
-.card-tag-pill {
-    background: #f1f5f9;
-    color: #475569;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 2px 7px;
+.tag-sku {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 10px;
+    font-weight: 700;
+    color: #18181b;
+    background: #f4f4f5;
+    border: 1px solid #e4e4e7;
+    padding: 1px 5px;
     border-radius: 4px;
 }
 
-.card-desc {
-    font-size: 12px;
-    color: #64748b;
-    margin: 0 0 12px 0;
-    line-height: 1.45;
+.tag-sold {
+    font-size: 10px;
+    font-weight: 600;
+    color: #92400e;
+    background: #fef3c7;
+    border: 1px solid #fde68a;
+    padding: 1px 6px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.tag-attr {
+    font-size: 10px;
+    font-weight: 500;
+    color: #71717a;
+    background: #fafafa;
+    border: 1px solid #e4e4e7;
+    padding: 1px 5px;
+    border-radius: 4px;
+}
+
+.shadcn-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #09090b;
+    line-height: 1.35;
+    margin: 0 0 3px 0;
+}
+.shadcn-card-title a {
+    color: #09090b;
+    text-decoration: none;
+    transition: color 0.15s;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.shadcn-card-title a:hover {
+    color: #4f46e5;
+}
+
+.shadcn-card-desc {
+    font-size: 11px;
+    color: #71717a;
+    line-height: 1.4;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
 
-.card-footer-bar {
+/* Card Footer */
+.shadcn-card-footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-top: 1px solid #f1f5f9;
-    padding-top: 12px;
-    margin-top: auto;
+    padding: 8px 12px;
+    background: #fafafa;
+    border-top: 1px solid #f4f4f5;
 }
 
-.status-pill {
-    font-size: 11px;
-    font-weight: 700;
-    padding: 3px 8px;
-    border-radius: 12px;
+.status-badge-toggle {
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 9999px;
+    border: 1px solid;
     cursor: pointer;
-    border: none;
-    transition: opacity 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    transition: all 0.15s;
 }
-
-.status-pill.published {
+.status-badge-toggle.published {
     background: #ecfdf5;
-    color: #047857;
+    color: #065f46;
+    border-color: #a7f3d0;
+}
+.status-badge-toggle.published:hover {
+    background: #d1fae5;
+}
+.status-badge-toggle.draft {
+    background: #f4f4f5;
+    color: #71717a;
+    border-color: #e4e4e7;
+}
+.status-badge-toggle.draft:hover {
+    background: #e4e4e7;
 }
 
-.status-pill.draft {
-    background: #f1f5f9;
-    color: #64748b;
-}
-
-.card-actions {
-    display: flex;
-    gap: 6px;
-}
-
-.action-icon-btn {
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-    border: 1px solid #e2e8f0;
-    background: #ffffff;
-    color: #475569;
+.shadcn-actions-group {
     display: flex;
     align-items: center;
+    gap: 4px;
+}
+
+.icon-action-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 5px;
+    border: 1px solid #e4e4e7;
+    background: #ffffff;
+    color: #52525b;
+    display: inline-flex;
+    align-items: center;
     justify-content: center;
-    font-size: 12px;
+    font-size: 11px;
     text-decoration: none;
-    transition: all 0.2s;
+    cursor: pointer;
+    transition: all 0.15s;
 }
-
-.action-icon-btn:hover {
-    background: #f8fafc;
-    border-color: #cbd5e1;
-    color: #0f172a;
+.icon-action-btn:hover {
+    background: #f4f4f5;
+    border-color: #d4d4d8;
+    color: #09090b;
 }
-
-.action-icon-btn.delete:hover {
-    background: #fee2e2;
-    border-color: #fca5a5;
-    color: #dc2626;
+.icon-action-btn.delete:hover {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #ef4444;
 }
 </style>
 
-<div class="wrap">
-    <!-- Header -->
-    <div class="lookbook-page-header">
-        <div class="lookbook-title-group">
-            <h1>
-                <i class="fa-solid fa-camera-retro" style="color: var(--lookbook-accent);"></i>
-                Collections &amp; Lookbook Manager
+<div class="shadcn-wrap">
+    
+    <!-- 1. Minimal Header Row -->
+    <div class="shadcn-header">
+        <div class="shadcn-title-group">
+            <h1 class="header-title">
+                <i class="fa-solid fa-camera-retro" style="color: #4f46e5; font-size: 15px;"></i>
+                Lookbook &amp; Outfits
             </h1>
-            <p class="lookbook-subtitle">
-                Manage designer outfit styles, multi-angle photoshoot media, and lookbook gallery items.
-            </p>
-        </div>
-
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <a href="collection-ai-sorter.php" class="button button-primary" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); border: none; padding: 6px 16px; font-weight: 700;">
-                <i class="fa-solid fa-wand-magic-sparkles"></i> AI Outfit Sorter <span class="badge" style="background: rgba(255,255,255,0.25); color: #fff; font-size: 10px; padding: 1px 6px; border-radius: 10px; margin-left: 4px;">Gemini</span>
-            </a>
-            <a href="collection-add.php" class="button button-primary" style="background: #0f172a; border-color: #0f172a; padding: 6px 16px; font-weight: 700;">
-                <i class="fa-solid fa-circle-plus"></i> Add Outfit Style
-            </a>
-        </div>
-    </div>
-
-    <!-- AI Callout Banner -->
-    <div class="ai-banner-strip">
-        <div class="ai-banner-content">
-            <div class="ai-banner-icon">
-                <i class="fa-solid fa-brain"></i>
-            </div>
-            <div>
-                <strong style="font-size: 15px;">Gemini AI Automated Image Sorter Available</strong>
-                <div style="font-size: 12px; color: rgba(255,255,255,0.9); margin-top: 2px;">
-                    Have hundreds of mixed photoshoot images? The AI analyzes fabrics, embroidery, colors, and cuts to group matching photos into distinct Outfit Styles and create organized subfolders.
-                </div>
+            <span class="header-count-badge"><span id="statTotalOutfits">0</span> outfits</span>
+            
+            <div class="header-meta-row">
+                <span class="header-meta-item"><i class="fa-solid fa-sparkles text-amber-500" style="color: #d97706; font-size: 11px;"></i> <strong id="statSoldBridged" style="color: #92400e;">0</strong> in diary</span>
+                <span class="header-meta-sep">•</span>
+                <span class="header-meta-item"><i class="fa-solid fa-images text-emerald-600" style="color: #059669; font-size: 11px;"></i> <strong id="statTotalPhotos">0</strong> media</span>
+                <span class="header-meta-sep">•</span>
+                <span class="header-meta-item" style="color: #059669; font-size: 11.5px; font-family: ui-monospace, monospace;"><span class="pulse-dot"></span> <span id="statQueryTime">0 ms</span></span>
             </div>
         </div>
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <a href="collection-ai-sorter.php" class="button" style="background: #ffffff; color: #4f46e5; border: none; font-weight: 800; padding: 6px 16px;">
-                <i class="fa-solid fa-wand-magic-sparkles"></i> Open AI Sorter Studio
+
+        <div style="display: flex; gap: 6px; align-items: center;">
+            <button type="button" class="btn-shadcn-sm btn-shadcn-outline" onclick="syncSoldOutfits()" id="btnSyncSold" title="Sync Sold Outfits to Client Diary">
+                <i class="fa-solid fa-arrows-rotate text-emerald-600" style="color: #059669;"></i>
+                <span>Sync Sold</span>
+                <span class="tag-sold-mini">Diary</span>
+            </button>
+            <a href="collection-ai-sorter.php" class="btn-shadcn-sm btn-shadcn-secondary" title="Open AI Sorter Studio">
+                <i class="fa-solid fa-wand-magic-sparkles text-indigo-600" style="color: #4f46e5;"></i>
+                <span>AI Sorter</span>
+            </a>
+            <a href="collection-add.php" class="btn-shadcn-sm btn-shadcn-primary">
+                <i class="fa-solid fa-plus"></i>
+                <span>Add Outfit</span>
             </a>
         </div>
     </div>
 
-    <!-- API Live Monitor Bar -->
-    <div class="api-monitor-bar">
-        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-            <div class="api-stat-item">
-                <i class="fa-solid fa-vest-patches" style="color: var(--lookbook-accent);"></i>
-                <span>Outfits in DB: <strong id="statTotalOutfits">0</strong></span>
-            </div>
-            <div class="api-stat-item">
-                <i class="fa-solid fa-images" style="color: #059669;"></i>
-                <span>Total Media: <strong id="statTotalPhotos">0</strong></span>
-            </div>
-            <div class="api-stat-item">
-                <i class="fa-solid fa-gauge-high" style="color: #d97706;"></i>
-                <span>API Speed: <strong id="statQueryTime">0 ms</strong></span>
-            </div>
-        </div>
-        <div class="api-badge-live">
-            <span class="pulse-dot"></span> AJAX Engine Connected
-        </div>
-    </div>
-
-    <!-- Category Tabs -->
-    <div class="cat-tabs-container" id="categoryTabsContainer">
-        <button type="button" class="cat-tab-btn active" data-cat="All" onclick="setCategoryFilter('All')">
-            All Styles <span class="cat-tab-count" id="countAll">0</span>
+    <!-- 2. Compact Category Tabs Track -->
+    <div class="shadcn-tabs-track" id="categoryTabsContainer">
+        <button type="button" class="shadcn-tab-item active" data-cat="All" onclick="setCategoryFilter('All')">
+            <span>All Styles</span>
+            <span class="shadcn-tab-count" id="countAll">0</span>
         </button>
-        <!-- Dynamically populated categories -->
+        <!-- Categories populated via JS -->
     </div>
 
-    <!-- Toolbar -->
-    <div class="lookbook-toolbar">
-        <div class="toolbar-left">
-            <div class="search-input-box">
-                <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" id="searchInput" placeholder="Search by title, SKU, fabric, color..." onkeyup="handleSearch(event)">
-            </div>
-            <select id="statusFilter" class="form-input-sm" style="width: 130px;" onchange="loadCollections(1)">
+    <!-- 3. Minimal Toolbar -->
+    <div class="shadcn-toolbar">
+        <div class="shadcn-search-input-wrap">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="searchInput" placeholder="Search by SKU (e.g. YNB049), title, color..." onkeyup="handleSearch(event)">
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+            <select id="statusFilter" class="shadcn-select" onchange="loadCollections(1)">
                 <option value="all">All Statuses</option>
                 <option value="published">Published</option>
                 <option value="draft">Draft</option>
             </select>
-        </div>
 
-        <div class="toolbar-right">
-            <label style="font-size: 12px; color: #64748b;">Per page:</label>
-            <select id="perPageSelect" class="form-input-sm" style="width: 70px;" onchange="loadCollections(1)">
-                <option value="12">12</option>
-                <option value="18" selected>18</option>
+            <span style="font-size: 11.5px; color: #71717a; margin-left: 4px;">Show:</span>
+            <select id="perPageSelect" class="shadcn-select" style="width: 60px;" onchange="loadCollections(1)">
+                <option value="16" selected>16</option>
+                <option value="24">24</option>
                 <option value="36">36</option>
-                <option value="60">60</option>
+                <option value="48">48</option>
             </select>
-            <button type="button" class="button" onclick="loadCollections(currentPage)"><i class="fa-solid fa-rotate"></i></button>
+
+            <button type="button" class="btn-shadcn-sm btn-shadcn-outline" style="width: 30px; height: 30px; padding: 0;" onclick="loadCollections(currentPage)" title="Refresh">
+                <i class="fa-solid fa-rotate" style="font-size: 11px;"></i>
+            </button>
         </div>
     </div>
 
-    <!-- Outfits Grid Container -->
-    <div id="collectionsGrid" class="collection-grid">
-        <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; color: #94a3b8;">
-            <i class="fa-solid fa-spinner fa-spin fa-2x"></i>
-            <div style="margin-top: 10px;">Loading outfit styles...</div>
+    <!-- 4. 4-Column Card Grid -->
+    <div id="collectionsGrid" class="shadcn-grid-4col">
+        <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; color: #a1a1aa;">
+            <i class="fa-solid fa-circle-notch fa-spin fa-2x" style="color: #4f46e5;"></i>
+            <div style="margin-top: 10px; font-size: 13px; font-weight: 500;">Loading outfits with WebP acceleration...</div>
         </div>
     </div>
 
-    <!-- Pagination Container -->
-    <div id="paginationWrap" style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding: 14px 0; border-top: 1px solid #e2e8f0; flex-wrap: wrap; gap: 12px;">
-        <div style="font-size: 13px; color: #64748b;" id="paginationInfo">Showing 0 of 0</div>
+    <!-- 5. Minimal Pagination -->
+    <div id="paginationWrap" style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 14px; border-top: 1px solid #e4e4e7; flex-wrap: wrap; gap: 8px;">
+        <div style="font-size: 12px; color: #71717a;" id="paginationInfo">Showing 0 of 0</div>
         <div style="display: flex; gap: 6px;" id="paginationBtns"></div>
     </div>
+
 </div>
 
 <script>
@@ -596,12 +680,12 @@ function handleSearch(e) {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
         loadCollections(1);
-    }, 350);
+    }, 280);
 }
 
 function setCategoryFilter(cat) {
     currentCategory = cat;
-    document.querySelectorAll('.cat-tab-btn').forEach(btn => {
+    document.querySelectorAll('.shadcn-tab-item').forEach(btn => {
         btn.classList.toggle('active', btn.getAttribute('data-cat') === cat);
     });
     loadCollections(1);
@@ -610,7 +694,12 @@ function setCategoryFilter(cat) {
 async function loadCollections(page = 1) {
     currentPage = page;
     const grid = document.getElementById('collectionsGrid');
-    grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; color: #94a3b8;"><i class="fa-solid fa-spinner fa-spin fa-2x"></i><div style="margin-top: 10px;">Loading outfit styles...</div></div>`;
+    grid.innerHTML = `
+        <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; color: #a1a1aa;">
+            <i class="fa-solid fa-circle-notch fa-spin fa-2x" style="color: #4f46e5;"></i>
+            <div style="margin-top: 10px; font-size: 13px; font-weight: 500;">Loading outfits...</div>
+        </div>
+    `;
 
     const search = document.getElementById('searchInput').value.trim();
     const status = document.getElementById('statusFilter').value;
@@ -632,6 +721,9 @@ async function loadCollections(page = 1) {
         // Update stats
         if (data.stats) {
             document.getElementById('statTotalOutfits').textContent = data.stats.total_collections || 0;
+            if (document.getElementById('statSoldBridged')) {
+                document.getElementById('statSoldBridged').textContent = data.stats.total_sold_bridged || 0;
+            }
             document.getElementById('statTotalPhotos').textContent = data.stats.total_photos || 0;
             document.getElementById('statQueryTime').textContent = `${data.stats.query_time_ms} ms`;
             document.getElementById('countAll').textContent = data.stats.total_collections || 0;
@@ -655,16 +747,16 @@ async function loadCollections(page = 1) {
 
 function renderCategoryTabs(categories) {
     const container = document.getElementById('categoryTabsContainer');
-    const existingButtons = container.querySelectorAll('.cat-tab-btn:not([data-cat="All"])');
+    const existingButtons = container.querySelectorAll('.shadcn-tab-item:not([data-cat="All"])');
     existingButtons.forEach(b => b.remove());
 
     categories.forEach(cat => {
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = `cat-tab-btn ${currentCategory === cat.category ? 'active' : ''}`;
+        btn.className = `shadcn-tab-item ${currentCategory === cat.category ? 'active' : ''}`;
         btn.setAttribute('data-cat', cat.category);
         btn.onclick = () => setCategoryFilter(cat.category);
-        btn.innerHTML = `${escapeHtml(cat.category)} <span class="cat-tab-count">${cat.count}</span>`;
+        btn.innerHTML = `<span>${escapeHtml(cat.category)}</span> <span class="shadcn-tab-count">${cat.count}</span>`;
         container.appendChild(btn);
     });
 }
@@ -673,22 +765,22 @@ function renderCollectionCards(items) {
     const grid = document.getElementById('collectionsGrid');
     if (!items.length) {
         grid.innerHTML = `
-            <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; background: #ffffff; border: 1.5px dashed #cbd5e1; border-radius: 12px;">
-                <div style="width: 60px; height: 60px; background: #eef2ff; border-radius: 50%; color: #6366f1; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 14px;">
+            <div style="grid-column: 1/-1; text-align: center; padding: 50px 20px; background: #ffffff; border: 1.5px dashed #e4e4e7; border-radius: 10px;">
+                <div style="width: 44px; height: 44px; background: #f4f4f5; border-radius: 50%; color: #71717a; display: inline-flex; align-items: center; justify-content: center; font-size: 18px; margin-bottom: 10px;">
                     <i class="fa-solid fa-vest-patches"></i>
                 </div>
-                <h3 style="font-size: 17px; font-weight: 700; color: #0f172a; margin-bottom: 4px;">No Outfit Styles Found</h3>
-                <p style="font-size: 13px; color: #64748b; max-width: 450px; margin: 0 auto 16px auto;">
+                <h3 style="font-size: 15px; font-weight: 600; color: #09090b; margin-bottom: 2px;">No Outfits Found</h3>
+                <p style="font-size: 12px; color: #71717a; max-width: 380px; margin: 0 auto 12px auto;">
                     ${currentCategory !== 'All' 
-                        ? `There are no outfits registered under <strong>${escapeHtml(currentCategory)}</strong> yet. Run the AI Sorter on your raw photoshoot folder!` 
-                        : 'No outfits match the current filters.'}
+                        ? `No outfits under <strong>${escapeHtml(currentCategory)}</strong>.` 
+                        : 'No outfits match the current search or filters.'}
                 </p>
-                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                    <a href="collection-ai-sorter.php" class="button button-primary" style="background: var(--lookbook-accent); border: none; font-weight: 700;">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i> Run Gemini AI Sorter
+                <div style="display: flex; gap: 6px; justify-content: center; flex-wrap: wrap;">
+                    <a href="collection-ai-sorter.php" class="btn-shadcn-sm btn-shadcn-secondary">
+                        <i class="fa-solid fa-wand-magic-sparkles text-indigo-600"></i> AI Sorter
                     </a>
-                    <a href="collection-add.php" class="button">
-                        <i class="fa-solid fa-circle-plus"></i> Add Manually
+                    <a href="collection-add.php" class="btn-shadcn-sm btn-shadcn-outline">
+                        <i class="fa-solid fa-plus"></i> Add Manually
                     </a>
                 </div>
             </div>
@@ -697,59 +789,88 @@ function renderCollectionCards(items) {
     }
 
     grid.innerHTML = items.map(c => {
-        const coverSrc = c.cover_url || 'assets/images/placeholder.svg';
+        // High-speed WebP thumbnail with full server URL fallback on error
+        const coverSrc = c.cover_thumb || c.cover_url || 'assets/images/placeholder.svg';
+        const fallbackSrc = c.cover_url || 'assets/images/placeholder.svg';
         const thumbs = c.preview_images || [];
         const isFeatured = parseInt(c.is_featured) === 1;
         const isPublished = c.status === 'published';
+        const isSold = parseInt(c.is_sold) === 1;
 
         return `
-            <div class="collection-card" id="card_${c.id}">
-                <div class="card-media-wrap">
-                    <img src="${coverSrc}" alt="${escapeHtml(c.title)}" class="card-media-img" onerror="this.onerror=null; this.src='assets/images/placeholder.svg';">
-                    <span class="card-cat-badge">${escapeHtml(c.category || 'Collection')}</span>
-                    <span class="card-photos-badge"><i class="fa-solid fa-image"></i> ${c.total_images || 0}</span>
-                    <button type="button" class="card-star-btn ${isFeatured ? 'active' : ''}" onclick="toggleFeatured(${c.id})" title="${isFeatured ? 'Remove Featured' : 'Mark as Featured'}">
-                        <i class="fa-solid fa-star"></i>
-                    </button>
+            <div class="shadcn-card" id="card_${c.id}">
+                <div>
+                    <!-- Hero Image Media Wrap -->
+                    <div class="shadcn-card-media" id="media_${c.id}">
+                        <img 
+                            src="${coverSrc}" 
+                            alt="${escapeHtml(c.title)}" 
+                            class="shadcn-card-img" 
+                            id="main_img_${c.id}"
+                            loading="lazy"
+                            decoding="async"
+                            onerror="this.onerror=null; this.src='${fallbackSrc}';"
+                        >
+                        <span class="badge-category">${escapeHtml(c.category || 'Atelier')}</span>
+                        <span class="badge-angles"><i class="fa-solid fa-camera" style="font-size: 9px;"></i> ${c.total_images || 0}</span>
+                        <button type="button" class="btn-favorite-star ${isFeatured ? 'active' : ''}" onclick="toggleFeatured(${c.id})" title="${isFeatured ? 'Remove Featured' : 'Mark as Featured'}">
+                            <i class="fa-solid fa-star" style="font-size: 11px;"></i>
+                        </button>
+                    </div>
+
+                    <!-- Multi-Angle Quick Switcher Strip -->
+                    ${thumbs.length > 0 ? `
+                        <div class="shadcn-thumb-strip">
+                            ${thumbs.map(t => {
+                                const thumbUrl = (typeof t === 'object' && t !== null) ? (t.thumb || t.original) : t;
+                                const originalUrl = (typeof t === 'object' && t !== null) ? (t.original || t.thumb) : t;
+                                return `
+                                    <div class="shadcn-mini-thumb" 
+                                         onclick="swapCardMainImage(${c.id}, '${thumbUrl}', '${originalUrl}')"
+                                         title="Preview Angle">
+                                        <img src="${thumbUrl}" alt="Angle" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='${originalUrl}';">
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    ` : ''}
+
+                    <!-- Card Body -->
+                    <div class="shadcn-card-body">
+                        <div>
+                            <div class="shadcn-tag-row">
+                                ${c.sku ? `<span class="tag-sku">${escapeHtml(c.sku)}</span>` : ''}
+                                ${isSold ? `<span class="tag-sold"><i class="fa-solid fa-sparkles"></i> Sold Diary</span>` : ''}
+                                ${c.fabric ? `<span class="tag-attr">${escapeHtml(c.fabric)}</span>` : ''}
+                                ${c.color ? `<span class="tag-attr">${escapeHtml(c.color)}</span>` : ''}
+                            </div>
+                            <h3 class="shadcn-card-title">
+                                <a href="${c.edit_url}" title="${escapeHtml(c.title)}">${escapeHtml(c.title)}</a>
+                            </h3>
+                            <p class="shadcn-card-desc">${escapeHtml(c.description || c.subtitle || 'Designer handcrafted ensemble.')}</p>
+                        </div>
+                    </div>
                 </div>
 
-                ${thumbs.length > 0 ? `
-                    <div class="card-thumbs-strip">
-                        ${thumbs.map(t => `
-                            <div class="card-mini-thumb">
-                                <img src="${t}" alt="Angle" onerror="this.onerror=null; this.src='assets/images/placeholder.svg';">
-                            </div>
-                        `).join('')}
-                    </div>
-                ` : ''}
+                <!-- Card Footer -->
+                <div class="shadcn-card-footer">
+                    <button type="button" class="status-badge-toggle ${isPublished ? 'published' : 'draft'}" onclick="toggleStatus(${c.id})">
+                        <i class="fa-solid fa-circle" style="font-size: 5px;"></i>
+                        <span>${isPublished ? 'Published' : 'Draft'}</span>
+                    </button>
 
-                <div class="card-info">
-                    <div>
-                        <div class="card-tags-row">
-                            ${c.sku ? `<span class="card-tag-pill" style="background: #e0e7ff; color: #3730a3; font-weight: 700;">${escapeHtml(c.sku)}</span>` : ''}
-                            ${c.fabric ? `<span class="card-tag-pill">${escapeHtml(c.fabric)}</span>` : ''}
-                            ${c.color ? `<span class="card-tag-pill">${escapeHtml(c.color)}</span>` : ''}
-                        </div>
-                        <h3 class="card-title">
-                            <a href="${c.edit_url}">${escapeHtml(c.title)}</a>
-                        </h3>
-                        <p class="card-desc">${escapeHtml(c.description || c.subtitle || 'Designer lookbook piece.')}</p>
-                    </div>
-
-                    <div class="card-footer-bar">
-                        <button type="button" class="status-pill ${isPublished ? 'published' : 'draft'}" onclick="toggleStatus(${c.id})">
-                            <i class="fa-solid fa-circle" style="font-size: 7px; vertical-align: middle; margin-right: 3px;"></i>
-                            ${isPublished ? 'Published' : 'Draft'}
-                        </button>
-
-                        <div class="card-actions">
-                            <a href="${c.edit_url}" class="action-icon-btn" title="Edit Outfit & Media">
-                                <i class="fa-solid fa-pen"></i>
+                    <div class="shadcn-actions-group">
+                        ${c.product_id ? `
+                            <a href="product-edit.php?id=${c.product_id}" class="icon-action-btn" title="View Source Product" target="_blank" style="color: #4f46e5;">
+                                <i class="fa-solid fa-bag-shopping"></i>
                             </a>
-                            <button type="button" class="action-icon-btn delete" onclick="deleteCollection(${c.id}, '${escapeHtml(c.title)}')" title="Delete Outfit">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
-                        </div>
+                        ` : ''}
+                        <a href="${c.edit_url}" class="icon-action-btn" title="Edit Outfit">
+                            <i class="fa-solid fa-pen"></i>
+                        </a>
+                        <button type="button" class="icon-action-btn delete" onclick="deleteCollection(${c.id}, '${escapeHtml(c.title)}')" title="Delete Outfit">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -757,18 +878,33 @@ function renderCollectionCards(items) {
     }).join('');
 }
 
+function swapCardMainImage(cardId, thumbUrl, originalUrl) {
+    const mainImg = document.getElementById(`main_img_${cardId}`);
+    if (mainImg) {
+        mainImg.style.opacity = '0.5';
+        mainImg.src = thumbUrl;
+        mainImg.onerror = function() {
+            this.onerror = null;
+            this.src = originalUrl;
+        };
+        mainImg.onload = function() {
+            this.style.opacity = '1';
+        };
+    }
+}
+
 function renderPagination(p) {
     if (!p) return;
-    document.getElementById('paginationInfo').textContent = `Showing page ${p.page} of ${p.total_pages || 1} (${p.total} total outfits)`;
+    document.getElementById('paginationInfo').textContent = `Page ${p.page} of ${p.total_pages || 1} (${p.total} outfits)`;
 
     const btnsWrap = document.getElementById('paginationBtns');
     let html = '';
 
     if (p.has_prev) {
-        html += `<button type="button" class="button" onclick="loadCollections(${p.page - 1})"><i class="fa-solid fa-chevron-left"></i> Prev</button>`;
+        html += `<button type="button" class="btn-shadcn-sm btn-shadcn-outline" onclick="loadCollections(${p.page - 1})"><i class="fa-solid fa-chevron-left"></i> Prev</button>`;
     }
     if (p.has_next) {
-        html += `<button type="button" class="button" onclick="loadCollections(${p.page + 1})">Next <i class="fa-solid fa-chevron-right"></i></button>`;
+        html += `<button type="button" class="btn-shadcn-sm btn-shadcn-outline" onclick="loadCollections(${p.page + 1})">Next <i class="fa-solid fa-chevron-right"></i></button>`;
     }
 
     btnsWrap.innerHTML = html;
@@ -786,7 +922,7 @@ async function toggleFeatured(id) {
         const data = await res.json();
         if (data.success) {
             const card = document.getElementById(`card_${id}`);
-            const star = card.querySelector('.card-star-btn');
+            const star = card.querySelector('.btn-favorite-star');
             star.classList.toggle('active', data.is_featured === 1);
         }
     } catch (e) {
@@ -806,10 +942,10 @@ async function toggleStatus(id) {
         const data = await res.json();
         if (data.success) {
             const card = document.getElementById(`card_${id}`);
-            const btn = card.querySelector('.status-pill');
+            const btn = card.querySelector('.status-badge-toggle');
             const isPub = data.status === 'published';
-            btn.className = `status-pill ${isPub ? 'published' : 'draft'}`;
-            btn.innerHTML = `<i class="fa-solid fa-circle" style="font-size: 7px; vertical-align: middle; margin-right: 3px;"></i> ${isPub ? 'Published' : 'Draft'}`;
+            btn.className = `status-badge-toggle ${isPub ? 'published' : 'draft'}`;
+            btn.innerHTML = `<i class="fa-solid fa-circle" style="font-size: 5px;"></i> <span>${isPub ? 'Published' : 'Draft'}</span>`;
         }
     } catch (e) {
         console.error(e);
@@ -835,6 +971,30 @@ async function deleteCollection(id, title) {
         }
     } catch (e) {
         alert('Network error: ' + e.message);
+    }
+}
+
+async function syncSoldOutfits() {
+    const btn = document.getElementById('btnSyncSold');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Syncing...';
+    try {
+        const res = await fetch('api/admin_collections.php?action=sync_sold_products', {
+            method: 'POST'
+        });
+        const data = await res.json();
+        if (data.success) {
+            alert('🎉 ' + data.message);
+            loadCollections(currentPage);
+        } else {
+            alert('⚠️ ' + (data.message || 'Failed to sync sold outfits.'));
+        }
+    } catch (err) {
+        alert('❌ Error syncing sold outfits: ' + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
     }
 }
 

@@ -63,6 +63,24 @@ try {
         exit();
     }
 
+    // 4. Manual Sync Sold Outfits to Client Diary / Lookbook
+    if ($action === 'sync_sold_products' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        $syncRes = sync_sold_outfits_to_lookbook($pdo);
+        if ($syncRes['success']) {
+            echo json_encode([
+                'success' => true,
+                'message' => "Successfully synced sold outfits: {$syncRes['bridged_new']} new added, {$syncRes['updated']} verified in Client Diary.",
+                'data' => $syncRes
+            ]);
+        } else {
+            echo json_encode([
+                'success' => false,
+                'message' => "Sync error: " . ($syncRes['message'] ?? 'Unknown error')
+            ]);
+        }
+        exit();
+    }
+
     // 4. List Collections with Server-Side Pagination, Search & Category Filters
     $search = trim($_GET['s'] ?? '');
     $catFilter = trim($_GET['cat'] ?? '');
@@ -75,10 +93,14 @@ try {
     $params = [];
 
     if ($search !== '') {
-        $where[] = "(c.title LIKE ? OR c.subtitle LIKE ? OR c.description LIKE ?)";
-        $params[] = "%$search%";
-        $params[] = "%$search%";
-        $params[] = "%$search%";
+        $where[] = "(c.title LIKE ? OR c.sku LIKE ? OR c.subtitle LIKE ? OR c.description LIKE ? OR c.fabric LIKE ? OR c.color LIKE ?)";
+        $sTerm = "%$search%";
+        $params[] = $sTerm;
+        $params[] = $sTerm;
+        $params[] = $sTerm;
+        $params[] = $sTerm;
+        $params[] = $sTerm;
+        $params[] = $sTerm;
     }
 
     if ($catFilter !== '' && $catFilter !== 'All') {
@@ -131,11 +153,15 @@ try {
             $cid = $t['collection_id'];
             if (!isset($thumbsMap[$cid])) $thumbsMap[$cid] = [];
             if (count($thumbsMap[$cid]) < 4) {
-                $thumbsMap[$cid][] = get_collection_image_url($t['image_path']);
+                $thumbsMap[$cid][] = [
+                    'thumb' => get_collection_thumb_url($t['image_path'], 100, 75),
+                    'original' => get_collection_image_url($t['image_path'])
+                ];
             }
         }
 
         foreach ($collections as &$c) {
+            $c['cover_thumb'] = get_collection_thumb_url($c['cover_image'], 480, 80);
             $c['cover_url'] = get_collection_image_url($c['cover_image']);
             $c['preview_images'] = $thumbsMap[$c['id']] ?? [];
             $c['edit_url'] = "collection-edit.php?id=" . $c['id'];
@@ -146,7 +172,7 @@ try {
     // Category Counts Breakdown (Combining DB records + on-disk category folders)
     $catCountsDb = $pdo->query("SELECT category, COUNT(*) as count FROM collections WHERE category IS NOT NULL AND category != '' GROUP BY category ORDER BY category ASC")->fetchAll(PDO::FETCH_KEY_PAIR);
 
-    $allKnownCats = ['Blouse', 'Sold out', 'Anarkali', 'Lehenga', 'Gown', 'Suit', 'Indo western', 'Kids wear', 'Sari', 'Sari Makeover', 'Family Twinning', 'Mens wear', 'Home furnishing'];
+    $allKnownCats = ['Client Diaries', 'Blouse', 'Sold out', 'Anarkali', 'Lehenga', 'Gown', 'Suit', 'Indo western', 'Kids wear', 'Sari', 'Sari Makeover', 'Family Twinning', 'Mens wear', 'Home furnishing'];
     
     // Auto-include any category that exists in the database
     foreach ($catCountsDb as $k => $v) {
@@ -192,6 +218,7 @@ try {
 
     $totalAllCollections = $pdo->query("SELECT COUNT(*) FROM collections")->fetchColumn();
     $totalPhotosInDb = $pdo->query("SELECT COUNT(*) FROM collection_images")->fetchColumn();
+    $totalSoldBridged = $pdo->query("SELECT COUNT(*) FROM collections WHERE is_sold = 1")->fetchColumn();
 
     $executionTimeMs = round((microtime(true) - $startTime) * 1000, 2);
 
@@ -210,6 +237,7 @@ try {
         'stats' => [
             'total_collections' => (int)$totalAllCollections,
             'total_photos' => (int)$totalPhotosInDb,
+            'total_sold_bridged' => (int)$totalSoldBridged,
             'query_time_ms' => $executionTimeMs
         ]
     ]);

@@ -1416,7 +1416,26 @@ function get_collection_image_url($path) {
     }
     $parts = explode('/', $clean);
     $encoded = array_map('rawurlencode', $parts);
-    return implode('/', $encoded);
+    $encodedPath = implode('/', $encoded);
+    
+    // Always take image reference of server base URL
+    return 'https://yosshitaneha.com/admin/' . $encodedPath;
+}
+
+/**
+ * Get high-speed compressed WebP thumbnail URL via thumb.php
+ */
+function get_collection_thumb_url($path, $width = 450, $quality = 80) {
+    if (empty($path)) return 'assets/images/placeholder.svg';
+    if (str_starts_with($path, 'data:')) return $path;
+    $clean = ltrim($path, '/');
+    if (str_starts_with($clean, 'admin/')) {
+        $clean = substr($clean, 6);
+    }
+    // Strip yosshitaneha.com/admin/ if present
+    $clean = preg_replace('#^https?://(www\.)?yosshitaneha\.com/admin/#i', '', $clean);
+    
+    return "api/thumb.php?src=" . urlencode($clean) . "&w={$width}&q={$quality}";
 }
 
 if (!function_exists('format_bytes')) {
@@ -1641,10 +1660,14 @@ function sync_outfit_stock_from_pos($pdo = null) {
             purge_cache();
         }
 
+        // Auto-bridge sold out outfits to Client Diary / Lookbook
+        $lookbookSync = sync_sold_outfits_to_lookbook($pdo);
+
         return [
             'success' => true,
             'total_outfits' => count($products),
             'updated' => $updatedCount,
+            'lookbook_bridged' => $lookbookSync['bridged_new'] ?? 0,
             'changes' => $details
         ];
     } catch (Exception $e) {
@@ -1652,4 +1675,166 @@ function sync_outfit_stock_from_pos($pdo = null) {
     }
 }
 
+/**
+ * Automatically bridges sold out / out-of-stock outfit products to Collections (Client Diaries & Lookbook).
+ * If an outfit product's stock_qty <= 0:
+ *   - Inserts or activates a record in `collections` under category 'Client Diaries'.
+ *   - Flags it with `is_sold = 1` and links `product_id`.
+ *   - Copies all multi-angle photoshoot / product images into `collection_images`.
+ * If restocked (stock_qty > 0):
+ *   - Sets collection status to 'draft' so only actual sold pieces show in client diary.
+ */
+function sync_sold_outfits_to_lookbook($pdo = null) {
+    if (!$pdo && isset($GLOBALS['pdo'])) {
+        $pdo = $GLOBALS['pdo'];
+    }
+    if (!$pdo) return ['success' => false, 'message' => 'No database connection'];
+
+    try {
+        $outfitCatIds = get_all_child_category_ids($pdo, 26);
+        $inCats = implode(',', array_map('intval', $outfitCatIds));
+
+        // Fetch all outfit products
+        $stmt = $pdo->query("SELECT p.id, p.category_id, p.name, p.slug, p.sku, p.description, p.short_description, 
+                                    p.price, p.sale_price, p.stock_qty, p.status, p.main_image, c.name as category_name
+                             FROM products p
+                             LEFT JOIN categories c ON p.category_id = c.id
+                             WHERE (p.category_id IN ($inCats) OR p.sku LIKE 'YNB%' OR p.sku LIKE 'YNI%') 
+                               AND p.deleted_at IS NULL");
+        $outfits = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($outfits)) {
+            return ['success' => true, 'bridged_new' => 0, 'updated' => 0, 'restocked_hidden' => 0];
+        }
+
+        $bridgedCount = 0;
+        $updatedCount = 0;
+        $restockedCount = 0;
+
+        // Prepared statements for collection checks & updates
+        $findCollStmt = $pdo->prepare("SELECT id, status, is_sold FROM collections WHERE product_id = ? OR (sku IS NOT NULL AND sku != '' AND sku = ?) LIMIT 1");
+        
+        $insertCollStmt = $pdo->prepare("INSERT INTO collections 
+            (title, slug, sku, product_id, subtitle, category, description, cover_image, is_featured, is_sold, sort_order, status) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 1, 999, 'published')");
+
+        $updateCollStmt = $pdo->prepare("UPDATE collections 
+            SET title = ?, subtitle = ?, description = ?, cover_image = ?, status = 'published', is_sold = 1, product_id = ? 
+            WHERE id = ?");
+
+        $draftCollStmt = $pdo->prepare("UPDATE collections SET status = 'draft' WHERE id = ?");
+
+        $findImgStmt = $pdo->prepare("SELECT image_path, thumb_path, sort_order FROM product_images WHERE product_id = ? ORDER BY sort_order ASC, id ASC");
+        $checkCollImgStmt = $pdo->prepare("SELECT COUNT(*) FROM collection_images WHERE collection_id = ? AND image_path = ?");
+        $insertCollImgStmt = $pdo->prepare("INSERT INTO collection_images (collection_id, image_path, thumb_path, caption, outfit_type, sort_order) VALUES (?, ?, ?, ?, ?, ?)");
+
+        foreach ($outfits as $outfit) {
+            $isSold = ((int)$outfit['stock_qty'] <= 0) && ($outfit['status'] === 'published');
+            $findCollStmt->execute([$outfit['id'], $outfit['sku']]);
+            $existingColl = $findCollStmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($isSold) {
+                $catName = 'Client Diaries';
+                $subtitle = 'Client Diary • Sold Out Atelier Piece';
+                $desc = !empty($outfit['description']) ? $outfit['description'] : ($outfit['short_description'] ?? '');
+
+                if (!$existingColl) {
+                    // Generate unique slug
+                    $cleanSlug = !empty($outfit['slug']) ? $outfit['slug'] : strtolower(preg_replace('/[^a-z0-9]+/i', '-', $outfit['sku']));
+                    $baseSlug = 'client-diary-' . $cleanSlug;
+                    $slug = $baseSlug;
+                    $counter = 1;
+                    $slugCheckStmt = $pdo->prepare("SELECT COUNT(*) FROM collections WHERE slug = ?");
+                    while (true) {
+                        $slugCheckStmt->execute([$slug]);
+                        if ((int)$slugCheckStmt->fetchColumn() === 0) break;
+                        $slug = $baseSlug . '-' . $counter;
+                        $counter++;
+                    }
+
+                    $insertCollStmt->execute([
+                        $outfit['name'],
+                        $slug,
+                        $outfit['sku'],
+                        $outfit['id'],
+                        $subtitle,
+                        $catName,
+                        $desc,
+                        $outfit['main_image'] ?: null
+                    ]);
+                    $collId = (int)$pdo->lastInsertId();
+                    $bridgedCount++;
+
+                    // 1. Add cover image to collection_images if exists
+                    if (!empty($outfit['main_image'])) {
+                        $insertCollImgStmt->execute([$collId, $outfit['main_image'], $outfit['main_image'], 'Client Diary Cover', 'Front View', 0]);
+                    }
+
+                    // 2. Add product gallery images
+                    $findImgStmt->execute([$outfit['id']]);
+                    $prodImgs = $findImgStmt->fetchAll(PDO::FETCH_ASSOC);
+                    $sort = 1;
+                    foreach ($prodImgs as $pImg) {
+                        if (!empty($pImg['image_path']) && $pImg['image_path'] !== $outfit['main_image']) {
+                            $insertCollImgStmt->execute([$collId, $pImg['image_path'], $pImg['thumb_path'] ?: $pImg['image_path'], 'Client Diary Angle', 'Outfit Detail', $sort]);
+                            $sort++;
+                        }
+                    }
+                } else {
+                    // Update existing collection to published & is_sold
+                    $collId = (int)$existingColl['id'];
+                    $updateCollStmt->execute([
+                        $outfit['name'],
+                        $subtitle,
+                        $desc,
+                        $outfit['main_image'] ?: null,
+                        $outfit['id'],
+                        $collId
+                    ]);
+
+                    // Ensure images exist in collection_images
+                    if (!empty($outfit['main_image'])) {
+                        $checkCollImgStmt->execute([$collId, $outfit['main_image']]);
+                        if ((int)$checkCollImgStmt->fetchColumn() === 0) {
+                            $insertCollImgStmt->execute([$collId, $outfit['main_image'], $outfit['main_image'], 'Client Diary Cover', 'Front View', 0]);
+                        }
+                    }
+                    $findImgStmt->execute([$outfit['id']]);
+                    $prodImgs = $findImgStmt->fetchAll(PDO::FETCH_ASSOC);
+                    $sort = 1;
+                    foreach ($prodImgs as $pImg) {
+                        if (!empty($pImg['image_path'])) {
+                            $checkCollImgStmt->execute([$collId, $pImg['image_path']]);
+                            if ((int)$checkCollImgStmt->fetchColumn() === 0) {
+                                $insertCollImgStmt->execute([$collId, $pImg['image_path'], $pImg['thumb_path'] ?: $pImg['image_path'], 'Client Diary Angle', 'Outfit Detail', $sort]);
+                            }
+                            $sort++;
+                        }
+                    }
+                    $updatedCount++;
+                }
+            } else {
+                // If in stock (> 0) and previously bridged, draft it from lookbook
+                if ($existingColl && !empty($existingColl['is_sold']) && $existingColl['status'] === 'published') {
+                    $draftCollStmt->execute([$existingColl['id']]);
+                    $restockedCount++;
+                }
+            }
+        }
+
+        if (function_exists('purge_cache')) {
+            purge_cache();
+        }
+
+        return [
+            'success' => true,
+            'bridged_new' => $bridgedCount,
+            'updated' => $updatedCount,
+            'restocked_hidden' => $restockedCount,
+            'total_checked' => count($outfits)
+        ];
+    } catch (Exception $e) {
+        return ['success' => false, 'message' => $e->getMessage()];
+    }
+}
 ?>

@@ -2,8 +2,12 @@
 // admin/api/collections.php
 require_once __DIR__ . '/cors_header.php';
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/functions.php';
 
 try {
+    if (isset($_GET['sync']) && $_GET['sync'] == '1' && function_exists('sync_sold_outfits_to_lookbook')) {
+        sync_sold_outfits_to_lookbook($pdo);
+    }
     if (isset($_GET['slug']) || isset($_GET['id'])) {
         // Fetch single collection with full gallery
         $isSlug = isset($_GET['slug']);
@@ -81,6 +85,15 @@ try {
         $params[] = $_GET['category'];
     }
 
+    if (!empty($_GET['s'])) {
+        $search = trim($_GET['s']);
+        $where[] = "(c.title LIKE ? OR c.sku LIKE ? OR c.subtitle LIKE ? OR c.description LIKE ? OR c.fabric LIKE ? OR c.color LIKE ?)";
+        $sTerm = "%$search%";
+        for ($i = 0; $i < 6; $i++) {
+            $params[] = $sTerm;
+        }
+    }
+
     $where_sql = implode(' AND ', $where);
     $limit_sql = "";
     if (isset($_GET['limit']) && is_numeric($_GET['limit'])) {
@@ -114,7 +127,10 @@ try {
         foreach ($allMedia as $m) {
             $cid = $m['collection_id'];
             if (!isset($mediaMap[$cid])) $mediaMap[$cid] = [];
-            $mediaMap[$cid][] = $m;
+            // Cap to 6 thumbnails per collection for listing speed
+            if (count($mediaMap[$cid]) < 6) {
+                $mediaMap[$cid][] = $m;
+            }
         }
 
         foreach ($collections as &$c) {

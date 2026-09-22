@@ -39,10 +39,43 @@ foreach ($candidatePaths as $cp) {
 }
 
 if (!$filePath) {
-    // If not found locally, return 404 or redirect
+    // If not found locally, attempt to fetch from live production server (e.g. for dev/localhost or synced DB items)
+    $remoteBase = 'https://yosshitaneha.com/admin/';
+    $cleanSrc = ltrim($src, '/');
+    $parts = explode('/', $cleanSrc);
+    $encodedUrl = $remoteBase . implode('/', array_map('rawurlencode', $parts));
+
+    $origCacheDir = $baseAdmin . '/uploads/cache/remote';
+    if (!is_dir($origCacheDir)) {
+        @mkdir($origCacheDir, 0755, true);
+    }
+    $ext = pathinfo($cleanSrc, PATHINFO_EXTENSION) ?: 'jpg';
+    $downloadedFile = $origCacheDir . '/' . md5($cleanSrc) . '.' . $ext;
+
+    if (file_exists($downloadedFile) && filesize($downloadedFile) > 0) {
+        $filePath = $downloadedFile;
+    } else {
+        $ch = curl_init($encodedUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 8);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        $remoteData = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode === 200 && !empty($remoteData) && strlen($remoteData) > 200) {
+            @file_put_contents($downloadedFile, $remoteData);
+            $filePath = $downloadedFile;
+        }
+    }
+}
+
+if (!$filePath) {
+    // If still not found, return clean fallback SVG
     http_response_code(404);
     header('Content-Type: image/svg+xml');
-    echo '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"><rect width="300" height="300" fill="#f1f5f9"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#94a3b8" font-family="sans-serif" font-size="14">Image Not Found</text></svg>';
+    echo '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"><rect width="300" height="300" fill="#f8fafc"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#cbd5e1" font-family="sans-serif" font-size="13">Image Unavailable</text></svg>';
     exit();
 }
 
