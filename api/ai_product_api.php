@@ -550,12 +550,22 @@ switch ($action) {
         $totalCandidateTokens = 0;
         $totalTokensSum = 0;
 
-        $variations = [
-            '', 
-            ' Also, ensure a slight side-profile angle.',
-            ' Also, ensure a dynamic and confident fashion pose.',
-            ' Also, ensure a different elegant camera angle.'
-        ];
+        $mode = $input['mode'] ?? 'model';
+        if ($mode === 'studio' || stripos($basePrompt, 'no human model') !== false) {
+            $variations = [
+                '', 
+                ' Also, capture an ultra-sharp macro detail shot.',
+                ' Also, showcase with sophisticated directional lighting and soft shadows.',
+                ' Also, capture from an alternate elegant perspective angle.'
+            ];
+        } else {
+            $variations = [
+                '', 
+                ' Also, ensure a slight side-profile angle.',
+                ' Also, ensure a dynamic and confident fashion pose.',
+                ' Also, ensure a different elegant camera angle.'
+            ];
+        }
 
         for ($i = 0; $i < $numImages; $i++) {
             $currentPrompt = $basePrompt . ($variations[$i] ?? '');

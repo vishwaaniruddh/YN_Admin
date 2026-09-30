@@ -536,11 +536,30 @@ try {
                     </h2>
                 </div>
                 <div class="shadcn-card-padded">
-                    <p style="font-size: 12.5px; color: #71717a; margin-top: 0; margin-bottom: 15px;">Generate AI fashion model photos wearing this exact product.</p>
+                    <p id="ai_card_desc" style="font-size: 12.5px; color: #71717a; margin-top: 0; margin-bottom: 15px;">Generate AI fashion model photos wearing this exact product.</p>
 
                     <div style="display: flex; flex-direction: column; gap: 16px;">
-                        <!-- Face Reference Models -->
+                        <!-- Generation Mode Selector (With Model vs Without Model) -->
                         <div>
+                            <label style="font-size: 12px; font-weight: 600; color: #09090b; margin-bottom: 6px; display: block;">Generation Mode</label>
+                            <div style="display: flex; gap: 8px;">
+                                <label style="flex: 1; cursor: pointer;">
+                                    <input type="radio" name="ai_gen_mode" value="model" checked class="ai-radio-hidden">
+                                    <div class="ai-mode-pill">
+                                        <i class="fa-solid fa-person-dress"></i> With Model (On Model)
+                                    </div>
+                                </label>
+                                <label style="flex: 1; cursor: pointer;">
+                                    <input type="radio" name="ai_gen_mode" value="studio" class="ai-radio-hidden">
+                                    <div class="ai-mode-pill">
+                                        <i class="fa-solid fa-box-open"></i> Without Model (Studio Photo)
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Face Reference Models (Model Mode Only) -->
+                        <div id="ai_model_face_container">
                             <label style="font-size: 12px; font-weight: 600; color: #09090b; margin-bottom: 6px; display: block;">Model Face (Optional)</label>
                             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                                 <label class="ai-model-picker">
@@ -582,12 +601,14 @@ try {
                             </div>
                         </div>
 
-                        <!-- Background Presets -->
+                        <!-- Background / Props / Surface Presets -->
                         <div>
-                            <label style="font-size: 12px; font-weight: 600; color: #09090b; margin-bottom: 6px; display: block;">Background / Props Preset</label>
-                            <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="bg_preset_container">
+                            <label id="ai_bg_label" style="font-size: 12px; font-weight: 600; color: #09090b; margin-bottom: 6px; display: block;">Background / Props Preset</label>
+                            
+                            <!-- Model Background Presets -->
+                            <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="bg_preset_container_model">
                                 <?php
-                                $bgPresets = [
+                                $bgPresetsModel = [
                                     'Palace' => 'elegant royal palace with marble pillars and chandeliers',
                                     'Beach' => 'golden hour beach with soft waves and sunset sky',
                                     'Studio' => 'clean professional photography studio with soft gradient backdrop',
@@ -598,7 +619,7 @@ try {
                                     'City Night' => 'modern city skyline at night with bokeh lights'
                                 ];
                                 $first = true;
-                                foreach ($bgPresets as $label => $promptPart):
+                                foreach ($bgPresetsModel as $label => $promptPart):
                                 ?>
                                 <label class="ai-bg-picker">
                                     <input type="radio" name="ai_bg_preset" value="<?= htmlspecialchars($promptPart) ?>" <?= $first ? 'checked' : '' ?> class="ai-radio-hidden">
@@ -606,6 +627,28 @@ try {
                                 </label>
                                 <?php $first = false; endforeach; ?>
                             </div>
+
+                            <!-- Studio Surface Presets (Studio Mode Only) -->
+                            <div style="display: none; gap: 6px; flex-wrap: wrap;" id="bg_preset_container_studio">
+                                <?php
+                                $bgPresetsStudio = [
+                                    'Dark Marble' => 'luxury black marble surface with soft warm directional studio spotlighting',
+                                    'Velvet Cushion' => 'royal velvet jewelry display cushion with subtle warm accent lighting',
+                                    'Wooden Stand' => 'minimalist rustic wooden jewelry stand with soft natural shadows',
+                                    'Reflective Glass' => 'reflective dark mirror glass surface with sharp luxury reflections',
+                                    'Champagne Silk' => 'draped champagne silk fabric backdrop with soft diffuse studio lighting',
+                                    'White Studio' => 'pristine white minimalist studio display backdrop'
+                                ];
+                                $firstStudio = true;
+                                foreach ($bgPresetsStudio as $label => $promptPart):
+                                ?>
+                                <label class="ai-bg-picker">
+                                    <input type="radio" name="ai_bg_preset_studio" value="<?= htmlspecialchars($promptPart) ?>" <?= $firstStudio ? 'checked' : '' ?> class="ai-radio-hidden">
+                                    <div class="ai-bg-pill"><?= $label ?></div>
+                                </label>
+                                <?php $firstStudio = false; endforeach; ?>
+                            </div>
+
                             <input type="text" id="ai_bg_custom" class="form-control" style="margin-top: 8px; width: 100%; font-size: 12px;" value="elegant royal palace with marble pillars and chandeliers" placeholder="Describe background and props...">
                         </div>
 
@@ -618,10 +661,12 @@ try {
                             $db_hair_styles = $pdo->query("SELECT * FROM ai_hair_styles WHERE is_active = 1 ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
                         } catch (Exception $e) {}
                         ?>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div id="ai_shot_hair_grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                             <div>
-                                <label style="font-size: 12px; font-weight: 600; color: #09090b; margin-bottom: 6px; display: block;">Shot Type Master</label>
-                                <div style="display: flex; flex-direction: column; gap: 6px;">
+                                <label style="font-size: 12px; font-weight: 600; color: #09090b; margin-bottom: 6px; display: block;">Shot Type</label>
+                                
+                                <!-- Model Shot Types -->
+                                <div id="ai_shot_type_container_model" style="display: flex; flex-direction: column; gap: 6px;">
                                     <?php
                                     if (!empty($db_shot_types)):
                                         $sIdx = 0;
@@ -642,8 +687,16 @@ try {
                                         <label style="font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #09090b;"><input type="radio" name="ai_shot_type" value="shot from behind showing the back design and details" data-name="Back View" style="accent-color: #09090b;"> Back View</label>
                                     <?php endif; ?>
                                 </div>
+
+                                <!-- Studio Shot Types (Studio Mode Only) -->
+                                <div id="ai_shot_type_container_studio" style="display: none; flex-direction: column; gap: 6px;">
+                                    <label style="font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #09090b;"><input type="radio" name="ai_shot_type_studio" value="ultra-sharp macro close-up product photography highlighting fine details, gemstone sparkle, and metal texture" checked style="accent-color: #09090b;"> Macro Close-Up</label>
+                                    <label style="font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #09090b;"><input type="radio" name="ai_shot_type_studio" value="professional flat lay top-down product photography layout" style="accent-color: #09090b;"> Flat Lay (Top-Down)</label>
+                                    <label style="font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #09090b;"><input type="radio" name="ai_shot_type_studio" value="elegant 3/4 perspective product display shot showing side and front angles" style="accent-color: #09090b;"> 3/4 Display Angle</label>
+                                    <label style="font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #09090b;"><input type="radio" name="ai_shot_type_studio" value="dramatic floating product display with soft realistic shadow underneath" style="accent-color: #09090b;"> Floating Display</label>
+                                </div>
                             </div>
-                            <div>
+                            <div id="ai_hair_style_container">
                                 <label style="font-size: 12px; font-weight: 600; color: #09090b; margin-bottom: 6px; display: block;">Hair Style Master</label>
                                 <div style="display: flex; flex-direction: column; gap: 6px;">
                                     <?php
@@ -672,7 +725,7 @@ try {
                         <!-- Final Prompt Textarea -->
                         <div>
                             <label style="font-size: 12px; font-weight: 600; color: #09090b; margin-bottom: 6px; display: block;">Final Prompt (Auto-Assembled)</label>
-                            <textarea id="ai_final_prompt" rows="3" class="form-control" style="width: 100%; font-size: 12px; line-height: 1.5;">A photorealistic beautiful Indian fashion model wearing this exact product. The background should have elegant royal palace with marble pillars and chandeliers. Shot type: full body head-to-toe shot showing the complete outfit/jewelry look. Aspect ratio: 2:3 vertical fashion portrait format.</textarea>
+                            <textarea id="ai_final_prompt" class="form-control auto-expand-textarea" style="width: 100%; font-size: 12.5px; line-height: 1.55; resize: vertical; overflow-y: hidden; box-sizing: border-box; min-height: 70px;">A photorealistic beautiful Indian fashion model wearing this exact product. The background should have elegant royal palace with marble pillars and chandeliers. Shot type: full body head-to-toe shot showing the complete outfit/jewelry look. Aspect ratio: 2:3 vertical fashion portrait format.</textarea>
                         </div>
 
                         <!-- Action Bar -->
@@ -909,6 +962,30 @@ function undoGalleryImageDeletion(imageId) {
     color: #09090b;
 }
 .ai-radio-hidden:checked + .ai-bg-pill {
+    background: #09090b;
+    color: #ffffff;
+    border-color: #09090b;
+}
+.ai-mode-pill {
+    padding: 8px 16px;
+    background: #f4f4f5;
+    border: 1px solid #e4e4e7;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #52525b;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.15s ease;
+}
+.ai-mode-pill:hover {
+    background: #e4e4e7;
+    color: #09090b;
+}
+.ai-radio-hidden:checked + .ai-mode-pill {
     background: #09090b;
     color: #ffffff;
     border-color: #09090b;
@@ -1555,7 +1632,8 @@ function autoResizeTextarea(textarea) {
 function initAutoExpandTextareas() {
     const configs = [
         { id: 'p_desc', counterId: 'desc_length_counter' },
-        { id: 'p_short_desc', counterId: 'short_desc_length_counter' }
+        { id: 'p_short_desc', counterId: 'short_desc_length_counter' },
+        { id: 'ai_final_prompt' }
     ];
 
     configs.forEach(({ id, counterId }) => {
@@ -1564,7 +1642,7 @@ function initAutoExpandTextareas() {
 
         const update = () => {
             autoResizeTextarea(el);
-            updateTextareaCounter(el, counterId);
+            if (counterId) updateTextareaCounter(el, counterId);
         };
 
         el.addEventListener('input', update);
@@ -1626,37 +1704,107 @@ async function aiGenerateShortDescription() {
 }
 
 function updateFinalPrompt() {
-    const prodName = document.getElementById('p_name')?.value || 'fashion item';
-    const faceInput = document.querySelector('input[name="ai_model_face"]:checked')?.value || '';
-    const customBg = document.getElementById('ai_bg_custom')?.value.trim() || 'clean studio background';
-    const shotType = document.querySelector('input[name="ai_shot_type"]:checked')?.value || '';
-    const hairStyle = document.querySelector('input[name="ai_hair_style"]:checked')?.value || '';
+    const prodName = document.getElementById('p_name')?.value.trim() || 'product';
+    const mode = document.querySelector('input[name="ai_gen_mode"]:checked')?.value || 'model';
+    const customBg = document.getElementById('ai_bg_custom')?.value.trim();
 
-    let promptParts = [
-        `A photorealistic beautiful Indian fashion model wearing this exact ${prodName}.`,
-        `The background should have ${customBg}.`,
-        `Shot type: ${shotType}.`,
-        `Do not change the product details.`,
-        `Aspect ratio: 2:3 vertical fashion portrait format.`
-    ];
+    if (mode === 'studio') {
+        const shotTypeStudio = document.querySelector('input[name="ai_shot_type_studio"]:checked')?.value || 'ultra-sharp macro close-up product photography highlighting fine details, gemstone sparkle, and metal texture';
+        let bgPrompt = customBg || 'luxury black marble surface with soft warm directional studio spotlighting';
 
-    if (hairStyle) {
-        promptParts.push(`The model should have ${hairStyle}.`);
-    }
-    if (faceInput) {
-        promptParts.push(`The model's face must match the reference photo exactly.`);
-    }
+        let promptParts = [
+            `Ultra-high resolution professional studio product photography of this exact ${prodName} placed on ${bgPrompt}.`,
+            `Shot type: ${shotTypeStudio}.`,
+            `No human model, no hands, product-only studio display photoshoot with soft diffuse studio lighting, 8k resolution, razor-sharp focus on details, gemstone sparkle and fine metal craftsmanship.`,
+            `Do not change the ${prodName} design or features.`,
+            `Aspect ratio: 2:3 vertical format.`
+        ];
+        const finalBox = document.getElementById('ai_final_prompt');
+        if (finalBox) {
+            finalBox.value = promptParts.join(' ');
+            autoResizeTextarea(finalBox);
+        }
+    } else {
+        const faceInput = document.querySelector('input[name="ai_model_face"]:checked')?.value || '';
+        const shotType = document.querySelector('input[name="ai_shot_type"]:checked')?.value || '';
+        const hairStyle = document.querySelector('input[name="ai_hair_style"]:checked')?.value || '';
+        let bgPrompt = customBg || 'elegant royal palace with marble pillars and chandeliers';
 
-    const finalBox = document.getElementById('ai_final_prompt');
-    if (finalBox) {
-        finalBox.value = promptParts.join(' ');
+        let promptParts = [
+            `A photorealistic beautiful Indian fashion model wearing this exact ${prodName}.`,
+            `The background should have ${bgPrompt}.`,
+            `Shot type: ${shotType}.`,
+            `Do not change the product details.`,
+            `Aspect ratio: 2:3 vertical fashion portrait format.`
+        ];
+
+        if (hairStyle) {
+            promptParts.push(`The model should have ${hairStyle}.`);
+        }
+        if (faceInput) {
+            promptParts.push(`The model's face must match the reference photo exactly.`);
+        }
+
+        const finalBox = document.getElementById('ai_final_prompt');
+        if (finalBox) {
+            finalBox.value = promptParts.join(' ');
+            autoResizeTextarea(finalBox);
+        }
     }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     initAutoExpandTextareas();
 
-    document.querySelectorAll('input[name="ai_model_face"], input[name="ai_bg_preset"], input[name="ai_shot_type"], input[name="ai_hair_style"]').forEach(input => {
+    // Toggle UI Mode (With Model vs Without Model)
+    document.querySelectorAll('input[name="ai_gen_mode"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const mode = e.target.value;
+            const faceContainer = document.getElementById('ai_model_face_container');
+            const hairContainer = document.getElementById('ai_hair_style_container');
+            const bgLabel = document.getElementById('ai_bg_label');
+            const bgModel = document.getElementById('bg_preset_container_model');
+            const bgStudio = document.getElementById('bg_preset_container_studio');
+            const shotModel = document.getElementById('ai_shot_type_container_model');
+            const shotStudio = document.getElementById('ai_shot_type_container_studio');
+            const customBg = document.getElementById('ai_bg_custom');
+            const btn = document.getElementById('aiImageBtn');
+            const cardDesc = document.getElementById('ai_card_desc');
+
+            if (mode === 'studio') {
+                if (faceContainer) faceContainer.style.display = 'none';
+                if (hairContainer) hairContainer.style.display = 'none';
+                if (bgModel) bgModel.style.display = 'none';
+                if (bgStudio) bgStudio.style.display = 'flex';
+                if (shotModel) shotModel.style.display = 'none';
+                if (shotStudio) shotStudio.style.display = 'flex';
+                if (bgLabel) bgLabel.innerText = 'Display Surface / Backdrop Preset';
+                if (cardDesc) cardDesc.innerText = 'Generate professional studio product photos (no model) for this item.';
+
+                const studioVal = document.querySelector('input[name="ai_bg_preset_studio"]:checked')?.value || 'luxury black marble surface with soft warm directional studio spotlighting';
+                if (customBg) customBg.value = studioVal;
+
+                if (btn) btn.innerHTML = '<i class="fa-solid fa-camera"></i> Generate Studio Product Photo';
+            } else {
+                if (faceContainer) faceContainer.style.display = 'block';
+                if (hairContainer) hairContainer.style.display = 'block';
+                if (bgModel) bgModel.style.display = 'flex';
+                if (bgStudio) bgStudio.style.display = 'none';
+                if (shotModel) shotModel.style.display = 'flex';
+                if (shotStudio) shotStudio.style.display = 'none';
+                if (bgLabel) bgLabel.innerText = 'Background / Props Preset';
+                if (cardDesc) cardDesc.innerText = 'Generate AI fashion model photos wearing this exact product.';
+
+                const modelVal = document.querySelector('input[name="ai_bg_preset"]:checked')?.value || 'elegant royal palace with marble pillars and chandeliers';
+                if (customBg) customBg.value = modelVal;
+
+                if (btn) btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Generate Model Image';
+            }
+            updateFinalPrompt();
+        });
+    });
+
+    document.querySelectorAll('input[name="ai_model_face"], input[name="ai_bg_preset"], input[name="ai_bg_preset_studio"], input[name="ai_shot_type"], input[name="ai_shot_type_studio"], input[name="ai_hair_style"]').forEach(input => {
         input.addEventListener('change', updateFinalPrompt);
     });
 
@@ -1687,21 +1835,39 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    document.querySelectorAll('input[name="ai_bg_preset_studio"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const customInput = document.getElementById('ai_bg_custom');
+            if (customInput) {
+                customInput.value = e.target.value;
+                updateFinalPrompt();
+            }
+        });
+    });
+
+    // Initial prompt sync and auto-sizing
+    updateFinalPrompt();
 });
 
 window.addEventListener('load', () => {
     setTimeout(initAutoExpandTextareas, 80);
+    setTimeout(() => {
+        autoResizeTextarea(document.getElementById('ai_final_prompt'));
+    }, 100);
 });
 
 window.addEventListener('resize', () => {
     autoResizeTextarea(document.getElementById('p_desc'));
     autoResizeTextarea(document.getElementById('p_short_desc'));
+    autoResizeTextarea(document.getElementById('ai_final_prompt'));
 });
 
 
 async function aiGenerateAdvancedImage() {
     const btn = document.getElementById('aiImageBtn');
-    const faceInput = document.querySelector('input[name="ai_model_face"]:checked')?.value || '';
+    const mode = document.querySelector('input[name="ai_gen_mode"]:checked')?.value || 'model';
+    const faceInput = (mode === 'studio') ? '' : (document.querySelector('input[name="ai_model_face"]:checked')?.value || '');
     const finalPrompt = document.getElementById('ai_final_prompt')?.value.trim() || '';
     const numImages = document.querySelector('input[name="ai_num_images"]:checked')?.value || 1;
 
@@ -1718,6 +1884,7 @@ async function aiGenerateAdvancedImage() {
             body: JSON.stringify({
                 prompt: finalPrompt,
                 face_reference: faceInput,
+                mode: mode,
                 num_images: parseInt(numImages)
             })
         });
