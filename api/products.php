@@ -57,6 +57,13 @@ if ($cached_res !== false) {
                 $cached_res['data'] = array_values(array_filter($cached_res['data'], function($p) {
                     return (int)($p['stock_qty'] ?? 0) > 0;
                 }));
+            } else {
+                // Ensure available products are shown first, sold out products afterwards
+                usort($cached_res['data'], function($a, $b) {
+                    $stockA = ((int)($a['stock_qty'] ?? 0) > 0) ? 0 : 1;
+                    $stockB = ((int)($b['stock_qty'] ?? 0) > 0) ? 0 : 1;
+                    return $stockA - $stockB;
+                });
             }
         }
     }
@@ -147,6 +154,15 @@ try {
 
     $show_out_of_stock = ($include_out_of_stock || $is_outfit_category) && !$in_stock;
 
+    // For outfit categories, ensure DB stock_qty matches live POS inventory (throttled to once every 3 minutes)
+    if ($is_outfit_category && function_exists('sync_outfit_stock_from_pos')) {
+        $last_sync = get_cache('outfit_pos_stock_synced_at', 180, $pdo);
+        if ($last_sync === false) {
+            sync_outfit_stock_from_pos($pdo);
+            set_cache('outfit_pos_stock_synced_at', time(), $pdo);
+        }
+    }
+
     // Build WHERE clause (shared between count and data queries)
     if ($show_out_of_stock) {
         $where_sql = "WHERE p.status = 'published' AND p.deleted_at IS NULL";
@@ -223,9 +239,13 @@ try {
         }
         unset($product);
 
-        // PHP in-memory sort
+        // PHP in-memory sort (In-stock / available products first, sold out products afterwards)
         if ($sort === 'price_asc' || $sort === 'price_low') {
             usort($products, function($a, $b) {
+                $stockA = ((int)($a['stock_qty'] ?? 0) > 0) ? 0 : 1;
+                $stockB = ((int)($b['stock_qty'] ?? 0) > 0) ? 0 : 1;
+                if ($stockA !== $stockB) return $stockA - $stockB;
+
                 $priceA = (isset($a['sale_price']) && (float)$a['sale_price'] > 0) ? (float)$a['sale_price'] : (float)($a['price'] ?? 0);
                 $priceB = (isset($b['sale_price']) && (float)$b['sale_price'] > 0) ? (float)$b['sale_price'] : (float)($b['price'] ?? 0);
                 if ($priceA == $priceB) return 0;
@@ -233,15 +253,31 @@ try {
             });
         } elseif ($sort === 'price_desc' || $sort === 'price_high') {
             usort($products, function($a, $b) {
+                $stockA = ((int)($a['stock_qty'] ?? 0) > 0) ? 0 : 1;
+                $stockB = ((int)($b['stock_qty'] ?? 0) > 0) ? 0 : 1;
+                if ($stockA !== $stockB) return $stockA - $stockB;
+
                 $priceA = (isset($a['sale_price']) && (float)$a['sale_price'] > 0) ? (float)$a['sale_price'] : (float)($a['price'] ?? 0);
                 $priceB = (isset($b['sale_price']) && (float)$b['sale_price'] > 0) ? (float)$b['sale_price'] : (float)($b['price'] ?? 0);
                 if ($priceA == $priceB) return 0;
                 return ($priceA > $priceB) ? -1 : 1;
             });
         } elseif ($sort === 'name_asc') {
-            usort($products, function($a, $b) { return strcasecmp($a['name'] ?? '', $b['name'] ?? ''); });
+            usort($products, function($a, $b) {
+                $stockA = ((int)($a['stock_qty'] ?? 0) > 0) ? 0 : 1;
+                $stockB = ((int)($b['stock_qty'] ?? 0) > 0) ? 0 : 1;
+                if ($stockA !== $stockB) return $stockA - $stockB;
+
+                return strcasecmp($a['name'] ?? '', $b['name'] ?? '');
+            });
         } elseif ($sort === 'name_desc') {
-            usort($products, function($a, $b) { return strcasecmp($b['name'] ?? '', $a['name'] ?? ''); });
+            usort($products, function($a, $b) {
+                $stockA = ((int)($a['stock_qty'] ?? 0) > 0) ? 0 : 1;
+                $stockB = ((int)($b['stock_qty'] ?? 0) > 0) ? 0 : 1;
+                if ($stockA !== $stockB) return $stockA - $stockB;
+
+                return strcasecmp($b['name'] ?? '', $a['name'] ?? '');
+            });
         }
 
         $total_items = count($products);
@@ -258,14 +294,15 @@ try {
         $total_items = (int)$countStmt->fetchColumn();
         $total_pages = $limit > 0 ? (int)ceil($total_items / $limit) : 1;
 
-        // 2. Fetch only the page we need
+        // 2. Fetch only the page we need (in-stock / available products first, sold out afterwards)
         $order_clause = "";
+        $stock_order = "(p.stock_qty > 0) DESC";
         if ($sort === 'newest' || $sort === 'created_desc') {
-            $order_clause = "ORDER BY p.id DESC, p.created_at DESC";
+            $order_clause = "ORDER BY {$stock_order}, p.id DESC, p.created_at DESC";
         } elseif ($sort === 'sku_asc' || $sort === 'oldest') {
-            $order_clause = "ORDER BY CAST(REGEXP_REPLACE(p.sku, '[^0-9]', '') AS UNSIGNED) ASC, p.id ASC";
+            $order_clause = "ORDER BY {$stock_order}, CAST(REGEXP_REPLACE(p.sku, '[^0-9]', '') AS UNSIGNED) ASC, p.id ASC";
         } else {
-            $order_clause = "ORDER BY CAST(REGEXP_REPLACE(p.sku, '[^0-9]', '') AS UNSIGNED) DESC, p.id DESC";
+            $order_clause = "ORDER BY {$stock_order}, CAST(REGEXP_REPLACE(p.sku, '[^0-9]', '') AS UNSIGNED) DESC, p.id DESC";
         }
 
         $sql = "SELECT p.*, 
@@ -325,6 +362,13 @@ try {
             $paginated_products = array_values(array_filter($paginated_products, function($p) {
                 return (int)($p['stock_qty'] ?? 0) > 0;
             }));
+        } else {
+            // Keep available products first, sold out products afterwards
+            usort($paginated_products, function($a, $b) {
+                $stockA = ((int)($a['stock_qty'] ?? 0) > 0) ? 0 : 1;
+                $stockB = ((int)($b['stock_qty'] ?? 0) > 0) ? 0 : 1;
+                return $stockA - $stockB;
+            });
         }
     }
     
