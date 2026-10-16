@@ -594,8 +594,22 @@ require_once __DIR__ . '/includes/sidebar.php';
     cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; position: relative;
 }
 .product-card.selected { border-color: #c8a55c; background: #fffdf9; }
-.product-card-img-wrap { height: 185px; background: #fafafa; position: relative; display: flex; align-items: center; justify-content: center; }
-.product-card-img { max-height: 100%; max-width: 100%; object-fit: cover; }
+.product-card-img-wrap {
+    height: 195px;
+    background: #f8fafc;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.product-card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: opacity 0.2s ease;
+}
 .card-select-checkbox {
     position: absolute; top: 8px; left: 8px; width: 22px; height: 22px; border-radius: 5px;
     background: rgba(255,255,255,0.9); border: 2px solid #cbd5e1; display: flex; align-items: center;
@@ -721,16 +735,18 @@ require_once __DIR__ . '/includes/sidebar.php';
 }
 .angle-img-wrap {
     height: 165px;
-    background: #fafafa;
+    background: #f8fafc;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 4px;
+    overflow: hidden;
 }
 .angle-img-wrap img {
     max-height: 100%;
     max-width: 100%;
     object-fit: contain;
+    transition: opacity 0.2s ease;
 }
 .angle-card-footer {
     padding: 8px 10px;
@@ -871,6 +887,33 @@ function formatImageUrl(path) {
         return 'https://yosshitaneha.com/' + clean;
     }
     return 'https://yosshitaneha.com/admin/' + clean;
+}
+
+/**
+ * Fast WebP Thumbnail URL generator using admin/api/thumb.php
+ * Drastically reduces payload from ~3-5MB DSLR photos to ~10-25KB WebP thumbnails.
+ */
+function getFastThumbUrl(path, width = 380, quality = 80) {
+    if (!path) return DEFAULT_PLACEHOLDER_IMG;
+    let clean = path.toString().trim();
+    if (clean.startsWith('data:')) return clean;
+    if (clean.startsWith('api/thumb.php') || clean.startsWith('/api/thumb.php')) return clean;
+
+    clean = clean.replace(/^https?:\/\/localhost(:[0-9]+)?(\/yn)?\/admin\/?/i, '');
+    clean = clean.replace(/^https?:\/\/localhost(:[0-9]+)?\/?/i, '');
+    clean = clean.replace(/^https?:\/\/(www\.)?yosshitaneha\.com\/admin\/?/i, '');
+    clean = clean.replace(/^https?:\/\/(www\.)?yosshitaneha\.com\/?/i, '');
+
+    // If external third-party URL, return as is
+    if (clean.startsWith('http://') || clean.startsWith('https://')) {
+        return clean;
+    }
+
+    clean = clean.replace(/^\/+/, '');
+    if (clean.startsWith('admin/')) {
+        clean = clean.substring(6);
+    }
+    return `api/thumb.php?src=${encodeURIComponent(clean)}&w=${width}&q=${quality}`;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1056,7 +1099,8 @@ function renderProductsGrid() {
             catBadge = `<div class="card-cat-badge">${escapeHtml(prod.primary_category_name)}</div>`;
         }
 
-        const imgUrl = formatImageUrl(prod.display_image || prod.main_image);
+        const originalImgUrl = formatImageUrl(prod.display_image || prod.main_image);
+        const thumbImgUrl = prod.thumb_image ? prod.thumb_image : getFastThumbUrl(prod.display_image || prod.main_image, 380, 80);
 
         let priceHtml = '';
         if (prod.item_type === 'collection') {
@@ -1075,7 +1119,12 @@ function renderProductsGrid() {
         html += `
             <div class="product-card ${selectedClass}" id="prod_card_${itemKey}" onclick="toggleProductSelect('${escapeJsString(itemKey)}')">
                 <div class="product-card-img-wrap">
-                    <img src="${imgUrl}" class="product-card-img" alt="${escapeHtml(nameDisplay)}" loading="lazy" onerror="this.onerror=null; this.src=DEFAULT_PLACEHOLDER_IMG;">
+                    <img src="${thumbImgUrl}" 
+                         class="product-card-img" 
+                         alt="${escapeHtml(nameDisplay)}" 
+                         loading="lazy" 
+                         decoding="async" 
+                         onerror="if(!this.dataset.triedOrig){this.dataset.triedOrig=1; this.src='${escapeJsString(originalImgUrl)}';}else{this.onerror=null; this.src=DEFAULT_PLACEHOLDER_IMG;}">
                     <div class="card-select-checkbox">${checkIcon}</div>
                     ${galleryCount}
                 </div>
@@ -1339,6 +1388,7 @@ function ensureFullProductDetails() {
             const nameVal = p.name || p.title || '';
             const slugVal = p.slug || '';
             const urlVal = p.url || (isColl ? ('https://yosshitaneha.com/collections/' + encodeURIComponent(slugVal || p.sku || rawId)) : ('https://yosshitaneha.com/product/' + encodeURIComponent(slugVal || p.sku || rawId)));
+            const thumbImg = p.thumb_image || getFastThumbUrl(mainImg, 280, 80);
             
             updatedList.push({
                 id: rawId,
@@ -1359,7 +1409,7 @@ function ensureFullProductDetails() {
                     id: 'main_' + itemKey,
                     path: mainImg,
                     is_main: true,
-                    thumb: mainImg,
+                    thumb: thumbImg,
                     label: isColl ? 'Angle 1 (Cover View)' : 'Angle 1 (Main Image)'
                 }]
             });
@@ -1463,8 +1513,10 @@ function renderReviewList() {
 
         let anglesHtml = '';
         allImages.forEach((img, idx) => {
-            const formattedImgUrl = formatImageUrl(img.path);
-            const isImgSelected = selectedImgSet.has(img.path) || selectedImgSet.has(formattedImgUrl);
+            const fullImgPath = img.path;
+            const fullImgUrl = formatImageUrl(img.path);
+            const thumbUrl = img.thumb ? (img.thumb.startsWith('http') || img.thumb.startsWith('api/') ? img.thumb : getFastThumbUrl(img.thumb, 280, 80)) : getFastThumbUrl(img.path, 280, 80);
+            const isImgSelected = selectedImgSet.has(fullImgPath) || selectedImgSet.has(fullImgUrl);
             const isMain = (idx === 0 || img.is_main);
             
             let activeClass = '';
@@ -1476,18 +1528,22 @@ function renderReviewList() {
             const angleLabel = img.label || (isMain ? (isColl ? 'Angle 1 (Cover View)' : 'Angle 1 (Main Image)') : ('Angle ' + (idx + 1)));
 
             anglesHtml += `
-                <div class="angle-card ${activeClass}" onclick="selectProductAngle('${escapeJsString(itemKey)}', '${escapeJsString(img.path)}')">
+                <div class="angle-card ${activeClass}" onclick="selectProductAngle('${escapeJsString(itemKey)}', '${escapeJsString(fullImgPath)}')">
                     ${mainBadge}
                     <div class="angle-img-wrap">
-                        <img src="${formattedImgUrl}" alt="${escapeHtml(angleLabel)}" onerror="this.onerror=null; this.src=DEFAULT_PLACEHOLDER_IMG;">
+                        <img src="${thumbUrl}" 
+                             alt="${escapeHtml(angleLabel)}" 
+                             loading="lazy" 
+                             decoding="async" 
+                             onerror="if(!this.dataset.triedOrig){this.dataset.triedOrig=1; this.src='${escapeJsString(fullImgUrl)}';}else{this.onerror=null; this.src=DEFAULT_PLACEHOLDER_IMG;}">
                     </div>
                     <div class="angle-card-footer">
                         <input type="radio" 
                                class="angle-radio-input" 
                                name="angle_radio_${itemKey}" 
-                               value="${escapeHtml(img.path)}" 
+                               value="${escapeHtml(fullImgPath)}" 
                                ${isImgSelected ? 'checked' : ''} 
-                               onclick="event.stopPropagation(); selectProductAngle('${escapeJsString(itemKey)}', '${escapeJsString(img.path)}')">
+                               onclick="event.stopPropagation(); selectProductAngle('${escapeJsString(itemKey)}', '${escapeJsString(fullImgPath)}')">
                         <span>${escapeHtml(angleLabel)}</span>
                     </div>
                 </div>

@@ -27,6 +27,30 @@ function format_live_image_url($path) {
     return 'https://yosshitaneha.com/admin/' . $clean;
 }
 
+function format_thumb_url($path, $width = 380, $quality = 80) {
+    if (empty($path)) return '';
+    $clean = trim((string)$path);
+    if (str_starts_with($clean, 'data:')) return $clean;
+    // Strip localhost
+    $clean = preg_replace('#^https?://localhost(:[0-9]+)?(/yn)?/admin/?#i', '', $clean);
+    $clean = preg_replace('#^https?://localhost(:[0-9]+)?/?#i', '', $clean);
+    // Strip yosshitaneha.com/admin/
+    $clean = preg_replace('#^https?://(www\.)?yosshitaneha\.com/admin/?#i', '', $clean);
+    $clean = preg_replace('#^https?://(www\.)?yosshitaneha\.com/?#i', '', $clean);
+    
+    // If it's a 3rd party URL (not localhost or yosshitaneha), return as is
+    if (str_starts_with($clean, 'http://') || str_starts_with($clean, 'https://')) {
+        return $clean;
+    }
+    
+    $clean = ltrim($clean, '/');
+    if (str_starts_with($clean, 'admin/')) {
+        $clean = substr($clean, 6);
+    }
+    
+    return 'api/thumb.php?src=' . rawurlencode($clean) . "&w={$width}&q={$quality}";
+}
+
 $action = trim($_GET['action'] ?? $_POST['action'] ?? '');
 
 try {
@@ -157,6 +181,7 @@ try {
                 $col['sale_price_formatted'] = null;
                 $col['effective_price_formatted'] = 'Lookbook';
                 $col['display_image'] = format_live_image_url($col['main_image']);
+                $col['thumb_image'] = format_thumb_url($col['main_image'], 380, 80);
             }
             unset($col);
 
@@ -304,6 +329,7 @@ try {
             $prod['effective_price'] = (float)($prod['sale_price'] > 0 ? $prod['sale_price'] : $prod['price']);
             $prod['effective_price_formatted'] = '₹' . number_format($prod['effective_price'], 0);
             $prod['display_image'] = format_live_image_url($prod['main_image']);
+            $prod['thumb_image'] = format_thumb_url($prod['main_image'], 380, 80);
         }
         unset($prod);
 
@@ -412,12 +438,13 @@ try {
 
                 if (!empty($p['main_image'])) {
                     $liveMain = format_live_image_url($p['main_image']);
+                    $thumbMain = format_thumb_url($p['main_image'], 280, 80);
                     if ($liveMain) {
                         $imagesList[] = [
                             'id' => 'main_' . $pId,
                             'path' => $liveMain,
                             'is_main' => true,
-                            'thumb' => $liveMain,
+                            'thumb' => $thumbMain ?: $liveMain,
                             'angle_label' => 'Angle 1 (Main Image)',
                             'label' => 'Angle 1 (Main Image)'
                         ];
@@ -428,14 +455,15 @@ try {
                 if (isset($galleryMap[$pId])) {
                     foreach ($galleryMap[$pId] as $idx => $gImg) {
                         $liveG = format_live_image_url($gImg['image_path']);
-                        $liveThumb = !empty($gImg['thumb_path']) ? format_live_image_url($gImg['thumb_path']) : $liveG;
+                        $rawThumb = !empty($gImg['thumb_path']) ? $gImg['thumb_path'] : $gImg['image_path'];
+                        $liveThumb = format_thumb_url($rawThumb, 280, 80);
                         if ($liveG && !isset($seenUrls[$liveG])) {
                             $angLabel = 'Angle ' . (count($imagesList) + 1);
                             $imagesList[] = [
                                 'id' => 'gal_' . $gImg['id'],
                                 'path' => $liveG,
                                 'is_main' => false,
-                                'thumb' => $liveThumb,
+                                'thumb' => $liveThumb ?: $liveG,
                                 'angle_label' => $angLabel,
                                 'label' => $angLabel
                             ];
@@ -513,12 +541,13 @@ try {
                 // 1. Cover Image
                 if (!empty($c['cover_image'])) {
                     $liveCover = format_live_image_url($c['cover_image']);
+                    $thumbCover = format_thumb_url($c['cover_image'], 280, 80);
                     if ($liveCover) {
                         $imagesList[] = [
                             'id' => 'cover_' . $cid,
                             'path' => $liveCover,
                             'is_main' => true,
-                            'thumb' => $liveCover,
+                            'thumb' => $thumbCover ?: $liveCover,
                             'angle_label' => 'Angle 1 (Cover View)',
                             'label' => 'Angle 1 (Cover View)'
                         ];
@@ -530,14 +559,15 @@ try {
                 if (isset($cImgMap[$cid])) {
                     foreach ($cImgMap[$cid] as $ci) {
                         $liveG = format_live_image_url($ci['image_path']);
-                        $liveThumb = !empty($ci['thumb_path']) ? format_live_image_url($ci['thumb_path']) : $liveG;
+                        $rawThumb = !empty($ci['thumb_path']) ? $ci['thumb_path'] : $ci['image_path'];
+                        $liveThumb = format_thumb_url($rawThumb, 280, 80);
                         if ($liveG && !isset($seenUrls[$liveG])) {
                             $angleLabel = !empty($ci['angle_type']) ? $ci['angle_type'] : (!empty($ci['caption']) ? $ci['caption'] : ('Angle ' . (count($imagesList) + 1)));
                             $imagesList[] = [
                                 'id' => 'cimg_' . $ci['id'],
                                 'path' => $liveG,
                                 'is_main' => (empty($imagesList) || $ci['is_cover'] == 1),
-                                'thumb' => $liveThumb,
+                                'thumb' => $liveThumb ?: $liveG,
                                 'angle_label' => $angleLabel,
                                 'label' => $angleLabel
                             ];

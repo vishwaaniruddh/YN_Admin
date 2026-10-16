@@ -116,7 +116,12 @@ function get_image_base64_for_pdf($imageRelPath, $layout = 'showcase') {
     $cleanPath = ltrim($cleanPath, '/');
     $decodedPath = rawurldecode($cleanPath);
 
+    $cleanSrcForCache = ltrim(preg_replace('#^https?://(www\.)?yosshitaneha\.com/admin/#i', '', $cleanPath), '/');
+    $ext = pathinfo($cleanSrcForCache, PATHINFO_EXTENSION) ?: 'jpg';
+    $remoteCachedPath = __DIR__ . '/uploads/cache/remote/' . md5($cleanSrcForCache) . '.' . $ext;
+
     $possiblePaths = [
+        $remoteCachedPath,
         __DIR__ . '/' . $cleanPath,
         __DIR__ . '/' . $decodedPath,
         __DIR__ . '/../' . $cleanPath,
