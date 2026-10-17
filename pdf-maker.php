@@ -1386,6 +1386,7 @@ function ensureFullProductDetails() {
             const mainImg = formatImageUrl(p.display_image || p.main_image || p.cover_image);
             const rawId = p.id || parseInt(itemKey.replace(/^[pc]_/, ''));
             const nameVal = p.name || p.title || '';
+            const slugVal = p.slug || '';
             const collTarget = slugVal || p.sku || rawId;
             let urlVal = p.product_url || p.url;
             if (!urlVal) {
