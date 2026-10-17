@@ -11,11 +11,17 @@ try {
     if (isset($_GET['slug']) || isset($_GET['id'])) {
         // Fetch single collection with full gallery
         $isSlug = isset($_GET['slug']);
-        $identifier = $isSlug ? $_GET['slug'] : (int)$_GET['id'];
+        $identifier = trim((string)($isSlug ? $_GET['slug'] : $_GET['id']));
         
-        $sql = "SELECT * FROM collections WHERE " . ($isSlug ? "slug = ?" : "id = ?");
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([$identifier]);
+        if ($isSlug) {
+            $numericId = (is_numeric($identifier) && (int)$identifier > 0) ? (int)$identifier : 0;
+            $sql = "SELECT * FROM collections WHERE slug = ? OR sku = ? OR (id = ? AND id > 0) LIMIT 1";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$identifier, $identifier, $numericId]);
+        } else {
+            $stmt = $pdo->prepare("SELECT * FROM collections WHERE id = ? LIMIT 1");
+            $stmt->execute([(int)$identifier]);
+        }
         $collection = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$collection) {

@@ -182,6 +182,8 @@ try {
                 $col['effective_price_formatted'] = 'Lookbook';
                 $col['display_image'] = format_live_image_url($col['main_image']);
                 $col['thumb_image'] = format_thumb_url($col['main_image'], 380, 80);
+                $collSlug = !empty($col['slug']) ? $col['slug'] : $col['sku'];
+                $col['product_url'] = 'https://yosshitaneha.com/collection/' . urlencode($collSlug);
             }
             unset($col);
 
@@ -612,7 +614,7 @@ try {
                     'price_formatted' => 'Price on Request',
                     'sale_price_formatted' => null,
                     'effective_price_formatted' => 'Couture',
-                    'product_url' => 'https://yosshitaneha.com/collections/' . urlencode($collSlug)
+                    'product_url' => 'https://yosshitaneha.com/collection/' . urlencode($collSlug)
                 ];
 
                 $lookup[$itemKey] = $item;

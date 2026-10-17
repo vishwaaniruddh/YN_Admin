@@ -50,12 +50,17 @@ $itemsToDisplay = [];
 foreach ($products as $p) {
     $selectedImgs = !empty($p['selected_images']) && is_array($p['selected_images']) ? $p['selected_images'] : [$p['main_image']];
     $prodSlug = !empty($p['slug']) ? $p['slug'] : $p['sku'];
+    $isColl = (!empty($p['item_type']) && $p['item_type'] === 'collection') || (!empty($p['item_key']) && str_starts_with($p['item_key'], 'c_'));
     $prodUrl = !empty($p['url']) ? $p['url'] : (!empty($p['product_url']) ? $p['product_url'] : '');
     if (empty($prodUrl)) {
-        if (!empty($p['item_type']) && $p['item_type'] === 'collection') {
-            $prodUrl = 'https://yosshitaneha.com/collections/' . urlencode($prodSlug);
+        if ($isColl) {
+            $prodUrl = 'https://yosshitaneha.com/collection/' . urlencode($prodSlug);
         } else {
             $prodUrl = 'https://yosshitaneha.com/product/' . urlencode($prodSlug);
+        }
+    } else {
+        if ($isColl) {
+            $prodUrl = str_replace('https://yosshitaneha.com/collections/', 'https://yosshitaneha.com/collection/', $prodUrl);
         }
     }
 
