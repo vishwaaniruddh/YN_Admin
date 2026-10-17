@@ -1389,9 +1389,9 @@ function ensureFullProductDetails() {
             const collTarget = slugVal || p.sku || rawId;
             let urlVal = p.product_url || p.url;
             if (!urlVal) {
-                urlVal = isColl ? ('https://yosshitaneha.com/collection/' + encodeURIComponent(collTarget)) : ('https://yosshitaneha.com/product/' + encodeURIComponent(slugVal || p.sku || rawId));
+                urlVal = isColl ? ('https://yosshitaneha.com/our-work?item=' + encodeURIComponent(collTarget)) : ('https://yosshitaneha.com/product/' + encodeURIComponent(slugVal || p.sku || rawId));
             } else if (isColl) {
-                urlVal = urlVal.replace('/collections/', '/collection/');
+                urlVal = urlVal.replace('/collections/', '/our-work?item=').replace('/collection/', '/our-work?item=');
             }
             const thumbImg = p.thumb_image || getFastThumbUrl(mainImg, 280, 80);
             

@@ -183,7 +183,7 @@ try {
                 $col['display_image'] = format_live_image_url($col['main_image']);
                 $col['thumb_image'] = format_thumb_url($col['main_image'], 380, 80);
                 $collSlug = !empty($col['slug']) ? $col['slug'] : $col['sku'];
-                $col['product_url'] = 'https://yosshitaneha.com/collection/' . urlencode($collSlug);
+                $col['product_url'] = 'https://yosshitaneha.com/our-work?item=' . urlencode($collSlug);
             }
             unset($col);
 

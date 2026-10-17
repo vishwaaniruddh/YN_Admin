@@ -54,13 +54,17 @@ foreach ($products as $p) {
     $prodUrl = !empty($p['url']) ? $p['url'] : (!empty($p['product_url']) ? $p['product_url'] : '');
     if (empty($prodUrl)) {
         if ($isColl) {
-            $prodUrl = 'https://yosshitaneha.com/collection/' . urlencode($prodSlug);
+            $prodUrl = 'https://yosshitaneha.com/our-work?item=' . urlencode($prodSlug);
         } else {
             $prodUrl = 'https://yosshitaneha.com/product/' . urlencode($prodSlug);
         }
     } else {
         if ($isColl) {
-            $prodUrl = str_replace('https://yosshitaneha.com/collections/', 'https://yosshitaneha.com/collection/', $prodUrl);
+            $prodUrl = str_replace(
+                ['https://yosshitaneha.com/collections/', 'https://yosshitaneha.com/collection/'], 
+                'https://yosshitaneha.com/our-work?item=', 
+                $prodUrl
+            );
         }
     }
 
