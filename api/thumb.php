@@ -120,112 +120,155 @@ if (file_exists($cacheFile) && filesize($cacheFile) > 0) {
     exit();
 }
 
-// Generate Resized Image
-$imgInfo = @getimagesize($filePath);
-if (!$imgInfo) {
-    header("Content-Type: image/jpeg");
-    readfile($filePath);
-    exit();
-}
-
-$origWidth = $imgInfo[0];
-$origHeight = $imgInfo[1];
-$mimeType = $imgInfo['mime'];
-
-// Calculate target dimensions keeping aspect ratio
-if ($width > 0 && $height === 0) {
-    $targetWidth = min($width, $origWidth);
-    $targetHeight = (int)round(($origHeight / $origWidth) * $targetWidth);
-} elseif ($height > 0 && $width === 0) {
-    $targetHeight = min($height, $origHeight);
-    $targetWidth = (int)round(($origWidth / $origHeight) * $targetHeight);
-} else {
-    // Both specified: fit within box
-    $scale = min($width / $origWidth, $height / $origHeight);
-    if ($scale >= 1) {
-        $targetWidth = $origWidth;
-        $targetHeight = $origHeight;
-    } else {
-        $targetWidth = (int)round($origWidth * $scale);
-        $targetHeight = (int)round($origHeight * $scale);
+// Generate Resized Image safely with automatic fallback
+try {
+    $imgInfo = @getimagesize($filePath);
+    if (!$imgInfo) {
+        $mime = @mime_content_type($filePath) ?: 'image/jpeg';
+        header("Content-Type: $mime");
+        readfile($filePath);
+        exit();
     }
-}
 
-// Load source image
-$srcImg = null;
-switch ($mimeType) {
-    case 'image/jpeg':
-    case 'image/jpg':
-        $srcImg = @imagecreatefromjpeg($filePath);
-        break;
-    case 'image/png':
-        $srcImg = @imagecreatefrompng($filePath);
-        break;
-    case 'image/webp':
-        $srcImg = @imagecreatefromwebp($filePath);
-        break;
-}
+    $origWidth = $imgInfo[0];
+    $origHeight = $imgInfo[1];
+    $mimeType = $imgInfo['mime'];
 
-if (!$srcImg) {
+    // Calculate target dimensions keeping aspect ratio
+    if ($width > 0 && $height === 0) {
+        $targetWidth = min($width, $origWidth);
+        $targetHeight = (int)round(($origHeight / $origWidth) * $targetWidth);
+    } elseif ($height > 0 && $width === 0) {
+        $targetHeight = min($height, $origHeight);
+        $targetWidth = (int)round(($origWidth / $origHeight) * $targetHeight);
+    } else {
+        // Both specified: fit within box
+        $scale = min($width / $origWidth, $height / $origHeight);
+        if ($scale >= 1) {
+            $targetWidth = $origWidth;
+            $targetHeight = $origHeight;
+        } else {
+            $targetWidth = (int)round($origWidth * $scale);
+            $targetHeight = (int)round($origHeight * $scale);
+        }
+    }
+
+    $targetWidth = max(1, $targetWidth);
+    $targetHeight = max(1, $targetHeight);
+
+    // Load source image
+    $srcImg = null;
+    switch ($mimeType) {
+        case 'image/jpeg':
+        case 'image/jpg':
+            $srcImg = @imagecreatefromjpeg($filePath);
+            break;
+        case 'image/png':
+            $srcImg = @imagecreatefrompng($filePath);
+            break;
+        case 'image/webp':
+            $srcImg = @imagecreatefromwebp($filePath);
+            break;
+    }
+
+    if (!$srcImg) {
+        header("Content-Type: $mimeType");
+        readfile($filePath);
+        exit();
+    }
+
+    // Correct orientation from EXIF if JPEG
+    if (($mimeType === 'image/jpeg' || $mimeType === 'image/jpg') && function_exists('exif_read_data')) {
+        $exif = @exif_read_data($filePath);
+        if (!empty($exif['Orientation'])) {
+            switch ($exif['Orientation']) {
+                case 3:
+                    $rotated = @imagerotate($srcImg, 180, 0);
+                    if ($rotated) { imagedestroy($srcImg); $srcImg = $rotated; }
+                    break;
+                case 6:
+                    $rotated = @imagerotate($srcImg, -90, 0);
+                    if ($rotated) { 
+                        imagedestroy($srcImg); 
+                        $srcImg = $rotated; 
+                        $tmpW = $targetWidth;
+                        $targetWidth = $targetHeight;
+                        $targetHeight = $tmpW;
+                    }
+                    break;
+                case 8:
+                    $rotated = @imagerotate($srcImg, 90, 0);
+                    if ($rotated) { 
+                        imagedestroy($srcImg); 
+                        $srcImg = $rotated; 
+                        $tmpW = $targetWidth;
+                        $targetWidth = $targetHeight;
+                        $targetHeight = $tmpW;
+                    }
+                    break;
+            }
+        }
+    }
+
+    // Resample
+    $dstImg = false;
+    if (function_exists('imagescale') && $mimeType !== 'image/png' && $mimeType !== 'image/webp') {
+        $dstImg = @imagescale($srcImg, $targetWidth, $targetHeight, IMG_BICUBIC);
+    }
+    
+    if (!$dstImg) {
+        $dstImg = @imagecreatetruecolor($targetWidth, $targetHeight);
+        if ($dstImg) {
+            if ($mimeType === 'image/png' || $mimeType === 'image/webp') {
+                imagealphablending($dstImg, false);
+                imagesavealpha($dstImg, true);
+                $transparent = imagecolorallocatealpha($dstImg, 255, 255, 255, 127);
+                imagefilledrectangle($dstImg, 0, 0, $targetWidth, $targetHeight, $transparent);
+            }
+            @imagecopyresampled($dstImg, $srcImg, 0, 0, 0, 0, $targetWidth, $targetHeight, imagesx($srcImg), imagesy($srcImg));
+        }
+    }
+
+    if (!$dstImg) {
+        if ($srcImg) @imagedestroy($srcImg);
+        header("Content-Type: $mimeType");
+        readfile($filePath);
+        exit();
+    }
+
+    // Save to WebP cache
+    $saved = false;
+    if (function_exists('imagewebp')) {
+        $saved = @imagewebp($dstImg, $cacheFile, $quality);
+        if ($saved && file_exists($cacheFile) && filesize($cacheFile) > 0) {
+            header("Content-Type: image/webp");
+            header("Content-Length: " . filesize($cacheFile));
+            readfile($cacheFile);
+            @imagedestroy($srcImg);
+            @imagedestroy($dstImg);
+            exit();
+        }
+    }
+
+    // Fallback if WebP save fails
+    if (function_exists('imagejpeg')) {
+        header("Content-Type: image/jpeg");
+        @imagejpeg($dstImg, null, $quality);
+        @imagedestroy($srcImg);
+        @imagedestroy($dstImg);
+        exit();
+    }
+
+    if ($srcImg) @imagedestroy($srcImg);
+    if ($dstImg) @imagedestroy($dstImg);
     header("Content-Type: $mimeType");
     readfile($filePath);
     exit();
-}
 
-// Correct orientation from EXIF if JPEG
-if (($mimeType === 'image/jpeg' || $mimeType === 'image/jpg') && function_exists('exif_read_data')) {
-    $exif = @exif_read_data($filePath);
-    if (!empty($exif['Orientation'])) {
-        switch ($exif['Orientation']) {
-            case 3:
-                $srcImg = imagerotate($srcImg, 180, 0);
-                break;
-            case 6:
-                $srcImg = imagerotate($srcImg, -90, 0);
-                $tmpW = $targetWidth;
-                $targetWidth = $targetHeight;
-                $targetHeight = $tmpW;
-                break;
-            case 8:
-                $srcImg = imagerotate($srcImg, 90, 0);
-                $tmpW = $targetWidth;
-                $targetWidth = $targetHeight;
-                $targetHeight = $tmpW;
-                break;
-        }
-    }
+} catch (Throwable $e) {
+    // If any error occurs, gracefully fallback to streaming original image without crashing
+    $mime = @mime_content_type($filePath) ?: 'image/jpeg';
+    header("Content-Type: $mime");
+    readfile($filePath);
+    exit();
 }
-
-// High quality resampling with imagescale (3.5x faster than imagecopyresampled)
-if (function_exists('imagescale') && $mimeType !== 'image/png' && $mimeType !== 'image/webp') {
-    $dstImg = imagescale($srcImg, $targetWidth, $targetHeight, IMG_BICUBIC);
-} else {
-    $dstImg = imagecreatetruecolor($targetWidth, $targetHeight);
-    if ($mimeType === 'image/png' || $mimeType === 'image/webp') {
-        imagealphablending($dstImg, false);
-        imagesavealpha($dstImg, true);
-        $transparent = imagecolorallocatealpha($dstImg, 255, 255, 255, 127);
-        imagefilledrectangle($dstImg, 0, 0, $targetWidth, $targetHeight, $transparent);
-    }
-    imagecopyresampled($dstImg, $srcImg, 0, 0, 0, 0, $targetWidth, $targetHeight, imagesx($srcImg), imagesy($srcImg));
-}
-
-// Save to WebP cache
-if (function_exists('imagewebp')) {
-    imagewebp($dstImg, $cacheFile, $quality);
-    header("Content-Type: image/webp");
-} else {
-    imagejpeg($dstImg, $cacheFile, $quality);
-    header("Content-Type: image/jpeg");
-}
-
-// Cleanup GD memory
-imagedestroy($srcImg);
-imagedestroy($dstImg);
-
-// Output generated file
-if (file_exists($cacheFile)) {
-    header("Content-Length: " . filesize($cacheFile));
-    readfile($cacheFile);
-}
-exit();
