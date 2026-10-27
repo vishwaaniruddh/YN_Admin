@@ -3,6 +3,7 @@
 require_once __DIR__ . '/cors_header.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../includes/cache.php';
 
 try {
     if (isset($_GET['sync']) && $_GET['sync'] == '1' && function_exists('sync_sold_outfits_to_lookbook')) {
@@ -13,6 +14,13 @@ try {
         $isSlug = isset($_GET['slug']);
         $identifier = trim((string)($isSlug ? $_GET['slug'] : $_GET['id']));
         
+        $cache_key = "collection_detail_" . ($isSlug ? "slug_" . md5($identifier) : "id_" . (int)$identifier);
+        $cached = get_cache($cache_key, 3600, $pdo);
+        if ($cached !== false) {
+            echo json_encode($cached);
+            exit();
+        }
+
         if ($isSlug) {
             $numericId = (is_numeric($identifier) && (int)$identifier > 0) ? (int)$identifier : 0;
             $sql = "SELECT * FROM collections WHERE slug = ? OR sku = ? OR (id = ? AND id > 0) LIMIT 1";
@@ -38,10 +46,13 @@ try {
         $collection['gallery'] = $gallery;
         $collection['total_images'] = count($gallery);
 
-        echo json_encode([
+        $response = [
             'success' => true,
             'data' => $collection
-        ]);
+        ];
+        set_cache($cache_key, $response, $pdo);
+
+        echo json_encode($response);
         exit();
     }
 
@@ -76,6 +87,13 @@ try {
             'categories' => $categories,
             'count' => count($photos)
         ]);
+        exit();
+    }
+
+    $list_cache_key = "collections_list_" . md5(serialize($_GET));
+    $cached_list = get_cache($list_cache_key, 1800, $pdo);
+    if ($cached_list !== false) {
+        echo json_encode($cached_list);
         exit();
     }
 
@@ -149,13 +167,16 @@ try {
     // Fetch active categories with counts
     $catCounts = $pdo->query("SELECT category, COUNT(*) as count FROM collections WHERE status = 'published' AND category IS NOT NULL AND category != '' GROUP BY category ORDER BY category ASC")->fetchAll(PDO::FETCH_ASSOC);
 
-    echo json_encode([
+    $response = [
         'success' => true,
         'data' => $collections,
         'categories' => array_column($catCounts, 'category'),
         'category_counts' => $catCounts,
         'count' => count($collections)
-    ]);
+    ];
+    set_cache($list_cache_key, $response, $pdo);
+
+    echo json_encode($response);
 
 } catch (Exception $e) {
     http_response_code(500);
