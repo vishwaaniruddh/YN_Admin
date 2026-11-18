@@ -673,12 +673,30 @@ function get_frontend_url($path = '') {
 }
 
 /**
- * Send System Email using database configured SMTP / PHPMailer settings
+ * Helper to parse comma/semicolon/whitespace separated email list into an array of valid emails
  */
+function parse_email_list($str) {
+    if (empty($str)) return [];
+    if (is_array($str)) {
+        $rawList = $str;
+    } else {
+        $rawList = preg_split('/[,;\s]+/', trim($str));
+    }
+    $valid = [];
+    foreach ($rawList as $em) {
+        $em = trim($em);
+        if (!empty($em) && filter_var($em, FILTER_VALIDATE_EMAIL)) {
+            $valid[] = $em;
+        }
+    }
+    return array_values(array_unique($valid));
+}
+
 /**
  * Send System Email using database configured SMTP / PHPMailer settings
+ * Supports additional recipients via $recipients ['extra_to', 'cc', 'bcc']
  */
-function send_system_email($pdo, $toEmail, $subject, $bodyHtml, $altBody = '', $embeddedImages = []) {
+function send_system_email($pdo, $toEmail, $subject, $bodyHtml, $altBody = '', $embeddedImages = [], $recipients = []) {
     $settings = [];
     try {
         $stmt = $pdo->query("SELECT setting_key, setting_value FROM site_settings WHERE setting_key LIKE 'smtp_%' OR setting_key LIKE 'mail_%'");
@@ -696,6 +714,42 @@ function send_system_email($pdo, $toEmail, $subject, $bodyHtml, $altBody = '', $
     $password = $settings['smtp_password'] ?? '';
     $fromEmail = !empty($settings['smtp_from_email']) ? $settings['smtp_from_email'] : 'info@yosshitaneha.com';
     $fromName = !empty($settings['smtp_from_name']) ? $settings['smtp_from_name'] : 'YosshitaNeha Fashion Studio';
+
+    // Global Admin copy setting fallback
+    $globalAdminCopyEmail = trim($settings['smtp_admin_copy_email'] ?? '');
+    $globalAdminCopyType = strtolower(trim($settings['smtp_admin_copy_type'] ?? 'bcc')); // bcc, cc, to
+
+    // Prepare primary TO addresses
+    $toAddresses = parse_email_list($toEmail);
+    if (!empty($recipients['extra_to'])) {
+        $toAddresses = array_merge($toAddresses, parse_email_list($recipients['extra_to']));
+    }
+    if (!empty($globalAdminCopyEmail) && $globalAdminCopyType === 'to') {
+        $toAddresses = array_merge($toAddresses, parse_email_list($globalAdminCopyEmail));
+    }
+    $toAddresses = array_values(array_unique($toAddresses));
+
+    // Prepare CC addresses
+    $ccAddresses = [];
+    if (!empty($recipients['cc'])) {
+        $ccAddresses = array_merge($ccAddresses, parse_email_list($recipients['cc']));
+    }
+    if (!empty($globalAdminCopyEmail) && $globalAdminCopyType === 'cc') {
+        $ccAddresses = array_merge($ccAddresses, parse_email_list($globalAdminCopyEmail));
+    }
+    // Remove any already in TO
+    $ccAddresses = array_values(array_diff(array_unique($ccAddresses), $toAddresses));
+
+    // Prepare BCC addresses
+    $bccAddresses = [];
+    if (!empty($recipients['bcc'])) {
+        $bccAddresses = array_merge($bccAddresses, parse_email_list($recipients['bcc']));
+    }
+    if (!empty($globalAdminCopyEmail) && $globalAdminCopyType === 'bcc') {
+        $bccAddresses = array_merge($bccAddresses, parse_email_list($globalAdminCopyEmail));
+    }
+    // Remove any already in TO or CC
+    $bccAddresses = array_values(array_diff(array_unique($bccAddresses), $toAddresses, $ccAddresses));
 
     if (class_exists('PHPMailer\PHPMailer\PHPMailer')) {
         $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
@@ -718,7 +772,21 @@ function send_system_email($pdo, $toEmail, $subject, $bodyHtml, $altBody = '', $
             }
 
             $mail->setFrom($fromEmail, $fromName);
-            $mail->addAddress($toEmail);
+            
+            // Add All TO recipients
+            foreach ($toAddresses as $toAddr) {
+                $mail->addAddress($toAddr);
+            }
+
+            // Add All CC recipients
+            foreach ($ccAddresses as $ccAddr) {
+                $mail->addCC($ccAddr);
+            }
+
+            // Add All BCC recipients
+            foreach ($bccAddresses as $bccAddr) {
+                $mail->addBCC($bccAddr);
+            }
 
             // Attach inline CID images (Logo & Product thumbnails)
             if (!empty($embeddedImages) && is_array($embeddedImages)) {
@@ -743,8 +811,28 @@ function send_system_email($pdo, $toEmail, $subject, $bodyHtml, $altBody = '', $
         $headers = "MIME-Version: 1.0\r\n";
         $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
         $headers .= "From: $fromName <$fromEmail>\r\n";
-        $sent = mail($toEmail, $subject, $bodyHtml, $headers);
+        if (!empty($ccAddresses)) {
+            $headers .= "Cc: " . implode(', ', $ccAddresses) . "\r\n";
+        }
+        if (!empty($bccAddresses)) {
+            $headers .= "Bcc: " . implode(', ', $bccAddresses) . "\r\n";
+        }
+        $primaryTo = !empty($toAddresses) ? implode(', ', $toAddresses) : $toEmail;
+        $sent = mail($primaryTo, $subject, $bodyHtml, $headers);
         return $sent ? ['success' => true, 'message' => 'Sent via PHP mail()'] : ['success' => false, 'error' => 'PHP mail() failed'];
+    }
+}
+
+/**
+ * Fetch dynamic Email Template by template_key
+ */
+function get_email_template($pdo, $templateKey) {
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM email_templates WHERE template_key = ? LIMIT 1");
+        $stmt->execute([$templateKey]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        return null;
     }
 }
 
@@ -826,6 +914,28 @@ function send_order_email($pdo, $orderId, $statusType = 'success') {
         }
 
         $statusKey = strtolower($statusType);
+        $keyMap = [
+            'shipped' => 'order_shipped',
+            'delivered' => 'order_delivered',
+            'cancelled' => 'order_cancelled',
+            'failure' => 'order_cancelled',
+        ];
+        $templateKey = $keyMap[$statusKey] ?? 'order_success';
+        $tmpl = get_email_template($pdo, $templateKey);
+
+        // Check if this specific email template is toggled off
+        if ($tmpl && isset($tmpl['is_enabled']) && (int)$tmpl['is_enabled'] === 0) {
+            return ['success' => false, 'message' => "Order email for '{$templateKey}' is disabled in Email Templates settings."];
+        }
+
+        $placeholders = [
+            '{ORDER_NUMBER}' => $orderNumber,
+            '{CUSTOMER_NAME}' => htmlspecialchars($custName),
+            '{ORDER_DATE}' => $orderDate,
+            '{TOTAL_AMOUNT}' => $totalFormatted,
+            '{COURIER_NAME}' => htmlspecialchars($order['courier_name'] ?: 'Express Logistics'),
+            '{TRACKING_NUMBER}' => htmlspecialchars($order['tracking_number'] ?: 'In Transit'),
+        ];
 
         // Fetch tracking URL template from logistics master if available
         $trackingUrl = '';
@@ -833,9 +943,9 @@ function send_order_email($pdo, $orderId, $statusType = 'success') {
             try {
                 $logStmt = $pdo->prepare("SELECT tracking_url FROM logistics WHERE name = ? LIMIT 1");
                 $logStmt->execute([$order['courier_name']]);
-                $tmpl = $logStmt->fetchColumn();
-                if ($tmpl) {
-                    $trackingUrl = str_replace('{TRACKING_NO}', urlencode($order['tracking_number']), $tmpl);
+                $tmplUrl = $logStmt->fetchColumn();
+                if ($tmplUrl) {
+                    $trackingUrl = str_replace('{TRACKING_NO}', urlencode($order['tracking_number']), $tmplUrl);
                 }
             } catch (Exception $ex) {}
         }
@@ -843,13 +953,13 @@ function send_order_email($pdo, $orderId, $statusType = 'success') {
         $shipmentBoxHtml = '';
 
         if ($statusKey === 'shipped') {
-            $subject = "Your Order " . $orderNumber . " Has Been Shipped! | YosshitaNeha";
+            $defaultSubject = "Your Order " . $orderNumber . " Has Been Shipped! | YosshitaNeha";
             $badgeBg = "#e8f0fe";
             $badgeColor = "#1a73e8";
             $badgeBorder = "#aecbfa";
-            $badgeText = "ORDER SHIPPED & IN TRANSIT";
-            $headline = "Great News! Your Order Is On Its Way";
-            $subheading = "Your order <strong>" . $orderNumber . "</strong> has been carefully packaged and dispatched via courier.";
+            $defaultBadgeText = "ORDER SHIPPED & IN TRANSIT";
+            $defaultHeadline = "Great News! Your Order Is On Its Way";
+            $defaultSubheading = "Your order <strong>" . $orderNumber . "</strong> has been carefully packaged and dispatched via courier.";
 
             // Special Shipment Info Banner
             $shipmentBoxHtml = '
@@ -874,31 +984,37 @@ function send_order_email($pdo, $orderId, $statusType = 'success') {
             </div>';
 
         } elseif ($statusKey === 'delivered') {
-            $subject = "Order Delivered - " . $orderNumber . " | YosshitaNeha";
+            $defaultSubject = "Order Delivered - " . $orderNumber . " | YosshitaNeha";
             $badgeBg = "#e6f4ea";
             $badgeColor = "#137333";
             $badgeBorder = "#b7e1cd";
-            $badgeText = "ORDER DELIVERED";
-            $headline = "Your Order Has Been Delivered!";
-            $subheading = "Your order <strong>" . $orderNumber . "</strong> has been successfully delivered to your shipping address. We hope you adore your luxury creation!";
+            $defaultBadgeText = "ORDER DELIVERED";
+            $defaultHeadline = "Your Order Has Been Delivered!";
+            $defaultSubheading = "Your order <strong>" . $orderNumber . "</strong> has been successfully delivered to your shipping address. We hope you adore your luxury creation!";
         } elseif ($statusKey === 'cancelled' || $statusKey === 'failure') {
-            $subject = "Order Cancellation Notice - " . $orderNumber . " | YosshitaNeha";
+            $defaultSubject = "Order Cancellation Notice - " . $orderNumber . " | YosshitaNeha";
             $badgeBg = "#fce8e6";
             $badgeColor = "#c5221f";
             $badgeBorder = "#f5c2c0";
-            $badgeText = "ORDER CANCELLED";
-            $headline = "Order #" . $orderNumber . " Has Been Cancelled";
-            $subheading = "Your order <strong>" . $orderNumber . "</strong> has been cancelled. If any payment was captured, a full refund will be processed to your original payment method.";
+            $defaultBadgeText = "ORDER CANCELLED";
+            $defaultHeadline = "Order #" . $orderNumber . " Has Been Cancelled";
+            $defaultSubheading = "Your order <strong>" . $orderNumber . "</strong> has been cancelled. If any payment was captured, a full refund will be processed to your original payment method.";
         } else {
             // Default: Order Confirmation / Processing
-            $subject = "Order Confirmation - " . $orderNumber . " | YosshitaNeha Fashion Studio";
+            $defaultSubject = "Order Confirmation - " . $orderNumber . " | YosshitaNeha Fashion Studio";
             $badgeBg = "#e6f4ea";
             $badgeColor = "#137333";
             $badgeBorder = "#b7e1cd";
-            $badgeText = "PAYMENT CONFIRMED & ORDER PROCESSING";
-            $headline = "Thank You for Your Order!";
-            $subheading = "Your order <strong>" . $orderNumber . "</strong> has been placed successfully and is being prepared with exquisite care.";
+            $defaultBadgeText = "PAYMENT CONFIRMED & ORDER PROCESSING";
+            $defaultHeadline = "Thank You for Your Order!";
+            $defaultSubheading = "Your order <strong>" . $orderNumber . "</strong> has been placed successfully and is being prepared with exquisite care.";
         }
+
+        $subject = ($tmpl && !empty($tmpl['subject'])) ? str_replace(array_keys($placeholders), array_values($placeholders), $tmpl['subject']) : $defaultSubject;
+        $badgeText = ($tmpl && !empty($tmpl['badge_text'])) ? $tmpl['badge_text'] : $defaultBadgeText;
+        $headline = ($tmpl && !empty($tmpl['headline'])) ? str_replace(array_keys($placeholders), array_values($placeholders), $tmpl['headline']) : $defaultHeadline;
+        $subheading = ($tmpl && !empty($tmpl['subheading'])) ? str_replace(array_keys($placeholders), array_values($placeholders), $tmpl['subheading']) : $defaultSubheading;
+        $footerNote = ($tmpl && !empty($tmpl['footer_note'])) ? str_replace(array_keys($placeholders), array_values($placeholders), $tmpl['footer_note']) : '';
 
         $htmlBody = '
         <!DOCTYPE html>
@@ -1003,6 +1119,10 @@ function send_order_email($pdo, $orderId, $statusType = 'success') {
                         </tr>
                     </table>';
 
+                    if (!empty($footerNote)) {
+                        $htmlBody .= '<p style="color: #64748b; font-size: 13px; line-height: 1.6; margin-top: 22px; text-align: center; font-style: italic;">' . $footerNote . '</p>';
+                    }
+
                     $htmlBody .= '
                     <div style="text-align: center; margin-top: 35px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
                         <a href="' . get_frontend_url('account') . '" style="display: inline-block; background-color: #c8a55c; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 25px; font-weight: bold; font-size: 13px;">View Order Online</a>
@@ -1017,7 +1137,13 @@ function send_order_email($pdo, $orderId, $statusType = 'success') {
         </body>
         </html>';
 
-        return send_system_email($pdo, $order['email'], $subject, $htmlBody, '', $embeddedImages);
+        $recipients = [
+            'extra_to' => $tmpl['extra_to'] ?? '',
+            'cc' => $tmpl['cc_emails'] ?? '',
+            'bcc' => $tmpl['bcc_emails'] ?? ''
+        ];
+
+        return send_system_email($pdo, $order['email'], $subject, $htmlBody, '', $embeddedImages, $recipients);
     } catch (Exception $ex) {
         return ['success' => false, 'error' => $ex->getMessage()];
     }
@@ -1034,6 +1160,20 @@ function send_welcome_email($pdo, $toEmail, $customerName) {
             return ['success' => false, 'message' => 'Welcome emails disabled in settings'];
         }
 
+        $tmpl = get_email_template($pdo, 'customer_welcome');
+        if ($tmpl && isset($tmpl['is_enabled']) && (int)$tmpl['is_enabled'] === 0) {
+            return ['success' => false, 'message' => 'Welcome emails disabled in Email Templates'];
+        }
+
+        $placeholders = [
+            '{CUSTOMER_NAME}' => htmlspecialchars($customerName)
+        ];
+
+        $subject = ($tmpl && !empty($tmpl['subject'])) ? str_replace(array_keys($placeholders), array_values($placeholders), $tmpl['subject']) : "Welcome to YosshitaNeha Luxury Fashion Studio";
+        $headline = ($tmpl && !empty($tmpl['headline'])) ? str_replace(array_keys($placeholders), array_values($placeholders), $tmpl['headline']) : ("Welcome, " . htmlspecialchars($customerName) . "!");
+        $subheading = ($tmpl && !empty($tmpl['subheading'])) ? str_replace(array_keys($placeholders), array_values($placeholders), $tmpl['subheading']) : "Thank you for registering with YosshitaNeha. We are delighted to welcome you to our world of handcrafted luxury bridal couture, fine jewelry, and bespoke fashion.";
+        $footerNote = ($tmpl && !empty($tmpl['footer_note'])) ? str_replace(array_keys($placeholders), array_values($placeholders), $tmpl['footer_note']) : "Your account is ready. You can now save your addresses, track orders in real-time, and curate your personalized wishlist.";
+
         $embeddedImages = [];
         $logoFile = __DIR__ . '/assets/images/logo.png';
         if (file_exists($logoFile)) {
@@ -1043,7 +1183,6 @@ function send_welcome_email($pdo, $toEmail, $customerName) {
             $logoHeader = '<h1 style="color: #c8a55c; font-size: 22px; letter-spacing: 2px; text-transform: uppercase; margin: 0; font-weight: 700;">YOSSHITANEHA</h1><span style="color: #646970; font-size: 10px; letter-spacing: 3px; text-transform: uppercase;">LUXURY BRIDAL &amp; FASHION STUDIO</span>';
         }
 
-        $subject = "Welcome to YosshitaNeha Luxury Fashion Studio";
         $htmlBody = '
         <!DOCTYPE html>
         <html>
@@ -1054,9 +1193,9 @@ function send_welcome_email($pdo, $toEmail, $customerName) {
                     ' . $logoHeader . '
                 </div>
                 <div style="padding: 30px;">
-                    <h2 style="color: #1d2327; margin-top: 0; font-weight: 700;">Welcome, ' . htmlspecialchars($customerName) . '!</h2>
-                    <p style="color: #50575e; font-size: 14px; line-height: 1.6;">Thank you for registering with YosshitaNeha. We are delighted to welcome you to our world of handcrafted luxury bridal couture, fine jewelry, and bespoke fashion.</p>
-                    <p style="color: #50575e; font-size: 14px; line-height: 1.6;">Your account is ready. You can now save your addresses, track orders in real-time, and curate your personalized wishlist.</p>
+                    <h2 style="color: #1d2327; margin-top: 0; font-weight: 700;">' . $headline . '</h2>
+                    <p style="color: #50575e; font-size: 14px; line-height: 1.6;">' . $subheading . '</p>
+                    <p style="color: #50575e; font-size: 14px; line-height: 1.6;">' . $footerNote . '</p>
                     <div style="text-align: center; margin-top: 30px;">
                         <a href="' . get_frontend_url('account') . '" style="display: inline-block; background-color: #c8a55c; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 25px; font-weight: bold; font-size: 13px;">Explore My Account</a>
                     </div>
@@ -1068,7 +1207,13 @@ function send_welcome_email($pdo, $toEmail, $customerName) {
         </body>
         </html>';
 
-        return send_system_email($pdo, $toEmail, $subject, $htmlBody, '', $embeddedImages);
+        $recipients = [
+            'extra_to' => $tmpl['extra_to'] ?? '',
+            'cc' => $tmpl['cc_emails'] ?? '',
+            'bcc' => $tmpl['bcc_emails'] ?? ''
+        ];
+
+        return send_system_email($pdo, $toEmail, $subject, $htmlBody, '', $embeddedImages, $recipients);
     } catch (Exception $ex) {
         return ['success' => false, 'error' => $ex->getMessage()];
     }

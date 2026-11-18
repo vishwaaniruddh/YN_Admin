@@ -248,12 +248,38 @@ $admin_initials = strtoupper(substr($admin_name, 0, 2));
                 </ul>
             </li>
 
+            <!-- ==================== EMAILS & NOTIFICATIONS ==================== -->
+            <li class="menu-section-label">Emails &amp; Notifications</li>
+
+            <?php 
+            $email_center_active = in_array($current_script, ['email-templates.php', 'mail-settings.php']);
+            ?>
+            <li class="menu-item has-submenu <?php echo $email_center_active ? 'open active-parent' : ''; ?>">
+                <a href="javascript:void(0);" class="submenu-toggle">
+                    <i class="fa-solid fa-envelope-circle-check"></i>
+                    <span>Email Center</span>
+                    <i class="fa-solid fa-chevron-right submenu-arrow"></i>
+                </a>
+                <ul class="submenu">
+                    <li class="<?php echo ($current_script == 'email-templates.php') ? 'active' : ''; ?>">
+                        <a href="email-templates.php">
+                            <i class="fa-solid fa-file-signature"></i> Email Templates
+                        </a>
+                    </li>
+                    <li class="<?php echo ($current_script == 'mail-settings.php') ? 'active' : ''; ?>">
+                        <a href="mail-settings.php">
+                            <i class="fa-solid fa-server"></i> SMTP &amp; Server Settings
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
             <!-- ==================== SYSTEM & SETTINGS ==================== -->
             <li class="menu-section-label">System &amp; Settings</li>
 
             <?php 
             $settings_active = in_array($current_script, [
-                'settings.php', 'mail-settings.php', 'masters.php', 
+                'settings.php', 'masters.php', 
                 'users.php', 'user-add.php', 'user-edit.php', 
                 'cache-manager.php', 'sync_db.php'
             ]);
@@ -268,11 +294,6 @@ $admin_initials = strtoupper(substr($admin_name, 0, 2));
                     <li class="<?php echo ($current_script == 'settings.php') ? 'active' : ''; ?>">
                         <a href="settings.php">
                             <i class="fa-solid fa-sliders"></i> General Settings
-                        </a>
-                    </li>
-                    <li class="<?php echo ($current_script == 'mail-settings.php') ? 'active' : ''; ?>">
-                        <a href="mail-settings.php">
-                            <i class="fa-solid fa-envelope"></i> Mail &amp; Notifications
                         </a>
                     </li>
                     <li class="<?php echo ($current_script == 'masters.php') ? 'active' : ''; ?>">

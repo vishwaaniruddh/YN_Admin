@@ -113,16 +113,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        // Save or update shipping address for the customer
+        $shippingData = $data['shipping'] ?? [];
+        $addrSummary = '';
+        if (!empty($shippingData) && is_array($shippingData)) {
+            $line1 = sanitize_html(trim($shippingData['address_line_1'] ?? ''));
+            $line2 = sanitize_html(trim($shippingData['address_line_2'] ?? ''));
+            $city = sanitize_html(trim($shippingData['city'] ?? ''));
+            $state = sanitize_html(trim($shippingData['state'] ?? ''));
+            $pincode = sanitize_html(trim($shippingData['pincode'] ?? ''));
+            $country = sanitize_html(trim($shippingData['country'] ?? 'India')) ?: 'India';
+
+            if (!empty($line1) && !empty($city) && !empty($state) && !empty($pincode)) {
+                $addrSummary = $line1 . ($line2 ? ', ' . $line2 : '') . ', ' . $city . ', ' . $state . ' - ' . $pincode;
+                try {
+                    // Check if an identical address already exists for this customer
+                    $checkStmt = $pdo->prepare("
+                        SELECT id FROM addresses 
+                        WHERE customer_id = ? AND address_line_1 = ? AND city = ? AND state = ? AND pincode = ?
+                        LIMIT 1
+                    ");
+                    $checkStmt->execute([$userId, $line1, $city, $state, $pincode]);
+                    $existingAddrId = $checkStmt->fetchColumn();
+
+                    // Mark prior addresses for this customer as non-default
+                    $pdo->prepare("UPDATE addresses SET is_default = 0 WHERE customer_id = ?")->execute([$userId]);
+
+                    if ($existingAddrId) {
+                        $upStmt = $pdo->prepare("
+                            UPDATE addresses 
+                            SET address_line_2 = ?, is_default = 1, created_at = CURRENT_TIMESTAMP 
+                            WHERE id = ?
+                        ");
+                        $upStmt->execute([$line2, $existingAddrId]);
+                    } else {
+                        $insStmt = $pdo->prepare("
+                            INSERT INTO addresses (customer_id, address_line_1, address_line_2, city, state, pincode, country, is_default)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+                        ");
+                        $insStmt->execute([$userId, $line1, $line2, $city, $state, $pincode, $country]);
+                    }
+                } catch (Exception $addrEx) {
+                    error_log("Failed to save shipping address: " . $addrEx->getMessage());
+                }
+            }
+        }
+
         // Call Razorpay API to generate Razorpay Order ID
+        $rpOrderPayload = [
+            'amount' => round($totalAmount * 100), // paise
+            'currency' => 'INR',
+            'receipt' => 'yn_rcpt_' . $orderId,
+            'notes' => [
+                'order_id' => (string)$orderId,
+                'customer_id' => (string)$userId
+            ]
+        ];
+        if (!empty($addrSummary)) {
+            $rpOrderPayload['notes']['shipping_address'] = substr($addrSummary, 0, 120);
+        }
+
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, 'https://api.razorpay.com/v1/orders');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
-            'amount' => round($totalAmount * 100), // paise
-            'currency' => 'INR',
-            'receipt' => 'yn_rcpt_' . $orderId
-        ]));
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($rpOrderPayload));
         curl_setopt($ch, CURLOPT_USERPWD, RAZORPAY_KEY_ID . ':' . RAZORPAY_KEY_SECRET);
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
         

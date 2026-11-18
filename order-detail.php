@@ -66,6 +66,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         header("Location: order-detail.php?id=" . urlencode($rawId));
         exit();
+    } elseif ($action === 'save_shipping_address') {
+        $line1 = sanitize_html(trim($_POST['address_line_1'] ?? ''));
+        $line2 = sanitize_html(trim($_POST['address_line_2'] ?? ''));
+        $city = sanitize_html(trim($_POST['city'] ?? ''));
+        $state = sanitize_html(trim($_POST['state'] ?? ''));
+        $pincode = sanitize_html(trim($_POST['pincode'] ?? ''));
+
+        $cStmt = $pdo->prepare("SELECT customer_id FROM orders WHERE id = ?");
+        $cStmt->execute([$orderId]);
+        $orderCustId = (int)$cStmt->fetchColumn();
+
+        if ($orderCustId > 0 && !empty($line1) && !empty($city) && !empty($state) && !empty($pincode)) {
+            try {
+                // Set all prior addresses to non-default
+                $pdo->prepare("UPDATE addresses SET is_default = 0 WHERE customer_id = ?")->execute([$orderCustId]);
+
+                // Insert new address
+                $insStmt = $pdo->prepare("
+                    INSERT INTO addresses (customer_id, address_line_1, address_line_2, city, state, pincode, country, is_default)
+                    VALUES (?, ?, ?, ?, ?, ?, 'India', 1)
+                ");
+                $insStmt->execute([$orderCustId, $line1, $line2, $city, $state, $pincode]);
+
+                log_activity($pdo, 'update_shipping_address', 'order', $orderId, "Saved delivery address for order #$orderId (Customer #$orderCustId)");
+                $_SESSION['flash_message'] = "Delivery address saved successfully.";
+                $_SESSION['flash_type'] = "success";
+            } catch (PDOException $e) {
+                $_SESSION['flash_message'] = "Database Error: " . $e->getMessage();
+                $_SESSION['flash_type'] = "error";
+            }
+        } else {
+            $_SESSION['flash_message'] = "Please provide all required address fields (Address, City, State, Pincode).";
+            $_SESSION['flash_type'] = "error";
+        }
+        header("Location: order-detail.php?id=" . urlencode($rawId));
+        exit();
     }
 }
 
@@ -219,11 +255,17 @@ switch($order['status']) {
 
                     <!-- Shipping Address Block -->
                     <div style="background: #fafafa; border: 1px solid #e4e4e7; border-radius: 8px; padding: 16px;">
-                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-                            <div style="width: 28px; height: 28px; border-radius: 6px; background: #ffffff; border: 1px solid #e4e4e7; display: flex; align-items: center; justify-content: center; color: #09090b; font-size: 12px;">
-                                <i class="fa-solid fa-location-dot"></i>
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 28px; height: 28px; border-radius: 6px; background: #ffffff; border: 1px solid #e4e4e7; display: flex; align-items: center; justify-content: center; color: #09090b; font-size: 12px;">
+                                    <i class="fa-solid fa-location-dot"></i>
+                                </div>
+                                <span style="font-size: 13px; font-weight: 600; color: #09090b;">Delivery Destination</span>
                             </div>
-                            <span style="font-size: 13px; font-weight: 600; color: #09090b;">Delivery Destination</span>
+                            <button type="button" onclick="document.getElementById('editAddressModal').style.display='flex'" class="shadcn-btn shadcn-btn-outline" style="height: 26px; padding: 0 10px; font-size: 11px;">
+                                <i class="fa-solid <?php echo !empty($address['address_line_1']) ? 'fa-pen-to-square' : 'fa-plus'; ?>" style="margin-right: 4px;"></i>
+                                <?php echo !empty($address['address_line_1']) ? 'Edit Address' : 'Add Address'; ?>
+                            </button>
                         </div>
                         <div style="font-size: 13px; line-height: 1.6; color: #09090b;">
                             <?php if (!empty($address['address_line_1'])): ?>
@@ -231,7 +273,10 @@ switch($order['status']) {
                                 <?php if (!empty($address['address_line_2'])) echo sanitize_html($address['address_line_2']) . '<br>'; ?>
                                 <?php echo sanitize_html($address['city']); ?>, <?php echo sanitize_html($address['state']); ?> - <strong><?php echo sanitize_html($address['pincode']); ?></strong>
                             <?php else: ?>
-                                <span style="color: #71717a; font-style: italic;">Primary address recorded on checkout</span>
+                                <div style="padding: 10px 12px; background: #fff1f2; border: 1px dashed #f43f5e; border-radius: 6px; color: #e11d48; font-size: 12px;">
+                                    <i class="fa-solid fa-circle-exclamation" style="margin-right: 5px;"></i>
+                                    <strong>No address recorded</strong>. Click <strong>Add Address</strong> above to add customer's delivery address.
+                                </div>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -470,6 +515,74 @@ switch($order['status']) {
 
     </div>
 
+</div>
+
+<!-- Edit / Add Delivery Address Modal -->
+<div id="editAddressModal" style="display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; padding: 20px;" onclick="if(event.target===this) this.style.display='none';">
+    <div style="background: #ffffff; border-radius: 12px; width: 100%; max-width: 500px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); overflow: hidden; animation: fadeIn 0.15s ease-out;">
+        <div style="padding: 16px 20px; border-bottom: 1px solid #e4e4e7; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="width: 28px; height: 28px; border-radius: 6px; background: #f4f4f5; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #09090b;">
+                    <i class="fa-solid fa-location-dot"></i>
+                </div>
+                <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #09090b;">
+                    <?php echo !empty($address['address_line_1']) ? 'Edit Delivery Address' : 'Add Delivery Address'; ?>
+                </h3>
+            </div>
+            <button type="button" onclick="document.getElementById('editAddressModal').style.display='none'" style="border: none; background: none; color: #71717a; cursor: pointer; font-size: 16px;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form method="POST" action="order-detail.php?id=<?php echo $order['id']; ?>" style="padding: 20px;">
+            <input type="hidden" name="action" value="save_shipping_address">
+            <input type="hidden" name="order_id" value="<?php echo $order['id']; ?>">
+            
+            <div style="margin-bottom: 14px;">
+                <label style="display: block; font-size: 12px; font-weight: 600; color: #09090b; margin-bottom: 6px;">
+                    Flat / House No. / Building / Street <span style="color: #e11d48;">*</span>
+                </label>
+                <input type="text" name="address_line_1" required value="<?php echo htmlspecialchars($address['address_line_1'] ?? ''); ?>" placeholder="e.g. Flat 302, Green Valley Apts" class="shadcn-input" style="width: 100%; box-sizing: border-box;">
+            </div>
+
+            <div style="margin-bottom: 14px;">
+                <label style="display: block; font-size: 12px; font-weight: 600; color: #09090b; margin-bottom: 6px;">
+                    Area / Street / Landmark <span style="color: #71717a; font-weight: 400;">(Optional)</span>
+                </label>
+                <input type="text" name="address_line_2" value="<?php echo htmlspecialchars($address['address_line_2'] ?? ''); ?>" placeholder="e.g. Near St. Mary's School" class="shadcn-input" style="width: 100%; box-sizing: border-box;">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+                <div>
+                    <label style="display: block; font-size: 12px; font-weight: 600; color: #09090b; margin-bottom: 6px;">
+                        City <span style="color: #e11d48;">*</span>
+                    </label>
+                    <input type="text" name="city" required value="<?php echo htmlspecialchars($address['city'] ?? ''); ?>" placeholder="e.g. Mumbai" class="shadcn-input" style="width: 100%; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 12px; font-weight: 600; color: #09090b; margin-bottom: 6px;">
+                        State <span style="color: #e11d48;">*</span>
+                    </label>
+                    <input type="text" name="state" required value="<?php echo htmlspecialchars($address['state'] ?? ''); ?>" placeholder="e.g. Maharashtra" class="shadcn-input" style="width: 100%; box-sizing: border-box;">
+                </div>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-size: 12px; font-weight: 600; color: #09090b; margin-bottom: 6px;">
+                    PIN Code <span style="color: #e11d48;">*</span>
+                </label>
+                <input type="text" name="pincode" required maxlength="10" value="<?php echo htmlspecialchars($address['pincode'] ?? ''); ?>" placeholder="e.g. 400050" class="shadcn-input" style="width: 100%; box-sizing: border-box;">
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 14px; border-top: 1px solid #e4e4e7;">
+                <button type="button" onclick="document.getElementById('editAddressModal').style.display='none'" class="shadcn-btn shadcn-btn-outline">
+                    Cancel
+                </button>
+                <button type="submit" class="shadcn-btn shadcn-btn-primary">
+                    <i class="fa-solid fa-floppy-disk" style="margin-right: 6px;"></i> Save Address
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

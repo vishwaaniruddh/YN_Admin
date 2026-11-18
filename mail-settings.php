@@ -28,6 +28,8 @@ $smtp_from_email = $settings['smtp_from_email'] ?? 'info@yosshitaneha.com';
 $smtp_from_name = $settings['smtp_from_name'] ?? 'YosshitaNeha Fashion Studio';
 $smtp_enable_order_emails = $settings['smtp_enable_order_emails'] ?? '1';
 $smtp_enable_welcome_emails = $settings['smtp_enable_welcome_emails'] ?? '1';
+$smtp_admin_copy_email = $settings['smtp_admin_copy_email'] ?? '';
+$smtp_admin_copy_type = $settings['smtp_admin_copy_type'] ?? 'bcc';
 
 $success_msg = '';
 $error_msg = '';
@@ -63,6 +65,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $new_from_name = trim($_POST['smtp_from_name'] ?? '');
         $new_order_emails = isset($_POST['smtp_enable_order_emails']) ? '1' : '0';
         $new_welcome_emails = isset($_POST['smtp_enable_welcome_emails']) ? '1' : '0';
+        $new_admin_copy_email = trim($_POST['smtp_admin_copy_email'] ?? '');
+        $new_admin_copy_type = strtolower(trim($_POST['smtp_admin_copy_type'] ?? 'bcc'));
 
         $to_save = [
             'mail_mailer' => $new_mailer,
@@ -75,6 +79,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'smtp_from_name' => $new_from_name,
             'smtp_enable_order_emails' => $new_order_emails,
             'smtp_enable_welcome_emails' => $new_welcome_emails,
+            'smtp_admin_copy_email' => $new_admin_copy_email,
+            'smtp_admin_copy_type' => $new_admin_copy_type,
         ];
 
         try {
@@ -146,7 +152,10 @@ require_once __DIR__ . '/includes/sidebar.php';
 
 <div class="wrap-header">
     <h1><i class="fa-solid fa-envelope" style="color: var(--wp-blue);"></i> Mail &amp; SMTP Configuration</h1>
-    <a href="settings.php" class="button"><i class="fa-solid fa-sliders"></i> General Settings</a>
+    <div style="display: flex; gap: 8px;">
+        <a href="email-templates.php" class="button" style="background: #09090b; color: #fff; border-color: #09090b;"><i class="fa-solid fa-file-signature"></i> Email Templates</a>
+        <a href="settings.php" class="button"><i class="fa-solid fa-sliders"></i> General Settings</a>
+    </div>
 </div>
 
 <?php if ($success_msg): ?>
@@ -240,7 +249,7 @@ require_once __DIR__ . '/includes/sidebar.php';
                         </div>
                     </div>
 
-                    <div style="background: #f8f9fa; border: 1px solid #e2e8f0; padding: 14px; border-radius: 6px; display: flex; flex-direction: column; gap: 10px;">
+                    <div style="background: #f8f9fa; border: 1px solid #e2e8f0; padding: 14px; border-radius: 6px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #1d2327; font-size: 13px;">
                             <input type="checkbox" name="smtp_enable_order_emails" value="1" <?php echo $smtp_enable_order_emails === '1' ? 'checked' : ''; ?>>
                             <span>Send automated order confirmation emails to customers after checkout</span>
@@ -249,6 +258,31 @@ require_once __DIR__ . '/includes/sidebar.php';
                             <input type="checkbox" name="smtp_enable_welcome_emails" value="1" <?php echo $smtp_enable_welcome_emails === '1' ? 'checked' : ''; ?>>
                             <span>Send welcome notification emails upon new customer account registration</span>
                         </label>
+                    </div>
+
+                    <!-- Global Client / Admin Copy Notification Setting -->
+                    <div style="background: #fdfdfd; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                            <i class="fa-solid fa-copy" style="color: #6366f1;"></i>
+                            <h3 style="margin: 0; font-size: 13.5px; font-weight: 700; color: #09090b;">Global Store Admin / Client Copy (TO / CC / BCC)</h3>
+                        </div>
+                        <p style="font-size: 12px; color: #64748b; margin: 0 0 12px; line-height: 1.4;">
+                            Specify an email address (e.g. your client or store manager) to receive a copy of <strong>all customer emails</strong> by default. You can also customize this per template in <a href="email-templates.php" style="color: #6366f1; text-decoration: underline;">Email Templates</a>.
+                        </p>
+                        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label for="smtp_admin_copy_email" style="font-size: 12px;">Admin / Client Email Address</label>
+                                <input type="text" id="smtp_admin_copy_email" name="smtp_admin_copy_email" value="<?php echo htmlspecialchars($smtp_admin_copy_email); ?>" placeholder="e.g. client@gmail.com, info@yosshitaneha.com" class="form-control">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label for="smtp_admin_copy_type" style="font-size: 12px;">Delivery Mode</label>
+                                <select id="smtp_admin_copy_type" name="smtp_admin_copy_type" class="form-control">
+                                    <option value="bcc" <?php echo $smtp_admin_copy_type === 'bcc' ? 'selected' : ''; ?>>BCC (Hidden from customer) - Recommended</option>
+                                    <option value="cc" <?php echo $smtp_admin_copy_type === 'cc' ? 'selected' : ''; ?>>CC (Visible in email header)</option>
+                                    <option value="to" <?php echo $smtp_admin_copy_type === 'to' ? 'selected' : ''; ?>>TO (Direct Recipient alongside customer)</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
 
                 </div>
