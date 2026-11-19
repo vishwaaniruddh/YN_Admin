@@ -290,6 +290,11 @@ try {
                                 <div style="font-size: 11px; color: #71717a; margin-top: 2px;">
                                     <?php echo $orderDate; ?>
                                 </div>
+                                <?php if (!empty($ord['pos_bill_number'])): ?>
+                                    <div style="font-size: 10px; font-weight: 600; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 1px 5px; border-radius: 4px; display: inline-flex; align-items: center; gap: 3px; margin-top: 3px;" title="Central POS Approval Bill">
+                                        <i class="fa-solid fa-file-invoice"></i> <?php echo htmlspecialchars($ord['pos_bill_number']); ?>
+                                    </div>
+                                <?php endif; ?>
                             </td>
                             <td>
                                 <div style="font-weight: 500; font-size: 13px; color: #09090b;">
@@ -377,6 +382,19 @@ try {
                                         </select>
                                     </div>
                                 </form>
+                                <?php if (!empty($ord['refund_status']) && $ord['refund_status'] === 'on_hold'): ?>
+                                    <div style="margin-top: 4px;">
+                                        <span style="font-size: 10px; font-weight: 600; color: #b45309; background: #fef3c7; border: 1px solid #fde68a; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 3px;">
+                                            <i class="fa-solid fa-hand"></i> Refund On Hold
+                                        </span>
+                                    </div>
+                                <?php elseif (!empty($ord['refund_status']) && in_array($ord['refund_status'], ['refunded', 'partially_refunded'])): ?>
+                                    <div style="margin-top: 4px;">
+                                        <span style="font-size: 10px; font-weight: 600; color: #065f46; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 3px;">
+                                            <i class="fa-solid fa-arrow-rotate-left"></i> Refunded: ₹<?php echo number_format($ord['refund_amount'], 2); ?>
+                                        </span>
+                                    </div>
+                                <?php endif; ?>
                             </td>
                             <td style="text-align: right; white-space: nowrap;">
                                 <div style="display: inline-flex; gap: 4px;">

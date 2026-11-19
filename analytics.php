@@ -30,6 +30,19 @@ $top_source_name = 'Direct';
 $top_products = [];
 $top_categories = [];
 $recent_logs = [];
+$checkout_visits_count = 0;
+$checkout_abandoned_count = 0;
+
+// Fetch Checkout Visitors KPI for current range
+try {
+    $cStmt = $pdo->query("SELECT 
+        COUNT(*) as total_v, 
+        SUM(CASE WHEN status IN ('visited', 'payment_initiated') AND (order_id IS NULL OR order_id = 0) THEN 1 ELSE 0 END) as ab_cnt 
+        FROM checkout_visitors WHERE created_at >= DATE_SUB(NOW(), $interval_sql)");
+    $cRow = $cStmt->fetch(PDO::FETCH_ASSOC);
+    $checkout_visits_count = (int)($cRow['total_v'] ?? 0);
+    $checkout_abandoned_count = (int)($cRow['ab_cnt'] ?? 0);
+} catch (Exception $e) {}
 
 // 1. Total Pageviews & Unique Visitors
 try {
@@ -161,6 +174,26 @@ try {
             </p>
         </div>
     </div>
+</div>
+
+<!-- Checkout Traffic & Abandoned Carts Banner -->
+<div style="background: linear-gradient(135deg, #18181b 0%, #27272a 100%); border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; color: #fff; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+    <div style="display: flex; align-items: center; gap: 14px;">
+        <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(176, 141, 87, 0.2); border: 1px solid rgba(176, 141, 87, 0.4); display: flex; align-items: center; justify-content: center; font-size: 20px; color: #fbbf24;">
+            <i class="fa-solid fa-cart-shopping"></i>
+        </div>
+        <div>
+            <div style="font-size: 15px; font-weight: 700; color: #fff;">
+                Checkout Visitors: <?php echo number_format($checkout_visits_count); ?> Visitors &bull; <?php echo number_format($checkout_abandoned_count); ?> Abandoned Carts
+            </div>
+            <div style="font-size: 12px; color: #a1a1aa; margin-top: 2px;">
+                Monitor shoppers who reached checkout, track cart details, and recover lost orders in real-time.
+            </div>
+        </div>
+    </div>
+    <a href="checkout-visitors.php" class="button" style="background: #B08D57; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+        View Checkout Visitors <i class="fa-solid fa-arrow-right"></i>
+    </a>
 </div>
 
 <!-- Main Two-Column Layout -->

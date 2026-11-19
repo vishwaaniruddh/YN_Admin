@@ -100,6 +100,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $orderId = $pdo->lastInsertId();
 
+        // Update checkout visitor tracking session if token provided
+        $sessionToken = trim($data['session_token'] ?? '');
+        if (!empty($sessionToken)) {
+            try {
+                $pdo->prepare("UPDATE checkout_visitors SET status = 'payment_initiated', order_id = ? WHERE session_token = ?")->execute([$orderId, $sessionToken]);
+            } catch (Exception $ex) {}
+        }
+
         // Insert order items
         foreach ($items as $item) {
             $stmt = $pdo->prepare("SELECT id, price, sale_price FROM products WHERE id = ?");
@@ -259,9 +267,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $paymentMethodLabel = trim($data['payment_method']);
         }
 
+        $checkoutSessionToken = trim($data['session_token'] ?? '');
+
         if (!empty($data['is_dummy'])) {
             $stmt = $pdo->prepare("UPDATE orders SET status = 'Processing', payment_method = ?, transaction_id = ? WHERE id = ?");
             $stmt->execute([$paymentMethodLabel, $razorpayPaymentId ?: ('txn_' . time()), $localOrderId]);
+            
+            // Mark checkout tracking as completed
+            try {
+                if (!empty($checkoutSessionToken)) {
+                    $pdo->prepare("UPDATE checkout_visitors SET status = 'completed', order_id = ? WHERE session_token = ?")->execute([$localOrderId, $checkoutSessionToken]);
+                } else {
+                    $pdo->prepare("UPDATE checkout_visitors SET status = 'completed' WHERE order_id = ?")->execute([$localOrderId]);
+                }
+            } catch (Exception $cex) {}
+
+            // Generate POS Approval Bill and deduct central inventory
+            try {
+                sync_order_to_pos_approval_bill($pdo, $localOrderId);
+            } catch (Exception $posEx) {
+                error_log("POS Sync Error (Dummy): " . $posEx->getMessage());
+            }
+
             send_order_email($pdo, $localOrderId, 'success');
             echo json_encode(['success' => true, 'message' => 'Dummy payment verified.']);
             exit;
@@ -273,6 +300,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (hash_equals($expectedSignature, $razorpaySignature)) {
             $stmt = $pdo->prepare("UPDATE orders SET status = 'Processing', payment_method = ?, transaction_id = ? WHERE id = ?");
             if ($stmt->execute([$paymentMethodLabel, $razorpayPaymentId, $localOrderId])) {
+                // Mark checkout tracking as completed
+                try {
+                    if (!empty($checkoutSessionToken)) {
+                        $pdo->prepare("UPDATE checkout_visitors SET status = 'completed', order_id = ? WHERE session_token = ?")->execute([$localOrderId, $checkoutSessionToken]);
+                    } else {
+                        $pdo->prepare("UPDATE checkout_visitors SET status = 'completed' WHERE order_id = ?")->execute([$localOrderId]);
+                    }
+                } catch (Exception $cex) {}
+
+                // Automatically generate POS Approval Bill and deduct central inventory
+                try {
+                    sync_order_to_pos_approval_bill($pdo, $localOrderId);
+                } catch (Exception $posEx) {
+                    error_log("POS Sync Error (Live): " . $posEx->getMessage());
+                }
+
                 send_order_email($pdo, $localOrderId, 'success');
                 echo json_encode(['success' => true, 'message' => 'Payment successful and order updated.']);
             } else {
@@ -281,6 +324,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $stmt = $pdo->prepare("UPDATE orders SET status = 'Cancelled', payment_method = ?, transaction_id = ? WHERE id = ?");
             $stmt->execute([$paymentMethodLabel, $razorpayPaymentId, $localOrderId]);
+            
+            // Mark checkout tracking as cancelled
+            try {
+                if (!empty($checkoutSessionToken)) {
+                    $pdo->prepare("UPDATE checkout_visitors SET status = 'cancelled' WHERE session_token = ?")->execute([$checkoutSessionToken]);
+                }
+            } catch (Exception $cex) {}
+
             send_order_email($pdo, $localOrderId, 'failure');
             echo json_encode(['success' => false, 'message' => 'Payment signature verification failed.']);
         }

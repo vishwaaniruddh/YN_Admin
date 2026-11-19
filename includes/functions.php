@@ -4,6 +4,8 @@
 // Load Composer Autoloader
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/cache.php';
+require_once __DIR__ . '/pos-sync.php';
+require_once __DIR__ . '/refund-service.php';
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;

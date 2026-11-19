@@ -143,6 +143,13 @@ $admin_initials = strtoupper(substr($admin_name, 0, 2));
                 </a>
             </li>
 
+            <li class="menu-item <?php echo ($current_script == 'checkout-visitors.php') ? 'active' : ''; ?>">
+                <a href="checkout-visitors.php">
+                    <i class="fa-solid fa-cart-shopping"></i>
+                    <span>Checkout Visitors</span>
+                </a>
+            </li>
+
             <!-- Store Rules & Discounts Submenu -->
             <?php 
             $ecommerce_active = ($current_script == 'ecommerce.php');
@@ -279,7 +286,7 @@ $admin_initials = strtoupper(substr($admin_name, 0, 2));
 
             <?php 
             $settings_active = in_array($current_script, [
-                'settings.php', 'masters.php', 
+                'settings.php', 'mail-settings.php', 'email-templates.php', 'masters.php', 
                 'users.php', 'user-add.php', 'user-edit.php', 
                 'cache-manager.php', 'sync_db.php'
             ]);
@@ -294,6 +301,16 @@ $admin_initials = strtoupper(substr($admin_name, 0, 2));
                     <li class="<?php echo ($current_script == 'settings.php') ? 'active' : ''; ?>">
                         <a href="settings.php">
                             <i class="fa-solid fa-sliders"></i> General Settings
+                        </a>
+                    </li>
+                    <li class="<?php echo ($current_script == 'email-templates.php') ? 'active' : ''; ?>">
+                        <a href="email-templates.php">
+                            <i class="fa-solid fa-envelope-open-text"></i> Email Templates
+                        </a>
+                    </li>
+                    <li class="<?php echo ($current_script == 'mail-settings.php') ? 'active' : ''; ?>">
+                        <a href="mail-settings.php">
+                            <i class="fa-solid fa-server"></i> Mail &amp; SMTP Settings
                         </a>
                     </li>
                     <li class="<?php echo ($current_script == 'masters.php') ? 'active' : ''; ?>">

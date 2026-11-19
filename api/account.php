@@ -227,4 +227,53 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'GET') {
         }
         exit;
     }
+
+    elseif ($action === 'request_cancellation') {
+        $rawInput = file_get_contents('php://input');
+        $data = json_decode($rawInput, true) ?? [];
+        $orderId = (int)($data['order_id'] ?? 0);
+        $reason = sanitize_html(trim($data['reason'] ?? 'Customer requested cancellation from account portal'));
+
+        // Verify that this order belongs to this authenticated user
+        $stmt = $pdo->prepare("SELECT * FROM orders WHERE id = ? AND customer_id = ?");
+        $stmt->execute([$orderId, $userId]);
+        $order = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$order) {
+            echo json_encode(['success' => false, 'message' => 'Order not found or unauthorized access.']);
+            exit;
+        }
+
+        if ($order['status'] === 'Cancelled') {
+            echo json_encode(['success' => false, 'message' => 'This order has already been cancelled.']);
+            exit;
+        }
+
+        $isDispatched = in_array(strtolower($order['status']), ['shipped', 'delivered']);
+
+        if ($isDispatched) {
+            // Place refund on hold awaiting physical return
+            $pdo->prepare("UPDATE orders SET refund_status = 'on_hold', refund_reason = ? WHERE id = ?")
+                ->execute(["Return requested by customer: " . $reason, $orderId]);
+            $msg = "Your return request has been submitted. Because your item is already dispatched, refund will be on hold until the physical parcel is received and inspected at our studio.";
+        } else {
+            // Order is still Processing/Pending
+            $pdo->prepare("UPDATE orders SET refund_status = 'on_hold', refund_reason = ? WHERE id = ?")
+                ->execute(["Cancellation requested before dispatch: " . $reason, $orderId]);
+            $msg = "Your cancellation request has been submitted to the studio. Our fulfillment team will process your refund shortly.";
+        }
+
+        // Log administrative activity
+        if (function_exists('log_activity')) {
+            $orderNum = format_order_number($orderId);
+            log_activity($pdo, "Customer #{$userId} requested cancellation/return for Order #{$orderNum}. Reason: {$reason}", 'orders', $orderId);
+        }
+
+        echo json_encode([
+            'success' => true,
+            'message' => $msg,
+            'refund_status' => 'on_hold'
+        ]);
+        exit;
+    }
 }

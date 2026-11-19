@@ -81,6 +81,7 @@ try {
     </div>
     <div class="dashboard-actions">
         <a href="orders.php" class="shadcn-btn shadcn-btn-primary"><i class="fa-solid fa-box-open"></i> Manage Orders</a>
+        <a href="checkout-visitors.php" class="shadcn-btn shadcn-btn-outline"><i class="fa-solid fa-cart-shopping"></i> Checkout Visitors</a>
         <a href="product-add.php" class="shadcn-btn shadcn-btn-outline"><i class="fa-solid fa-plus"></i> Add Product</a>
         <a href="export-products.php" class="shadcn-btn shadcn-btn-ghost"><i class="fa-solid fa-file-excel"></i> Export Catalog</a>
     </div>

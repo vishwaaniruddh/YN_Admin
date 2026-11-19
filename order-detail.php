@@ -66,6 +66,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         header("Location: order-detail.php?id=" . urlencode($rawId));
         exit();
+    } elseif ($action === 'sync_pos_approval_bill') {
+        $result = sync_order_to_pos_approval_bill($pdo, $orderId);
+        if ($result['success']) {
+            $_SESSION['flash_message'] = "POS Approval Bill <strong>" . htmlspecialchars($result['bill_number']) . "</strong> generated and central stock updated!";
+            $_SESSION['flash_type'] = "success";
+        } else {
+            $_SESSION['flash_message'] = "POS Sync Failed: " . htmlspecialchars($result['message']);
+            $_SESSION['flash_type'] = "error";
+        }
+        header("Location: order-detail.php?id=" . urlencode($rawId));
+        exit();
+    } elseif ($action === 'hold_refund') {
+        $holdReason = sanitize_html(trim($_POST['hold_reason'] ?? ''));
+        $res = hold_order_refund($pdo, $orderId, $holdReason);
+        $_SESSION['flash_message'] = $res['message'];
+        $_SESSION['flash_type'] = "success";
+        header("Location: order-detail.php?id=" . urlencode($rawId));
+        exit();
+    } elseif ($action === 'process_refund') {
+        $refundType = $_POST['refund_type'] ?? 'full';
+        $orderTotal = (float)($_POST['order_total'] ?? 0);
+        $refundAmount = ($refundType === 'partial') ? (float)($_POST['custom_refund_amount'] ?? 0) : $orderTotal;
+        $reason = sanitize_html(trim($_POST['refund_reason'] ?? ''));
+        $returnConfirmed = !empty($_POST['return_confirmed']);
+        $restockInventory = !empty($_POST['restock_inventory']);
+
+        $res = process_razorpay_refund($pdo, $orderId, $refundAmount, $reason, $returnConfirmed, $restockInventory);
+        if ($res['success']) {
+            $_SESSION['flash_message'] = $res['message'];
+            $_SESSION['flash_type'] = "success";
+        } else {
+            $_SESSION['flash_message'] = "Refund Request Notice: " . htmlspecialchars($res['message']);
+            $_SESSION['flash_type'] = "error";
+        }
+        header("Location: order-detail.php?id=" . urlencode($rawId));
+        exit();
     } elseif ($action === 'save_shipping_address') {
         $line1 = sanitize_html(trim($_POST['address_line_1'] ?? ''));
         $line2 = sanitize_html(trim($_POST['address_line_2'] ?? ''));
@@ -419,6 +455,55 @@ switch($order['status']) {
     <!-- Right Side Column -->
     <div class="side-column" style="flex: 0 0 340px; min-width: 280px;">
         
+        <!-- POS Inventory & Approval Bill Card -->
+        <div class="shadcn-card" style="margin-bottom: 24px;">
+            <div class="shadcn-card-header">
+                <h2 class="shadcn-card-title">
+                    <i class="fa-solid fa-cash-register" style="color: #71717a;"></i>
+                    POS Central Inventory &amp; Bill
+                </h2>
+            </div>
+            <div class="shadcn-card-padded">
+                <?php if (!empty($order['pos_bill_number'])): ?>
+                    <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 12px 14px; margin-bottom: 12px;">
+                        <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #065f46; font-size: 13.5px;">
+                            <i class="fa-solid fa-circle-check"></i>
+                            <span>POS Approval Bill Created</span>
+                        </div>
+                        <div style="font-family: monospace; font-size: 14px; font-weight: 700; color: #09090b; margin-top: 6px;">
+                            <?php echo htmlspecialchars($order['pos_bill_number']); ?>
+                        </div>
+                        <div style="font-size: 11.5px; color: #047857; margin-top: 4px;">
+                            <i class="fa-solid fa-clock"></i> Synced: <?php echo !empty($order['pos_synced_at']) ? date('d M Y, h:i A', strtotime($order['pos_synced_at'])) : 'Completed'; ?>
+                        </div>
+                        <div style="font-size: 11.5px; color: #065f46; margin-top: 2px;">
+                            <i class="fa-solid fa-boxes-stacked"></i> Central inventory deducted in POS.
+                        </div>
+                    </div>
+                    <a href="http://localhost/ss/pos/reports/approval.php" target="_blank" class="shadcn-btn shadcn-btn-outline" style="width: 100%; box-sizing: border-box; justify-content: center; font-size: 12.5px;">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Open POS Approval System
+                    </a>
+                <?php else: ?>
+                    <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 14px; margin-bottom: 14px;">
+                        <div style="display: flex; align-items: center; gap: 6px; font-weight: 600; color: #92400e; font-size: 13px;">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            <span>Not Synced to POS</span>
+                        </div>
+                        <p style="font-size: 12px; color: #78350f; margin: 4px 0 0 0; line-height: 1.4;">
+                            Generate an approval bill in the POS system to create this customer and deduct quantities from the central inventory.
+                        </p>
+                    </div>
+                    <form method="POST" action="order-detail.php?id=<?php echo $order['id']; ?>">
+                        <input type="hidden" name="action" value="sync_pos_approval_bill">
+                        <input type="hidden" name="order_id" value="<?php echo $order['id']; ?>">
+                        <button type="submit" class="shadcn-btn shadcn-btn-primary" style="width: 100%; justify-content: center; background: #09090b;">
+                            <i class="fa-solid fa-file-invoice"></i> Generate POS Approval Bill
+                        </button>
+                    </form>
+                <?php endif; ?>
+            </div>
+        </div>
+
         <!-- Fulfillment & Tracking Card -->
         <div class="shadcn-card" style="margin-bottom: 24px;">
             <div class="shadcn-card-header">
@@ -467,6 +552,91 @@ switch($order['status']) {
                         <i class="fa-solid fa-check"></i> Save &amp; Notify Customer
                     </button>
                 </form>
+            </div>
+        </div>
+
+        <!-- Cancellation & Razorpay Refund Card -->
+        <div class="shadcn-card" style="margin-bottom: 24px;">
+            <div class="shadcn-card-header">
+                <h2 class="shadcn-card-title">
+                    <i class="fa-solid fa-hand-holding-dollar" style="color: #71717a;"></i>
+                    Cancellation &amp; Razorpay Refund
+                </h2>
+            </div>
+            <div class="shadcn-card-padded">
+                <?php if ($order['refund_status'] === 'refunded' || $order['refund_status'] === 'partially_refunded'): ?>
+                    <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 12px 14px;">
+                        <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #065f46; font-size: 13.5px;">
+                            <i class="fa-solid fa-circle-check"></i>
+                            <span><?php echo ($order['refund_status'] === 'partially_refunded') ? 'Partial Refund Processed' : 'Full Refund Processed'; ?></span>
+                        </div>
+                        <div style="font-size: 17px; font-weight: 700; color: #09090b; margin-top: 6px;">
+                            ₹<?php echo number_format($order['refund_amount'], 2); ?>
+                        </div>
+                        <div style="font-size: 11.5px; color: #047857; margin-top: 4px; font-family: monospace;">
+                            <strong>Refund ID:</strong> <?php echo htmlspecialchars($order['refund_id'] ?: 'N/A'); ?>
+                        </div>
+                        <div style="font-size: 11px; color: #71717a; margin-top: 3px;">
+                            Reversed at: <?php echo !empty($order['refunded_at']) ? date('d M Y, h:i A', strtotime($order['refunded_at'])) : 'Completed'; ?>
+                        </div>
+                        <?php if (!empty($order['return_received'])): ?>
+                            <div style="margin-top: 6px; font-size: 11.5px; color: #065f46; font-weight: 500;">
+                                <i class="fa-solid fa-box-open"></i> Returned package received &amp; inspected.
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                <?php elseif ($order['refund_status'] === 'on_hold'): ?>
+                    <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 14px; margin-bottom: 12px;">
+                        <div style="display: flex; align-items: center; gap: 6px; font-weight: 700; color: #92400e; font-size: 13px;">
+                            <i class="fa-solid fa-hand"></i>
+                            <span>Refund On Hold (Awaiting Return)</span>
+                        </div>
+                        <p style="font-size: 12px; color: #78350f; margin: 6px 0 0 0; line-height: 1.4;">
+                            <?php echo htmlspecialchars($order['refund_reason'] ?: 'Awaiting return package receipt and physical inspection at our studio.'); ?>
+                        </p>
+                        <div style="font-size: 11px; color: #b45309; margin-top: 6px; font-weight: 600;">
+                            <i class="fa-solid fa-triangle-exclamation"></i> Do not release refund until package is received back.
+                        </div>
+                    </div>
+                    <button type="button" onclick="openRefundModal(true)" class="shadcn-btn shadcn-btn-primary" style="width: 100%; justify-content: center; background: #059669;">
+                        <i class="fa-solid fa-circle-check"></i> Package Received: Issue Refund
+                    </button>
+                <?php else: ?>
+                    <?php 
+                    $isDispatched = in_array(strtolower($order['status'] ?? ''), ['shipped', 'delivered']);
+                    ?>
+                    <?php if ($isDispatched): ?>
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; margin-bottom: 12px;">
+                            <div style="display: flex; align-items: center; gap: 6px; font-weight: 600; color: #334155; font-size: 12.5px;">
+                                <i class="fa-solid fa-truck-fast" style="color: #0284c7;"></i>
+                                <span>Product Already Dispatched</span>
+                            </div>
+                            <p style="font-size: 11.5px; color: #64748b; margin: 4px 0 0 0; line-height: 1.4;">
+                                If the customer cancels, put the refund on hold until the physical package is returned to the studio.
+                            </p>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <form method="POST" action="order-detail.php?id=<?php echo $order['id']; ?>" onsubmit="return confirm('Hold refund for this order until the customer returns the product?');">
+                                <input type="hidden" name="action" value="hold_refund">
+                                <input type="hidden" name="order_id" value="<?php echo $order['id']; ?>">
+                                <input type="hidden" name="hold_reason" value="Product in transit/delivered. Refund placed on hold awaiting physical return inspection.">
+                                <button type="submit" class="shadcn-btn shadcn-btn-outline" style="width: 100%; justify-content: center; color: #b45309; border-color: #fde68a; background: #fffbeb;">
+                                    <i class="fa-solid fa-hand"></i> Hold Refund (Awaiting Return)
+                                </button>
+                            </form>
+                            <button type="button" onclick="openRefundModal(false)" class="shadcn-btn shadcn-btn-outline" style="width: 100%; justify-content: center;">
+                                <i class="fa-solid fa-arrow-rotate-left"></i> Inspect Return &amp; Refund
+                            </button>
+                        </div>
+                    <?php else: ?>
+                        <p style="font-size: 12px; color: #71717a; margin: 0 0 12px 0; line-height: 1.4;">
+                            Order is not dispatched yet. You can cancel and issue a full or custom partial refund via Razorpay.
+                        </p>
+                        <button type="button" onclick="openRefundModal(true)" class="shadcn-btn shadcn-btn-outline" style="width: 100%; justify-content: center; color: #e11d48; border-color: #fecdd3;">
+                            <i class="fa-solid fa-ban"></i> Cancel &amp; Issue Refund
+                        </button>
+                    <?php endif; ?>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -584,5 +754,219 @@ switch($order['status']) {
         </form>
     </div>
 </div>
+
+<!-- Process Razorpay Refund Modal (Full & Partial + Return Inspection Guard) -->
+<div id="refundModal" style="display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; padding: 20px;" onclick="if(event.target===this) closeRefundModal();">
+    <div style="background: #ffffff; border-radius: 14px; width: 100%; max-width: 540px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); overflow: hidden; animation: fadeIn 0.15s ease-out;">
+        
+        <div style="padding: 16px 22px; border-bottom: 1px solid #e4e4e7; display: flex; align-items: center; justify-content: space-between; background: #fafafa;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(225, 29, 72, 0.1); color: #e11d48; display: flex; align-items: center; justify-content: center; font-size: 14px;">
+                    <i class="fa-solid fa-arrow-rotate-left"></i>
+                </div>
+                <div>
+                    <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #09090b;">
+                        Issue Razorpay Refund
+                    </h3>
+                    <div style="font-size: 11.5px; color: #71717a;">
+                        Order #<?php echo $orderNumber; ?> &bull; Total Paid: ₹<?php echo number_format($order['total_amount'], 2); ?>
+                    </div>
+                </div>
+            </div>
+            <button type="button" onclick="closeRefundModal()" style="border: none; background: none; color: #71717a; cursor: pointer; font-size: 18px;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form method="POST" action="order-detail.php?id=<?php echo $order['id']; ?>" onsubmit="return confirmRefundSubmission();" style="padding: 22px;">
+            <input type="hidden" name="action" value="process_refund">
+            <input type="hidden" name="order_id" value="<?php echo $order['id']; ?>">
+            <input type="hidden" name="order_total" id="modal_order_total" value="<?php echo (float)$order['total_amount']; ?>">
+
+            <!-- Return Inspection Guard Notice for Dispatched Orders -->
+            <?php 
+            $isDispatchedForModal = in_array(strtolower($order['status'] ?? ''), ['shipped', 'delivered']);
+            ?>
+            <div id="return_guard_container" style="<?php echo $isDispatchedForModal ? '' : 'display: none;'; ?> margin-bottom: 18px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 14px;">
+                <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #991b1b; font-size: 13px; margin-bottom: 4px;">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>Physical Return Verification Required</span>
+                </div>
+                <p style="font-size: 12px; color: #7f1d1d; margin: 0 0 10px 0; line-height: 1.4;">
+                    This order was marked as <strong><?php echo htmlspecialchars($order['status']); ?></strong>. If the customer has not returned the product yet, hold the refund instead.
+                </p>
+                <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; color: #991b1b; font-weight: 600; cursor: pointer;">
+                    <input type="checkbox" name="return_confirmed" id="return_confirmed_checkbox" value="1" style="margin-top: 2px;">
+                    <span>I confirm the returned product has been physically received and inspected at our studio.</span>
+                </label>
+            </div>
+
+            <!-- Refund Type Selection (Full vs Custom/Partial) -->
+            <div style="margin-bottom: 18px;">
+                <label style="display: block; font-size: 12.5px; font-weight: 700; color: #09090b; margin-bottom: 8px;">
+                    Refund Calculation Type <span style="color: #e11d48;">*</span>
+                </label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    
+                    <label style="border: 1px solid #e4e4e7; border-radius: 8px; padding: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; background: #ffffff;" id="label_full_refund">
+                        <input type="radio" name="refund_type" value="full" checked onchange="toggleRefundType('full')" style="accent-color: #09090b;">
+                        <div>
+                            <div style="font-weight: 600; font-size: 13px; color: #09090b;">Full 100% Refund</div>
+                            <div style="font-size: 11.5px; color: #059669; font-weight: 600;">₹<?php echo number_format($order['total_amount'], 2); ?></div>
+                        </div>
+                    </label>
+
+                    <label style="border: 1px solid #e4e4e7; border-radius: 8px; padding: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; background: #ffffff;" id="label_partial_refund">
+                        <input type="radio" name="refund_type" value="partial" onchange="toggleRefundType('partial')" style="accent-color: #09090b;">
+                        <div>
+                            <div style="font-weight: 600; font-size: 13px; color: #09090b;">Custom / Partial</div>
+                            <div style="font-size: 11.5px; color: #71717a;">Deduct shipping / fees</div>
+                        </div>
+                    </label>
+
+                </div>
+            </div>
+
+            <!-- Custom / Partial Amount Input -->
+            <div id="partial_amount_group" style="display: none; margin-bottom: 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <label style="font-size: 12px; font-weight: 700; color: #0f172a;">
+                        Custom Refund Amount (₹) <span style="color: #e11d48;">*</span>
+                    </label>
+                    <span style="font-size: 11px; color: #64748b;">Max: ₹<?php echo number_format($order['total_amount'], 2); ?></span>
+                </div>
+                <div style="position: relative;">
+                    <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-weight: 700; color: #64748b; font-size: 14px;">₹</span>
+                    <input type="number" id="custom_refund_amount_input" name="custom_refund_amount" min="1" max="<?php echo (float)$order['total_amount']; ?>" step="0.01" value="<?php echo (float)$order['total_amount']; ?>" class="shadcn-input" style="width: 100%; box-sizing: border-box; padding-left: 28px; font-weight: 700; font-size: 15px; color: #09090b;" oninput="updateDeductionPreview()">
+                </div>
+                <div id="deduction_preview" style="font-size: 11.5px; color: #b45309; margin-top: 6px; font-weight: 500;">
+                    <!-- Auto-updated via JS -->
+                </div>
+            </div>
+
+            <!-- Reason Field -->
+            <div style="margin-bottom: 18px;">
+                <label style="display: block; font-size: 12px; font-weight: 700; color: #09090b; margin-bottom: 6px;">
+                    Cancellation &amp; Refund Reason <span style="color: #e11d48;">*</span>
+                </label>
+                <select id="reason_preset_select" onchange="applyReasonPreset(this.value)" class="shadcn-input" style="width: 100%; box-sizing: border-box; margin-bottom: 8px; font-size: 12.5px;">
+                    <option value="">-- Choose Common Reason or Type Below --</option>
+                    <option value="Customer requested cancellation before dispatch">Customer requested cancellation before dispatch</option>
+                    <option value="Return received & inspected in original condition; full refund released">Return received &amp; inspected in original condition; full refund released</option>
+                    <option value="Customer returned item; refund released excluding shipping charge">Customer returned item; refund released excluding shipping charge</option>
+                    <option value="Size / fitting exchange requested">Size / fitting exchange requested</option>
+                    <option value="Defective or damaged parcel returned">Defective or damaged parcel returned</option>
+                </select>
+                <input type="text" id="refund_reason_input" name="refund_reason" required placeholder="e.g. Returned parcel inspected; refund processed to UPI" class="shadcn-input" style="width: 100%; box-sizing: border-box; font-size: 12.5px;" value="Customer cancellation / Return inspected">
+            </div>
+
+            <!-- Restock Inventory Checkbox -->
+            <div style="margin-bottom: 20px; background: #f4f4f5; padding: 10px 14px; border-radius: 8px;">
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #09090b; font-weight: 600; cursor: pointer;">
+                    <input type="checkbox" name="restock_inventory" value="1" checked style="accent-color: #09090b;">
+                    <span>Restock returned quantity back into central POS inventory (phppos_items)</span>
+                </label>
+            </div>
+
+            <!-- Modal Action Buttons -->
+            <div style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 16px; border-top: 1px solid #e4e4e7;">
+                <button type="button" onclick="closeRefundModal()" class="shadcn-btn shadcn-btn-outline">
+                    Cancel
+                </button>
+                <button type="submit" class="shadcn-btn shadcn-btn-primary" style="background: #e11d48; border-color: #e11d48; color: #ffffff;">
+                    <i class="fa-solid fa-arrow-rotate-left" style="margin-right: 6px;"></i> Process Razorpay Refund
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<script>
+const ORDER_TOTAL_AMOUNT = <?php echo (float)$order['total_amount']; ?>;
+const IS_DISPATCHED = <?php echo $isDispatchedForModal ? 'true' : 'false'; ?>;
+
+function openRefundModal(preConfirmReturn = false) {
+    const modal = document.getElementById('refundModal');
+    const returnGuard = document.getElementById('return_guard_container');
+    const returnCheckbox = document.getElementById('return_confirmed_checkbox');
+
+    if (IS_DISPATCHED) {
+        returnGuard.style.display = 'block';
+        if (preConfirmReturn && returnCheckbox) {
+            returnCheckbox.checked = true;
+        }
+    } else {
+        returnGuard.style.display = 'none';
+        if (returnCheckbox) returnCheckbox.checked = true;
+    }
+
+    toggleRefundType('full');
+    modal.style.display = 'flex';
+}
+
+function closeRefundModal() {
+    document.getElementById('refundModal').style.display = 'none';
+}
+
+function toggleRefundType(type) {
+    const partialGroup = document.getElementById('partial_amount_group');
+    const customInput = document.getElementById('custom_refund_amount_input');
+    const labelFull = document.getElementById('label_full_refund');
+    const labelPartial = document.getElementById('label_partial_refund');
+
+    if (type === 'partial') {
+        partialGroup.style.display = 'block';
+        labelPartial.style.borderColor = '#09090b';
+        labelFull.style.borderColor = '#e4e4e7';
+        updateDeductionPreview();
+    } else {
+        partialGroup.style.display = 'none';
+        customInput.value = ORDER_TOTAL_AMOUNT;
+        labelFull.style.borderColor = '#09090b';
+        labelPartial.style.borderColor = '#e4e4e7';
+    }
+}
+
+function updateDeductionPreview() {
+    const customInput = document.getElementById('custom_refund_amount_input');
+    const preview = document.getElementById('deduction_preview');
+    const val = parseFloat(customInput.value) || 0;
+    const diff = Math.max(0, ORDER_TOTAL_AMOUNT - val);
+
+    if (diff > 0) {
+        preview.innerHTML = `<strong>Deduction: ₹${diff.toFixed(2)}</strong> will be retained by your studio (Customer receives ₹${val.toFixed(2)}).`;
+    } else {
+        preview.innerHTML = `Customer receives full ₹${val.toFixed(2)} with no deductions.`;
+    }
+}
+
+function applyReasonPreset(val) {
+    if (val) {
+        document.getElementById('refund_reason_input').value = val;
+    }
+}
+
+function confirmRefundSubmission() {
+    const isDispatched = IS_DISPATCHED;
+    const returnCheckbox = document.getElementById('return_confirmed_checkbox');
+
+    if (isDispatched && returnCheckbox && !returnCheckbox.checked) {
+        alert("Return Verification Notice:\nThis order was already shipped/delivered. You cannot release a refund until you confirm that the returned physical parcel has been received and inspected at your studio.");
+        returnCheckbox.focus();
+        return false;
+    }
+
+    const refundType = document.querySelector('input[name="refund_type"]:checked').value;
+    const refundAmt = (refundType === 'partial') ? parseFloat(document.getElementById('custom_refund_amount_input').value) : ORDER_TOTAL_AMOUNT;
+
+    if (isNaN(refundAmt) || refundAmt <= 0) {
+        alert("Please enter a valid refund amount greater than ₹0.");
+        return false;
+    }
+
+    return confirm(`Are you sure you want to process a Razorpay refund of ₹${refundAmt.toFixed(2)} for Order #<?php echo $orderNumber; ?>?\n\nThis will instantly reverse funds back to the customer's source account.`);
+}
+</script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
