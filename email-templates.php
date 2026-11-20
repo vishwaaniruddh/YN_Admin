@@ -93,6 +93,11 @@ try {
             ]);
         }
     }
+
+    // Ensure extra_to, cc_emails, and bcc_emails columns exist
+    try { $pdo->exec("ALTER TABLE email_templates ADD COLUMN extra_to TEXT DEFAULT NULL AFTER footer_note"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE email_templates ADD COLUMN cc_emails TEXT DEFAULT NULL AFTER extra_to"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE email_templates ADD COLUMN bcc_emails TEXT DEFAULT NULL AFTER cc_emails"); } catch (Exception $e) {}
 } catch (Exception $e) {}
 
 // Selected active template tab
@@ -115,9 +120,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $headline = trim($_POST['headline'] ?? '');
         $subheading = trim($_POST['subheading'] ?? '');
         $footer_note = trim($_POST['footer_note'] ?? '');
-        $extra_to = trim($_POST['extra_to'] ?? '');
-        $cc_emails = trim($_POST['cc_emails'] ?? '');
-        $bcc_emails = trim($_POST['bcc_emails'] ?? '');
+
+        // Normalize multiple comma-separated emails
+        $extra_to_list = parse_email_list($_POST['extra_to'] ?? '');
+        $extra_to = !empty($extra_to_list) ? implode(', ', $extra_to_list) : null;
+
+        $cc_list = parse_email_list($_POST['cc_emails'] ?? '');
+        $cc_emails = !empty($cc_list) ? implode(', ', $cc_list) : null;
+
+        $bcc_list = parse_email_list($_POST['bcc_emails'] ?? '');
+        $bcc_emails = !empty($bcc_list) ? implode(', ', $bcc_list) : null;
+
         $is_enabled = isset($_POST['is_enabled']) ? 1 : 0;
 
         try {
@@ -322,14 +335,20 @@ require_once __DIR__ . '/includes/sidebar.php';
                                 </div>
                                 <?php if (!empty($t_data['bcc_emails']) || !empty($t_data['cc_emails']) || !empty($t_data['extra_to'])): ?>
                                     <div style="margin-top: 5px; display: flex; gap: 4px; flex-wrap: wrap;">
-                                        <?php if (!empty($t_data['extra_to'])): ?>
-                                            <span style="font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: <?php echo $is_selected ? 'rgba(255,255,255,0.2)' : '#e0f2fe'; ?>; color: <?php echo $is_selected ? '#ffffff' : '#0284c7'; ?>;">+TO</span>
+                                        <?php if (!empty($t_data['extra_to'])): 
+                                            $cntTo = count(parse_email_list($t_data['extra_to']));
+                                        ?>
+                                            <span style="font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: <?php echo $is_selected ? 'rgba(255,255,255,0.2)' : '#e0f2fe'; ?>; color: <?php echo $is_selected ? '#ffffff' : '#0284c7'; ?>;">+TO<?php echo $cntTo > 1 ? " ($cntTo)" : ""; ?></span>
                                         <?php endif; ?>
-                                        <?php if (!empty($t_data['cc_emails'])): ?>
-                                            <span style="font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: <?php echo $is_selected ? 'rgba(255,255,255,0.2)' : '#ecfdf5'; ?>; color: <?php echo $is_selected ? '#ffffff' : '#059669'; ?>;">CC</span>
+                                        <?php if (!empty($t_data['cc_emails'])): 
+                                            $cntCc = count(parse_email_list($t_data['cc_emails']));
+                                        ?>
+                                            <span style="font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: <?php echo $is_selected ? 'rgba(255,255,255,0.2)' : '#ecfdf5'; ?>; color: <?php echo $is_selected ? '#ffffff' : '#059669'; ?>;">CC<?php echo $cntCc > 1 ? " ($cntCc)" : ""; ?></span>
                                         <?php endif; ?>
-                                        <?php if (!empty($t_data['bcc_emails'])): ?>
-                                            <span style="font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: <?php echo $is_selected ? 'rgba(255,255,255,0.2)' : '#f3e8ff'; ?>; color: <?php echo $is_selected ? '#ffffff' : '#7c3aed'; ?>;">BCC</span>
+                                        <?php if (!empty($t_data['bcc_emails'])): 
+                                            $cntBcc = count(parse_email_list($t_data['bcc_emails']));
+                                        ?>
+                                            <span style="font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: <?php echo $is_selected ? 'rgba(255,255,255,0.2)' : '#f3e8ff'; ?>; color: <?php echo $is_selected ? '#ffffff' : '#7c3aed'; ?>;">BCC<?php echo $cntBcc > 1 ? " ($cntBcc)" : ""; ?></span>
                                         <?php endif; ?>
                                     </div>
                                 <?php endif; ?>
@@ -479,10 +498,10 @@ require_once __DIR__ . '/includes/sidebar.php';
                             </div>
                             <div>
                                 <span style="font-size: 13px; font-weight: 700; color: #09090b;">Client &amp; Admin Copy Routing (TO / CC / BCC)</span>
-                                <div style="font-size: 11.5px; color: #71717a;">Receive an automatic copy of this notification whenever it is sent to a customer.</div>
+                                <div style="font-size: 11.5px; color: #71717a;">Receive an automatic copy of this notification whenever it is sent to a customer. Supports multiple comma-separated emails.</div>
                             </div>
                         </div>
-                        <span class="shadcn-badge shadcn-badge-sky" style="font-size: 10px; padding: 2px 8px;">Multi-Recipient</span>
+                        <span class="shadcn-badge shadcn-badge-sky" style="font-size: 10px; padding: 2px 8px;">Multi-Recipient Enabled</span>
                     </div>
 
                     <div style="display: flex; flex-direction: column; gap: 14px;">
@@ -490,42 +509,46 @@ require_once __DIR__ . '/includes/sidebar.php';
                         <div>
                             <label style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600; color: #09090b; margin-bottom: 4px;">
                                 <span><i class="fa-solid fa-at" style="color: #0284c7; margin-right: 4px;"></i> Additional Direct Recipient (TO)</span>
-                                <span style="font-size: 11px; color: #71717a; font-weight: 400;">Separate multiple with comma</span>
+                                <span style="font-size: 10px; color: #0284c7; background: #e0f2fe; padding: 2px 7px; border-radius: 4px; font-weight: 600;">Multiple: comma-separated</span>
                             </label>
                             <input type="text" name="extra_to" id="tpl_extra_to" 
                                    value="<?php echo htmlspecialchars($current_template['extra_to'] ?? ''); ?>" 
                                    placeholder="e.g. client@gmail.com, boutique@yosshitaneha.com" 
                                    class="shadcn-input" style="width: 100%; box-sizing: border-box; font-size: 13px;"
-                                   oninput="updatePreview()">
-                            <p style="font-size: 11px; color: #71717a; margin: 3px 0 0;">These addresses will be primary recipients in the <code>TO</code> header alongside the customer.</p>
+                                   oninput="updatePreview(); renderEmailBadges('tpl_extra_to', 'badges_extra_to');">
+                            <div id="badges_extra_to" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px;"></div>
+                            <p style="font-size: 11px; color: #71717a; margin: 3px 0 0;">These addresses will be primary recipients in the <code>TO</code> header alongside the customer. Add multiple separated by commas.</p>
                         </div>
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
                             <!-- CC -->
                             <div>
-                                <label style="display: block; font-size: 12px; font-weight: 600; color: #09090b; margin-bottom: 4px;">
-                                    <i class="fa-solid fa-envelope" style="color: #059669; margin-right: 4px;"></i> Carbon Copy (CC - Visible)
+                                <label style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600; color: #09090b; margin-bottom: 4px;">
+                                    <span><i class="fa-solid fa-envelope" style="color: #059669; margin-right: 4px;"></i> Carbon Copy (CC - Visible)</span>
+                                    <span style="font-size: 10px; color: #059669; background: #ecfdf5; padding: 2px 7px; border-radius: 4px; font-weight: 600;">Multiple: comma-separated</span>
                                 </label>
                                 <input type="text" name="cc_emails" id="tpl_cc" 
                                        value="<?php echo htmlspecialchars($current_template['cc_emails'] ?? ''); ?>" 
-                                       placeholder="e.g. info@yosshitaneha.com" 
+                                       placeholder="e.g. client@gmail.com, boutique@yosshitaneha.com, manager@domain.com" 
                                        class="shadcn-input" style="width: 100%; box-sizing: border-box; font-size: 13px;"
-                                       oninput="updatePreview()">
-                                <p style="font-size: 11px; color: #71717a; margin: 3px 0 0;">Visible to customer in the email header.</p>
+                                       oninput="updatePreview(); renderEmailBadges('tpl_cc', 'badges_cc');">
+                                <div id="badges_cc" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px;"></div>
+                                <p style="font-size: 11px; color: #71717a; margin: 3px 0 0;">Visible to customer in the email header. Separate multiple emails with commas.</p>
                             </div>
 
                             <!-- BCC -->
                             <div>
                                 <label style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600; color: #09090b; margin-bottom: 4px;">
                                     <span><i class="fa-solid fa-eye-slash" style="color: #7c3aed; margin-right: 4px;"></i> Blind Carbon Copy (BCC - Hidden)</span>
-                                    <span class="shadcn-badge shadcn-badge-sky" style="font-size: 9px; padding: 1px 6px;">Recommended</span>
+                                    <span style="font-size: 10px; color: #7c3aed; background: #f3e8ff; padding: 2px 7px; border-radius: 4px; font-weight: 600;">Multiple: comma-separated (Recommended)</span>
                                 </label>
                                 <input type="text" name="bcc_emails" id="tpl_bcc" 
                                        value="<?php echo htmlspecialchars($current_template['bcc_emails'] ?? ''); ?>" 
-                                       placeholder="e.g. client@gmail.com, orders@yosshitaneha.com" 
+                                       placeholder="e.g. client@gmail.com, orders@yosshitaneha.com, owner@domain.com" 
                                        class="shadcn-input" style="width: 100%; box-sizing: border-box; font-size: 13px;"
-                                       oninput="updatePreview()">
-                                <p style="font-size: 11px; color: #71717a; margin: 3px 0 0;">Hidden copy — customer will NOT see these addresses.</p>
+                                       oninput="updatePreview(); renderEmailBadges('tpl_bcc', 'badges_bcc');">
+                                <div id="badges_bcc" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px;"></div>
+                                <p style="font-size: 11px; color: #71717a; margin: 3px 0 0;">Hidden copy — customer will NOT see these addresses. Recommended for boutique owner &amp; client monitoring. Separate multiple emails with commas.</p>
                             </div>
                         </div>
                     </div>
@@ -777,6 +800,67 @@ input:checked + .slider:before {
 </style>
 
 <script>
+function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+}
+
+// Render dynamic real-time validation pills under recipient inputs
+function renderEmailBadges(inputId, containerId) {
+    const input = document.getElementById(inputId);
+    const container = document.getElementById(containerId);
+    if (!input || !container) return;
+
+    const raw = input.value.trim();
+    if (!raw) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const emails = raw.split(/[,;\s]+/).filter(e => e.trim().length > 0);
+    let html = '';
+
+    emails.forEach(email => {
+        email = email.trim();
+        const valid = isValidEmail(email);
+        const safeEmail = email.replace(/'/g, "\\'");
+        if (valid) {
+            html += `<span style="background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; font-size: 11px; padding: 2px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 5px; font-weight: 500;">
+                <i class="fa-solid fa-check" style="font-size: 10px;"></i> ${escapeHtml(email)}
+                <button type="button" onclick="removeEmailTag('${inputId}', '${safeEmail}')" style="background: none; border: none; padding: 0; color: #059669; cursor: pointer; font-size: 14px; line-height: 1; margin-left: 2px;" title="Remove">&times;</button>
+            </span>`;
+        } else {
+            html += `<span style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; font-size: 11px; padding: 2px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 5px; font-weight: 500;">
+                <i class="fa-solid fa-triangle-exclamation" style="font-size: 10px;"></i> ${escapeHtml(email)}
+                <button type="button" onclick="removeEmailTag('${inputId}', '${safeEmail}')" style="background: none; border: none; padding: 0; color: #dc2626; cursor: pointer; font-size: 14px; line-height: 1; margin-left: 2px;" title="Remove">&times;</button>
+            </span>`;
+        }
+    });
+
+    container.innerHTML = html;
+}
+
+function removeEmailTag(inputId, emailToRemove) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+
+    let emails = input.value.split(/[,;\s]+/).map(e => e.trim()).filter(e => e.length > 0 && e.toLowerCase() !== emailToRemove.toLowerCase());
+    input.value = emails.join(', ');
+    updatePreview();
+    renderAllEmailBadges();
+}
+
+function renderAllEmailBadges() {
+    renderEmailBadges('tpl_extra_to', 'badges_extra_to');
+    renderEmailBadges('tpl_cc', 'badges_cc');
+    renderEmailBadges('tpl_bcc', 'badges_bcc');
+}
+
 function updatePreview() {
     const badge = document.getElementById('tpl_badge_text') ? document.getElementById('tpl_badge_text').value : '';
     const headline = document.getElementById('tpl_headline') ? document.getElementById('tpl_headline').value : '';
@@ -805,12 +889,14 @@ function updatePreview() {
     if (prevSubject) prevSubject.textContent = subject.replace('{ORDER_NUMBER}', 'YNFS_1011').replace('{CUSTOMER_NAME}', 'Sobha Anil Naik');
 
     if (prevTo) {
-        prevTo.textContent = 'Sobha Anil Naik <naiksobhaanil@gmail.com>' + (extraTo ? ', ' + extraTo : '');
+        const extraToList = extraTo ? extraTo.split(/[,;\s]+/).filter(e => e.trim().length > 0) : [];
+        prevTo.textContent = 'Sobha Anil Naik <naiksobhaanil@gmail.com>' + (extraToList.length ? ', ' + extraToList.join(', ') : '');
     }
 
     if (prevCcRow && prevCcHeader) {
         if (cc) {
-            prevCcHeader.textContent = cc;
+            const ccList = cc.split(/[,;\s]+/).filter(e => e.trim().length > 0);
+            prevCcHeader.textContent = ccList.join(', ');
             prevCcRow.style.display = 'flex';
         } else {
             prevCcRow.style.display = 'none';
@@ -819,7 +905,8 @@ function updatePreview() {
 
     if (prevBccRow && prevBccHeader) {
         if (bcc) {
-            prevBccHeader.textContent = bcc;
+            const bccList = bcc.split(/[,;\s]+/).filter(e => e.trim().length > 0);
+            prevBccHeader.textContent = bccList.join(', ');
             prevBccRow.style.display = 'flex';
         } else {
             prevBccRow.style.display = 'none';
@@ -828,7 +915,10 @@ function updatePreview() {
 }
 
 // Run immediately on page load
-document.addEventListener('DOMContentLoaded', updatePreview);
+document.addEventListener('DOMContentLoaded', function() {
+    updatePreview();
+    renderAllEmailBadges();
+});
 
 function insertTag(tag) {
     const subArea = document.getElementById('tpl_subheading');
