@@ -102,6 +102,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         header("Location: order-detail.php?id=" . urlencode($rawId));
         exit();
+    } elseif ($action === 'ajax_add_courier') {
+        header('Content-Type: application/json');
+        $courierName = sanitize_html(trim($_POST['courier_name'] ?? ''));
+        $trackingUrl = trim($_POST['tracking_url'] ?? '');
+        $contactNumber = sanitize_html(trim($_POST['contact_number'] ?? ''));
+
+        if (empty($courierName)) {
+            echo json_encode(['success' => false, 'message' => 'Courier partner name is required.']);
+            exit();
+        }
+
+        try {
+            $chk = $pdo->prepare("SELECT id, name, tracking_url, contact_number FROM logistics WHERE LOWER(name) = LOWER(?) LIMIT 1");
+            $chk->execute([$courierName]);
+            $existing = $chk->fetch(PDO::FETCH_ASSOC);
+
+            if ($existing) {
+                // Reactivate if inactive
+                $pdo->prepare("UPDATE logistics SET status = 'active' WHERE id = ?")->execute([$existing['id']]);
+                echo json_encode([
+                    'success' => true,
+                    'is_new' => false,
+                    'message' => 'Courier partner already exists and is now selected.',
+                    'courier' => $existing
+                ]);
+                exit();
+            }
+
+            $ins = $pdo->prepare("INSERT INTO logistics (name, tracking_url, contact_number, status) VALUES (?, ?, ?, 'active')");
+            $ins->execute([$courierName, $trackingUrl ?: null, $contactNumber ?: null]);
+            $newId = (int)$pdo->lastInsertId();
+
+            if (function_exists('log_activity')) {
+                log_activity($pdo, 'add_courier_partner', 'logistics', $newId, "Added new courier partner: $courierName");
+            }
+
+            echo json_encode([
+                'success' => true,
+                'is_new' => true,
+                'message' => "Courier partner \"$courierName\" added successfully!",
+                'courier' => [
+                    'id' => $newId,
+                    'name' => $courierName,
+                    'tracking_url' => $trackingUrl,
+                    'contact_number' => $contactNumber
+                ]
+            ]);
+            exit();
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+            exit();
+        }
     } elseif ($action === 'save_shipping_address') {
         $line1 = sanitize_html(trim($_POST['address_line_1'] ?? ''));
         $line2 = sanitize_html(trim($_POST['address_line_2'] ?? ''));
@@ -529,18 +581,32 @@ switch($order['status']) {
                     </div>
 
                     <div class="form-group">
-                        <label>Logistics Partner</label>
-                        <select name="courier_name" class="form-control" style="width: 100%;">
-                            <option value="">-- Select Logistics Partner --</option>
-                            <?php foreach ($logistics_partners as $log): ?>
-                                <option value="<?php echo htmlspecialchars($log['name']); ?>" <?php echo ($order['courier_name'] === $log['name']) ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($log['name']); ?>
-                                </option>
-                            <?php endforeach; ?>
-                            <?php if (!empty($order['courier_name']) && !in_array($order['courier_name'], array_column($logistics_partners, 'name'))): ?>
-                                <option value="<?php echo htmlspecialchars($order['courier_name']); ?>" selected><?php echo htmlspecialchars($order['courier_name']); ?></option>
-                            <?php endif; ?>
-                        </select>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <label style="margin-bottom: 0;">Logistics Partner</label>
+                            <button type="button" onclick="openAddCourierModal()" style="background: none; border: none; color: #4338ca; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; padding: 0;">
+                                <i class="fa-solid fa-plus-circle"></i> + Add New Courier
+                            </button>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <select name="courier_name" id="courier_select" class="form-control" style="flex: 1;" onchange="handleCourierSelectChange(this)">
+                                <option value="">-- Select Logistics Partner --</option>
+                                <?php foreach ($logistics_partners as $log): ?>
+                                    <option value="<?php echo htmlspecialchars($log['name']); ?>" <?php echo ($order['courier_name'] === $log['name']) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($log['name']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                                <?php if (!empty($order['courier_name']) && !in_array($order['courier_name'], array_column($logistics_partners, 'name'))): ?>
+                                    <option value="<?php echo htmlspecialchars($order['courier_name']); ?>" selected><?php echo htmlspecialchars($order['courier_name']); ?></option>
+                                <?php endif; ?>
+                                <option value="__add_new__" style="color: #4338ca; font-weight: 600;">+ Add New Courier...</option>
+                            </select>
+                            <button type="button" onclick="openAddCourierModal()" title="Add New Courier Partner" style="background: #f4f4f5; border: 1px solid #e4e4e7; border-radius: 6px; padding: 0 12px; color: #09090b; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px;" onmouseover="this.style.background='#e4e4e7'" onmouseout="this.style.background='#f4f4f5'">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </div>
+                        <div id="courier_success_hint" style="display: none; margin-top: 6px; font-size: 12px; color: #15803d; font-weight: 500; align-items: center; gap: 5px;">
+                            <i class="fa-solid fa-circle-check"></i> <span id="courier_success_hint_text"></span>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -882,6 +948,60 @@ switch($order['status']) {
     </div>
 </div>
 
+<!-- Add New Courier Partner Modal -->
+<div id="addCourierModal" style="display: none; position: fixed; inset: 0; z-index: 10000; background: rgba(0, 0, 0, 0.55); backdrop-filter: blur(2px); align-items: center; justify-content: center; padding: 16px;">
+    <div style="background: #ffffff; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); width: 100%; max-width: 480px; overflow: hidden; border: 1px solid #e4e4e7;">
+        <!-- Header -->
+        <div style="padding: 16px 20px; border-bottom: 1px solid #f4f4f5; display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
+            <div>
+                <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #09090b; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-truck-fast" style="color: #4338ca;"></i> Add New Courier Partner
+                </h3>
+                <p style="margin: 2px 0 0; font-size: 12px; color: #71717a;">Instantly adds partner to list and selects it for this order without reloading.</p>
+            </div>
+            <button type="button" onclick="closeAddCourierModal()" style="background: none; border: none; font-size: 18px; color: #71717a; cursor: pointer; padding: 4px 8px; border-radius: 4px;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- Body / Form -->
+        <form id="addCourierForm" onsubmit="submitNewCourier(event)" style="padding: 20px; margin: 0;">
+            <div id="add_courier_error" style="display: none; background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 8px 12px; border-radius: 6px; font-size: 12.5px; margin-bottom: 14px;"></div>
+
+            <div style="margin-bottom: 14px;">
+                <label style="display: block; font-size: 13px; font-weight: 600; color: #09090b; margin-bottom: 5px;">
+                    Courier Partner Name <span style="color: #e11d48;">*</span>
+                </label>
+                <input type="text" id="new_courier_name" required placeholder="e.g. Shiprocket, Trackon, Tirupati Courier, Smartr" class="shadcn-input" style="width: 100%; box-sizing: border-box; font-size: 13px; height: 38px;">
+            </div>
+
+            <div style="margin-bottom: 14px;">
+                <label style="display: block; font-size: 13px; font-weight: 600; color: #09090b; margin-bottom: 5px;">
+                    Tracking URL Template <span style="font-size: 11.5px; font-weight: 400; color: #71717a;">(Optional)</span>
+                </label>
+                <input type="url" id="new_courier_tracking_url" placeholder="https://example.com/track?awb={TRACKING_NO}" class="shadcn-input" style="width: 100%; box-sizing: border-box; font-size: 13px; height: 38px; font-family: monospace;">
+                <span style="font-size: 11px; color: #71717a; display: block; margin-top: 3px;">Use <code>{TRACKING_NO}</code> as placeholder for tracking number in customer emails.</span>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-size: 13px; font-weight: 600; color: #09090b; margin-bottom: 5px;">
+                    Contact / Helpline Phone <span style="font-size: 11.5px; font-weight: 400; color: #71717a;">(Optional)</span>
+                </label>
+                <input type="text" id="new_courier_phone" placeholder="e.g. 1800-XXX-XXXX or +91 9876543210" class="shadcn-input" style="width: 100%; box-sizing: border-box; font-size: 13px; height: 38px;">
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #f4f4f5; padding-top: 16px;">
+                <button type="button" onclick="closeAddCourierModal()" class="shadcn-btn shadcn-btn-outline" style="font-size: 13px;">
+                    Cancel
+                </button>
+                <button type="submit" id="btn_save_courier" class="shadcn-btn shadcn-btn-primary" style="background: #4338ca; border-color: #4338ca; color: #ffffff; font-size: 13px;">
+                    <i class="fa-solid fa-plus" style="margin-right: 5px;"></i> Save &amp; Select Courier
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
 const ORDER_TOTAL_AMOUNT = <?php echo (float)$order['total_amount']; ?>;
 const IS_DISPATCHED = <?php echo $isDispatchedForModal ? 'true' : 'false'; ?>;
@@ -966,6 +1086,120 @@ function confirmRefundSubmission() {
     }
 
     return confirm(`Are you sure you want to process a Razorpay refund of ₹${refundAmt.toFixed(2)} for Order #<?php echo $orderNumber; ?>?\n\nThis will instantly reverse funds back to the customer's source account.`);
+}
+
+// -------------------------------------------------------------------------
+// Courier Partner AJAX Management (Without Page Reload)
+// -------------------------------------------------------------------------
+function handleCourierSelectChange(selectElem) {
+    if (selectElem.value === '__add_new__') {
+        selectElem.value = '';
+        openAddCourierModal();
+    }
+}
+
+function openAddCourierModal() {
+    const modal = document.getElementById('addCourierModal');
+    if (!modal) return;
+    const errDiv = document.getElementById('add_courier_error');
+    if (errDiv) errDiv.style.display = 'none';
+    document.getElementById('new_courier_name').value = '';
+    document.getElementById('new_courier_tracking_url').value = '';
+    document.getElementById('new_courier_phone').value = '';
+    modal.style.display = 'flex';
+    setTimeout(() => {
+        const input = document.getElementById('new_courier_name');
+        if (input) input.focus();
+    }, 100);
+}
+
+function closeAddCourierModal() {
+    const modal = document.getElementById('addCourierModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function submitNewCourier(e) {
+    e.preventDefault();
+    const nameInput = document.getElementById('new_courier_name');
+    const urlInput = document.getElementById('new_courier_tracking_url');
+    const phoneInput = document.getElementById('new_courier_phone');
+    const errorDiv = document.getElementById('add_courier_error');
+    const submitBtn = document.getElementById('btn_save_courier');
+
+    const courierName = nameInput.value.trim();
+    if (!courierName) {
+        errorDiv.textContent = 'Please enter courier partner name.';
+        errorDiv.style.display = 'block';
+        return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 5px;"></i> Saving...';
+    errorDiv.style.display = 'none';
+
+    const formData = new FormData();
+    formData.append('action', 'ajax_add_courier');
+    formData.append('courier_name', courierName);
+    formData.append('tracking_url', urlInput.value.trim());
+    formData.append('contact_number', phoneInput.value.trim());
+
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fa-solid fa-plus" style="margin-right: 5px;"></i> Save &amp; Select Courier';
+
+        if (!data.success) {
+            errorDiv.textContent = data.message || 'Failed to add courier partner.';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        // Add to select dropdown if not already present
+        const select = document.getElementById('courier_select');
+        let exists = false;
+        for (let i = 0; i < select.options.length; i++) {
+            if (select.options[i].value.toLowerCase() === data.courier.name.toLowerCase()) {
+                select.options[i].selected = true;
+                exists = true;
+                break;
+            }
+        }
+
+        if (!exists) {
+            // Insert right before the last '__add_new__' option
+            const newOption = new Option(data.courier.name, data.courier.name, true, true);
+            const addNewOpt = select.querySelector('option[value="__add_new__"]');
+            if (addNewOpt) {
+                select.insertBefore(newOption, addNewOpt);
+            } else {
+                select.appendChild(newOption);
+            }
+            select.value = data.courier.name;
+        }
+
+        closeAddCourierModal();
+
+        // Show inline feedback message
+        const hint = document.getElementById('courier_success_hint');
+        const hintText = document.getElementById('courier_success_hint_text');
+        if (hint && hintText) {
+            hintText.textContent = data.is_new ? `Courier "${data.courier.name}" added and selected!` : `Courier "${data.courier.name}" selected!`;
+            hint.style.display = 'flex';
+            setTimeout(() => {
+                hint.style.display = 'none';
+            }, 6000);
+        }
+    })
+    .catch(err => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fa-solid fa-plus" style="margin-right: 5px;"></i> Save &amp; Select Courier';
+        errorDiv.textContent = 'Network or server error. Please try again.';
+        errorDiv.style.display = 'block';
+    });
 }
 </script>
 
