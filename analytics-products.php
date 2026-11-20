@@ -35,46 +35,61 @@ require_once __DIR__ . '/includes/sidebar.php';
         </div>
     </div>
 
-    <!-- KPI Cards -->
-    <div class="dashboard-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
+    <!-- KPI Cards (Standard ShadCN Stat Cards) -->
+    <div class="shadcn-stat-grid" style="margin-bottom: 24px;">
         <!-- Total Page Views -->
-        <div class="dash-card" style="background: #fff; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 14px;">
-            <div class="dash-card-icon" style="width: 46px; height: 46px; border-radius: 10px; background: #eff6ff; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                <i class="fa-solid fa-eye" style="font-size: 18px; color: #3b82f6;"></i>
+        <div class="shadcn-stat-card" style="min-width: 0; overflow: hidden;">
+            <div class="shadcn-stat-top">
+                <span class="shadcn-stat-title">Total Page Views</span>
+                <div class="shadcn-stat-icon-wrap" style="background: rgba(59, 130, 246, 0.12); color: #3b82f6;">
+                    <i class="fa-solid fa-eye"></i>
+                </div>
             </div>
-            <div class="dash-card-info">
-                <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: .5px;">Total Page Views</p>
-                <h3 id="kpiTotalViews" style="margin: 4px 0 0; font-size: 22px; font-weight: 700; color: #1e293b;">—</h3>
+            <div>
+                <div class="shadcn-stat-value" id="kpiTotalViews">0</div>
+                <div class="shadcn-stat-note" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">All product page visits</div>
             </div>
         </div>
+
         <!-- Most Viewed Product -->
-        <div class="dash-card" style="background: #fff; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 14px;">
-            <div class="dash-card-icon" style="width: 46px; height: 46px; border-radius: 10px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                <i class="fa-solid fa-trophy" style="font-size: 18px; color: #10b981;"></i>
+        <div class="shadcn-stat-card" style="min-width: 0; overflow: hidden;">
+            <div class="shadcn-stat-top">
+                <span class="shadcn-stat-title">Most Viewed Product</span>
+                <div class="shadcn-stat-icon-wrap" style="background: rgba(245, 158, 11, 0.12); color: #d97706;">
+                    <i class="fa-solid fa-fire"></i>
+                </div>
             </div>
-            <div class="dash-card-info" style="min-width: 0;">
-                <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: .5px;">Most Viewed Product</p>
-                <h3 id="kpiMostViewed" style="margin: 4px 0 0; font-size: 15px; font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="">—</h3>
+            <div style="min-width: 0; overflow: hidden;">
+                <div class="shadcn-stat-value" id="kpiMostViewedCount" style="font-size: 20px;">0 views</div>
+                <div class="shadcn-stat-note" id="kpiMostViewed" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; max-width: 100%; color: #475569;" title="No product views yet">No views recorded yet</div>
             </div>
         </div>
+
         <!-- Highest Conversion -->
-        <div class="dash-card" style="background: #fff; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 14px;">
-            <div class="dash-card-icon" style="width: 46px; height: 46px; border-radius: 10px; background: #fefce8; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                <i class="fa-solid fa-arrow-trend-up" style="font-size: 18px; color: #f59e0b;"></i>
+        <div class="shadcn-stat-card" style="min-width: 0; overflow: hidden;">
+            <div class="shadcn-stat-top">
+                <span class="shadcn-stat-title">Highest Conversion</span>
+                <div class="shadcn-stat-icon-wrap" style="background: rgba(16, 185, 129, 0.12); color: #059669;">
+                    <i class="fa-solid fa-arrow-trend-up"></i>
+                </div>
             </div>
-            <div class="dash-card-info" style="min-width: 0;">
-                <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: .5px;">Highest Conversion</p>
-                <h3 id="kpiHighestConversion" style="margin: 4px 0 0; font-size: 15px; font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="">—</h3>
+            <div style="min-width: 0; overflow: hidden;">
+                <div class="shadcn-stat-value" id="kpiHighestConversionRate" style="font-size: 20px; color: #059669;">0.00%</div>
+                <div class="shadcn-stat-note" id="kpiHighestConversion" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; max-width: 100%; color: #475569;" title="No orders yet">No orders recorded yet</div>
             </div>
         </div>
-        <!-- Total Orders -->
-        <div class="dash-card" style="background: #fff; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 14px;">
-            <div class="dash-card-icon" style="width: 46px; height: 46px; border-radius: 10px; background: #fef2f2; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                <i class="fa-solid fa-bag-shopping" style="font-size: 18px; color: #ef4444;"></i>
+
+        <!-- Total Orders from Views -->
+        <div class="shadcn-stat-card" style="min-width: 0; overflow: hidden;">
+            <div class="shadcn-stat-top">
+                <span class="shadcn-stat-title">Orders from Views</span>
+                <div class="shadcn-stat-icon-wrap" style="background: rgba(239, 68, 68, 0.12); color: #ef4444;">
+                    <i class="fa-solid fa-bag-shopping"></i>
+                </div>
             </div>
-            <div class="dash-card-info">
-                <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: .5px;">Total Orders from Views</p>
-                <h3 id="kpiTotalOrders" style="margin: 4px 0 0; font-size: 22px; font-weight: 700; color: #1e293b;">—</h3>
+            <div>
+                <div class="shadcn-stat-value" id="kpiTotalOrders">0</div>
+                <div class="shadcn-stat-note" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Converted store purchases</div>
             </div>
         </div>
     </div>
@@ -183,12 +198,14 @@ require_once __DIR__ . '/includes/sidebar.php';
     // KPI refs
     const kpiTotalViews = document.getElementById('kpiTotalViews');
     const kpiMostViewed = document.getElementById('kpiMostViewed');
+    const kpiMostViewedCount = document.getElementById('kpiMostViewedCount');
     const kpiHighestConversion = document.getElementById('kpiHighestConversion');
+    const kpiHighestConversionRate = document.getElementById('kpiHighestConversionRate');
     const kpiTotalOrders = document.getElementById('kpiTotalOrders');
 
     // Format number with commas
     function formatNumber(n) {
-        return Number(n).toLocaleString('en-IN');
+        return Number(n || 0).toLocaleString('en-IN');
     }
 
     // Format price
@@ -227,30 +244,65 @@ require_once __DIR__ . '/includes/sidebar.php';
     function updateKPIs(products) {
         if (!products || products.length === 0) {
             kpiTotalViews.textContent = '0';
-            kpiMostViewed.textContent = '—';
+            if (kpiMostViewedCount) kpiMostViewedCount.textContent = '0 views';
+            kpiMostViewed.textContent = 'No product views recorded';
             kpiMostViewed.title = '';
-            kpiHighestConversion.textContent = '—';
+            if (kpiHighestConversionRate) kpiHighestConversionRate.textContent = '0.00%';
+            kpiHighestConversion.textContent = 'No orders recorded';
             kpiHighestConversion.title = '';
             kpiTotalOrders.textContent = '0';
             return;
         }
 
         let totalViews = 0, totalOrders = 0;
-        let mostViewed = products[0], highestConv = products[0];
+        let mostViewed = null;
+        let highestConv = null;
 
         products.forEach(function(p) {
-            totalViews += parseInt(p.log_views) || 0;
-            totalOrders += parseInt(p.orders_count) || 0;
-            if ((parseInt(p.log_views) || 0) > (parseInt(mostViewed.log_views) || 0)) mostViewed = p;
-            if ((parseFloat(p.conversion_rate) || 0) > (parseFloat(highestConv.conversion_rate) || 0)) highestConv = p;
+            let v = parseInt(p.log_views) || 0;
+            let o = parseInt(p.orders_count) || 0;
+            let c = parseFloat(p.conversion_rate) || 0;
+
+            totalViews += v;
+            totalOrders += o;
+
+            if (v > 0) {
+                if (!mostViewed || v > (parseInt(mostViewed.log_views) || 0)) {
+                    mostViewed = p;
+                }
+            }
+
+            if (c > 0 && o > 0) {
+                if (!highestConv || c > (parseFloat(highestConv.conversion_rate) || 0)) {
+                    highestConv = p;
+                }
+            }
         });
 
         kpiTotalViews.textContent = formatNumber(totalViews);
-        kpiMostViewed.textContent = mostViewed.name;
-        kpiMostViewed.title = mostViewed.name + ' (' + formatNumber(mostViewed.log_views) + ' views)';
-        kpiHighestConversion.textContent = highestConv.name;
-        kpiHighestConversion.title = highestConv.name + ' (' + parseFloat(highestConv.conversion_rate).toFixed(2) + '%)';
         kpiTotalOrders.textContent = formatNumber(totalOrders);
+
+        if (mostViewed && (parseInt(mostViewed.log_views) || 0) > 0) {
+            let mvViews = parseInt(mostViewed.log_views) || 0;
+            if (kpiMostViewedCount) kpiMostViewedCount.textContent = formatNumber(mvViews) + ' views';
+            kpiMostViewed.textContent = mostViewed.name || '—';
+            kpiMostViewed.title = (mostViewed.name || '') + ' (' + formatNumber(mvViews) + ' views)';
+        } else {
+            if (kpiMostViewedCount) kpiMostViewedCount.textContent = '0 views';
+            kpiMostViewed.textContent = 'No views recorded in period';
+            kpiMostViewed.title = 'No products were viewed in this date range';
+        }
+
+        if (highestConv && (parseFloat(highestConv.conversion_rate) || 0) > 0) {
+            let rate = parseFloat(highestConv.conversion_rate).toFixed(2);
+            if (kpiHighestConversionRate) kpiHighestConversionRate.textContent = rate + '%';
+            kpiHighestConversion.textContent = highestConv.name || '—';
+            kpiHighestConversion.title = (highestConv.name || '') + ' (' + rate + '% conversion)';
+        } else {
+            if (kpiHighestConversionRate) kpiHighestConversionRate.textContent = '0.00%';
+            kpiHighestConversion.textContent = 'No converted orders yet';
+            kpiHighestConversion.title = 'No purchases recorded in this date range';
+        }
     }
 
     // Sort products

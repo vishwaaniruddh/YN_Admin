@@ -28,42 +28,57 @@ require_once __DIR__ . '/includes/sidebar.php';
         </div>
     </div>
 
-    <!-- KPI Summary Cards -->
-    <div class="dashboard-grid" id="kpiCards" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:18px; margin-bottom:28px;">
-        <div class="dash-card" style="background:#fff; border-radius:12px; padding:20px 22px; box-shadow:0 1px 4px rgba(0,0,0,.06); border:1px solid #e2e8f0; display:flex; align-items:center; gap:16px;">
-            <div class="dash-card-icon" style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg,#6366f1,#818cf8); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                <i class="fa-solid fa-eye" style="color:#fff; font-size:1.2rem;"></i>
+    <!-- KPI Summary Cards (Standard ShadCN Stat Cards) -->
+    <div class="shadcn-stat-grid" id="kpiCards" style="margin-bottom: 24px;">
+        <div class="shadcn-stat-card" style="min-width: 0; overflow: hidden;">
+            <div class="shadcn-stat-top">
+                <span class="shadcn-stat-title">Total Category Views</span>
+                <div class="shadcn-stat-icon-wrap" style="background: rgba(99, 102, 241, 0.12); color: #6366f1;">
+                    <i class="fa-solid fa-eye"></i>
+                </div>
             </div>
-            <div class="dash-card-info">
-                <div style="font-size:0.78rem; color:#64748b; text-transform:uppercase; letter-spacing:.5px; font-weight:600;">Total Category Views</div>
-                <div id="kpiTotalViews" style="font-size:1.5rem; font-weight:800; color:#1e293b; margin-top:2px;">—</div>
-            </div>
-        </div>
-        <div class="dash-card" style="background:#fff; border-radius:12px; padding:20px 22px; box-shadow:0 1px 4px rgba(0,0,0,.06); border:1px solid #e2e8f0; display:flex; align-items:center; gap:16px;">
-            <div class="dash-card-icon" style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg,#10b981,#34d399); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                <i class="fa-solid fa-crown" style="color:#fff; font-size:1.2rem;"></i>
-            </div>
-            <div class="dash-card-info">
-                <div style="font-size:0.78rem; color:#64748b; text-transform:uppercase; letter-spacing:.5px; font-weight:600;">Most Visited Category</div>
-                <div id="kpiTopCategory" style="font-size:1.2rem; font-weight:800; color:#1e293b; margin-top:2px;">—</div>
+            <div>
+                <div class="shadcn-stat-value" id="kpiTotalViews">0</div>
+                <div class="shadcn-stat-note" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">All category collections</div>
             </div>
         </div>
-        <div class="dash-card" style="background:#fff; border-radius:12px; padding:20px 22px; box-shadow:0 1px 4px rgba(0,0,0,.06); border:1px solid #e2e8f0; display:flex; align-items:center; gap:16px;">
-            <div class="dash-card-icon" style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg,#f59e0b,#fbbf24); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                <i class="fa-solid fa-chart-line" style="color:#fff; font-size:1.2rem;"></i>
+
+        <div class="shadcn-stat-card" style="min-width: 0; overflow: hidden;">
+            <div class="shadcn-stat-top">
+                <span class="shadcn-stat-title">Most Visited Category</span>
+                <div class="shadcn-stat-icon-wrap" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">
+                    <i class="fa-solid fa-crown"></i>
+                </div>
             </div>
-            <div class="dash-card-info">
-                <div style="font-size:0.78rem; color:#64748b; text-transform:uppercase; letter-spacing:.5px; font-weight:600;">Categories with Traffic</div>
-                <div id="kpiWithTraffic" style="font-size:1.5rem; font-weight:800; color:#1e293b; margin-top:2px;">—</div>
+            <div style="min-width: 0; overflow: hidden;">
+                <div class="shadcn-stat-value" id="kpiTopCategory" style="font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">—</div>
+                <div class="shadcn-stat-note" id="kpiTopCategoryNote" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; color: #475569;">No visits in this period</div>
             </div>
         </div>
-        <div class="dash-card" style="background:#fff; border-radius:12px; padding:20px 22px; box-shadow:0 1px 4px rgba(0,0,0,.06); border:1px solid #e2e8f0; display:flex; align-items:center; gap:16px;">
-            <div class="dash-card-icon" style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg,#3b82f6,#60a5fa); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                <i class="fa-solid fa-calculator" style="color:#fff; font-size:1.2rem;"></i>
+
+        <div class="shadcn-stat-card" style="min-width: 0; overflow: hidden;">
+            <div class="shadcn-stat-top">
+                <span class="shadcn-stat-title">Categories with Traffic</span>
+                <div class="shadcn-stat-icon-wrap" style="background: rgba(245, 158, 11, 0.12); color: #d97706;">
+                    <i class="fa-solid fa-chart-line"></i>
+                </div>
             </div>
-            <div class="dash-card-info">
-                <div style="font-size:0.78rem; color:#64748b; text-transform:uppercase; letter-spacing:.5px; font-weight:600;">Avg Views per Category</div>
-                <div id="kpiAvgViews" style="font-size:1.5rem; font-weight:800; color:#1e293b; margin-top:2px;">—</div>
+            <div>
+                <div class="shadcn-stat-value" id="kpiWithTraffic">0</div>
+                <div class="shadcn-stat-note" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Active collections viewed</div>
+            </div>
+        </div>
+
+        <div class="shadcn-stat-card" style="min-width: 0; overflow: hidden;">
+            <div class="shadcn-stat-top">
+                <span class="shadcn-stat-title">Avg Views per Category</span>
+                <div class="shadcn-stat-icon-wrap" style="background: rgba(14, 165, 233, 0.12); color: #0284c7;">
+                    <i class="fa-solid fa-calculator"></i>
+                </div>
+            </div>
+            <div>
+                <div class="shadcn-stat-value" id="kpiAvgViews">0</div>
+                <div class="shadcn-stat-note" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Average hits per collection</div>
             </div>
         </div>
     </div>
@@ -165,18 +180,25 @@ function showEmpty() {
 }
 
 function renderKPIs(cats) {
-    const totalViews = cats.reduce((s, c) => s + (c.view_count || 0), 0);
-    const withTraffic = cats.filter(c => (c.view_count || 0) > 0).length;
+    const totalViews = cats.reduce((s, c) => s + (parseInt(c.log_views) || parseInt(c.view_count) || 0), 0);
+    const withTraffic = cats.filter(c => (parseInt(c.log_views) || parseInt(c.view_count) || 0) > 0).length;
     const avgViews = cats.length > 0 ? Math.round(totalViews / cats.length) : 0;
 
     let topCat = '—';
+    let topCatNote = 'No visits recorded yet';
     if (cats.length > 0) {
-        const sorted = [...cats].sort((a, b) => (b.view_count || 0) - (a.view_count || 0));
-        topCat = sorted[0].name || '—';
+        const sorted = [...cats].sort((a, b) => ((parseInt(b.log_views) || parseInt(b.view_count) || 0) - (parseInt(a.log_views) || parseInt(a.view_count) || 0)));
+        const topVal = parseInt(sorted[0].log_views) || parseInt(sorted[0].view_count) || 0;
+        if (topVal > 0) {
+            topCat = sorted[0].name || '—';
+            topCatNote = topVal.toLocaleString() + ' views in period';
+        }
     }
 
     document.getElementById('kpiTotalViews').textContent = totalViews.toLocaleString();
     document.getElementById('kpiTopCategory').textContent = topCat;
+    const noteEl = document.getElementById('kpiTopCategoryNote');
+    if (noteEl) noteEl.textContent = topCatNote;
     document.getElementById('kpiWithTraffic').textContent = withTraffic + ' / ' + cats.length;
     document.getElementById('kpiAvgViews').textContent = avgViews.toLocaleString();
     document.getElementById('categoryCount').textContent = cats.length + ' categories';
