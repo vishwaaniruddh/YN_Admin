@@ -42,11 +42,39 @@ $admin_initials = strtoupper(substr($admin_name, 0, 2));
                 </a>
             </li>
 
-            <li class="menu-item <?php echo ($current_script == 'analytics.php') ? 'active' : ''; ?>">
-                <a href="analytics.php">
+            <?php 
+            $analytics_active = in_array($current_script, [
+                'analytics.php', 'analytics-products.php', 'analytics-categories.php', 'analytics-pages.php'
+            ]);
+            ?>
+            <li class="menu-item has-submenu <?php echo $analytics_active ? 'open active-parent' : ''; ?>">
+                <a href="javascript:void(0);" class="submenu-toggle">
                     <i class="fa-solid fa-chart-line"></i>
                     <span>Analytics &amp; Reports</span>
+                    <i class="fa-solid fa-chevron-right submenu-arrow"></i>
                 </a>
+                <ul class="submenu">
+                    <li class="<?php echo ($current_script == 'analytics.php') ? 'active' : ''; ?>">
+                        <a href="analytics.php">
+                            <i class="fa-solid fa-gauge-high"></i> Traffic Overview
+                        </a>
+                    </li>
+                    <li class="<?php echo ($current_script == 'analytics-products.php') ? 'active' : ''; ?>">
+                        <a href="analytics-products.php">
+                            <i class="fa-solid fa-chart-bar"></i> Product Analytics
+                        </a>
+                    </li>
+                    <li class="<?php echo ($current_script == 'analytics-categories.php') ? 'active' : ''; ?>">
+                        <a href="analytics-categories.php">
+                            <i class="fa-solid fa-layer-group"></i> Category Analytics
+                        </a>
+                    </li>
+                    <li class="<?php echo ($current_script == 'analytics-pages.php') ? 'active' : ''; ?>">
+                        <a href="analytics-pages.php">
+                            <i class="fa-solid fa-globe"></i> Pages &amp; Search
+                        </a>
+                    </li>
+                </ul>
             </li>
             
             <!-- ==================== CATALOG & INVENTORY ==================== -->

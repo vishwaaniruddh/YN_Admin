@@ -25,6 +25,7 @@ if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
 $referrer = trim($input['referrer'] ?? $_SERVER['HTTP_REFERER'] ?? '');
 $user_agent = trim($_SERVER['HTTP_USER_AGENT'] ?? $input['user_agent'] ?? '');
 $ua_lower = strtolower($user_agent);
+$session_id = trim($input['session_id'] ?? '');
 
 // Detect Search Engine Crawlers & Bots (e.g. Googlebot 66.249.xx.xx)
 $is_bot = false;
@@ -52,6 +53,10 @@ if ($is_bot) {
         $traffic_source = 'Google Search';
     } elseif (str_contains($ref_lower, 'youtube.com') || str_contains($ref_lower, 't.co') || str_contains($ref_lower, 'twitter.com')) {
         $traffic_source = 'Social Media';
+    } elseif (str_contains($ref_lower, 'pinterest.com')) {
+        $traffic_source = 'Pinterest';
+    } elseif (str_contains($ref_lower, 'wa.me') || str_contains($ref_lower, 'whatsapp.com')) {
+        $traffic_source = 'WhatsApp';
     } elseif (!str_contains($ref_lower, $_SERVER['HTTP_HOST'] ?? 'localhost') && !str_contains($ref_lower, 'yosshitaneha.com')) {
         $traffic_source = 'Referral';
     }
@@ -99,12 +104,16 @@ if ($path === '/' || str_ends_with($path, '/') || str_contains($path, '/home')) 
     if (!empty($input['category_id'])) {
         $category_id = (int)$input['category_id'];
     } else {
-        $parts = explode('/', trim($path, '/'));
-        $lastSlug = end($parts);
-        if (!empty($lastSlug) && $lastSlug !== 'category' && $lastSlug !== 'collections') {
+        // Try slug from URL or from input
+        $catSlug = $input['slug'] ?? '';
+        if (empty($catSlug)) {
+            $parts = explode('/', trim($path, '/'));
+            $catSlug = end($parts);
+        }
+        if (!empty($catSlug) && $catSlug !== 'category' && $catSlug !== 'collections') {
             try {
                 $stC = $pdo->prepare("SELECT id FROM categories WHERE slug = ? LIMIT 1");
-                $stC->execute([$lastSlug]);
+                $stC->execute([$catSlug]);
                 $cRow = $stC->fetch(PDO::FETCH_ASSOC);
                 if ($cRow) {
                     $category_id = (int)$cRow['id'];
@@ -116,6 +125,40 @@ if ($path === '/' || str_ends_with($path, '/') || str_contains($path, '/home')) 
     $page_type = 'cart';
 } elseif (str_contains($path, '/checkout')) {
     $page_type = 'checkout';
+} elseif (str_contains($path, '/auth') || str_contains($path, '/login')) {
+    $page_type = 'auth';
+} elseif (str_contains($path, '/search')) {
+    $page_type = 'search';
+} elseif (str_contains($path, '/consultation') || str_contains($path, '/blouse-studio') || str_contains($path, '/ai-studio') || str_contains($path, '/try-on') || str_contains($path, '/tryon')) {
+    $page_type = 'studio';
+} elseif (str_contains($path, '/our-work') || str_contains($path, '/portfolio') || str_contains($path, '/lookbook') || str_contains($path, '/client-diaries')) {
+    $page_type = 'portfolio';
+} elseif (str_contains($path, '/account')) {
+    $page_type = 'account';
+} elseif (str_contains($path, '/order/')) {
+    $page_type = 'order';
+}
+
+// Also handle page_hint from frontend for better slug matching
+if (!empty($input['page_hint']) && !empty($input['slug'])) {
+    $hintSlug = trim($input['slug']);
+    if ($input['page_hint'] === 'product' && !$product_id) {
+        $page_type = 'product';
+        try {
+            $stP = $pdo->prepare("SELECT id FROM products WHERE slug = ? OR sku = ? LIMIT 1");
+            $stP->execute([$hintSlug, $hintSlug]);
+            $pRow = $stP->fetch(PDO::FETCH_ASSOC);
+            if ($pRow) $product_id = (int)$pRow['id'];
+        } catch (Exception $e) {}
+    } elseif ($input['page_hint'] === 'category' && !$category_id) {
+        $page_type = 'category';
+        try {
+            $stC = $pdo->prepare("SELECT id FROM categories WHERE slug = ? LIMIT 1");
+            $stC->execute([$hintSlug]);
+            $cRow = $stC->fetch(PDO::FETCH_ASSOC);
+            if ($cRow) $category_id = (int)$cRow['id'];
+        } catch (Exception $e) {}
+    }
 }
 
 try {
@@ -124,7 +167,7 @@ try {
     $checkStmt->execute([$ip, substr($page_url, 0, 255)]);
     
     if (!$checkStmt->fetch()) {
-        $insStmt = $pdo->prepare("INSERT INTO visitor_logs (ip_address, page_url, page_type, product_id, category_id, referrer, traffic_source, user_agent, device_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $insStmt = $pdo->prepare("INSERT INTO visitor_logs (ip_address, page_url, page_type, product_id, category_id, referrer, traffic_source, user_agent, device_type, session_id, customer_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $insStmt->execute([
             $ip,
             substr($page_url, 0, 255),
@@ -134,12 +177,19 @@ try {
             substr($referrer, 0, 255),
             $traffic_source,
             substr($user_agent, 0, 255),
-            $device_type
+            $device_type,
+            $session_id ?: null,
+            null // customer_id — could be set from JWT in future
         ]);
 
         // Increment product view count if product_id is resolved and not a bot
         if ($product_id && !$is_bot) {
             $pdo->prepare("UPDATE products SET view_count = view_count + 1 WHERE id = ?")->execute([$product_id]);
+        }
+
+        // Increment category view count if category_id is resolved and not a bot
+        if ($category_id && !$is_bot) {
+            $pdo->prepare("UPDATE categories SET view_count = view_count + 1 WHERE id = ?")->execute([$category_id]);
         }
     }
 
