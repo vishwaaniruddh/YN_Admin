@@ -447,9 +447,20 @@ try {
                 <a href="analytics-products.php?range=<?php echo $range; ?>" style="font-size: 12px; font-weight: 600; color: #3b82f6; text-decoration: none; padding-right: 12px;">View All Products →</a>
             </div>
             <div class="postbox-body" style="padding: 0;">
-                <?php if (empty($top_products)): ?>
-                    <div style="text-align: center; padding: 30px; color: #646970;">
-                        <p style="margin: 0; font-size: 14px;">No products found in database.</p>
+                <?php 
+                $has_product_views = false;
+                foreach ($top_products as $tp_check) {
+                    if (max(($tp_check['log_views'] ?? 0), ($tp_check['view_count'] ?? 0)) > 0) {
+                        $has_product_views = true;
+                        break;
+                    }
+                }
+                ?>
+                <?php if (empty($top_products) || !$has_product_views): ?>
+                    <div style="text-align: center; padding: 40px 20px; color: #64748b;">
+                        <div style="font-size: 28px; color: #cbd5e1; margin-bottom: 8px;"><i class="fa-solid fa-eye-slash"></i></div>
+                        <div style="font-size: 14px; font-weight: 600; color: #1e293b; margin-bottom: 4px;">No Product Views Recorded Yet</div>
+                        <p style="margin: 0; font-size: 12.5px; color: #64748b;">When shoppers browse your products, the most popular items will appear here.</p>
                     </div>
                 <?php else: ?>
                     <table class="wp-list-table widefat fixed striped" style="margin: 0;">
