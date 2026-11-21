@@ -39,27 +39,55 @@ if (preg_match('/^[a-z]=\d+$/i', $queryString)) {
     $is_bot = true;
 }
 
-// Parse Traffic Source
+// Parse query string for campaign parameters if present
+$queryParts = [];
+if (!empty($queryString)) {
+    parse_str($queryString, $queryParts);
+}
+
+// Extract UTM and ad click tracking identifiers
+$utm_source = trim($input['utm_source'] ?? $queryParts['utm_source'] ?? '');
+$utm_medium = trim($input['utm_medium'] ?? $queryParts['utm_medium'] ?? '');
+$utm_campaign = trim($input['utm_campaign'] ?? $queryParts['utm_campaign'] ?? '');
+$utm_content = trim($input['utm_content'] ?? $queryParts['utm_content'] ?? '');
+$utm_term = trim($input['utm_term'] ?? $queryParts['utm_term'] ?? '');
+$fbclid = trim($input['fbclid'] ?? $queryParts['fbclid'] ?? '');
+$gclid = trim($input['gclid'] ?? $queryParts['gclid'] ?? '');
+$landing_page = trim($input['landing_page'] ?? $page_url);
+
+$source_lower = strtolower($utm_source);
+$medium_lower = strtolower($utm_medium);
+$ref_lower = strtolower($referrer);
+
+// Determine Smart Traffic Source
 $traffic_source = 'Direct';
+
 if ($is_bot) {
     $traffic_source = 'Googlebot / Crawler';
-} elseif (!empty($referrer)) {
-    $ref_lower = strtolower($referrer);
-    if (str_contains($ref_lower, 'instagram.com') || str_contains($ref_lower, 'l.instagram.com')) {
-        $traffic_source = 'Instagram';
-    } elseif (str_contains($ref_lower, 'facebook.com') || str_contains($ref_lower, 'fb.me')) {
-        $traffic_source = 'Facebook';
-    } elseif (str_contains($ref_lower, 'google.com') || str_contains($ref_lower, 'google.co.in')) {
-        $traffic_source = 'Google Search';
-    } elseif (str_contains($ref_lower, 'youtube.com') || str_contains($ref_lower, 't.co') || str_contains($ref_lower, 'twitter.com')) {
-        $traffic_source = 'Social Media';
-    } elseif (str_contains($ref_lower, 'pinterest.com')) {
-        $traffic_source = 'Pinterest';
-    } elseif (str_contains($ref_lower, 'wa.me') || str_contains($ref_lower, 'whatsapp.com')) {
-        $traffic_source = 'WhatsApp';
-    } elseif (!str_contains($ref_lower, $_SERVER['HTTP_HOST'] ?? 'localhost') && !str_contains($ref_lower, 'yosshitaneha.com')) {
-        $traffic_source = 'Referral';
-    }
+} elseif (!empty($fbclid) || ($source_lower === 'facebook' && (!empty($utm_campaign) || in_array($medium_lower, ['cpc', 'paid', 'ads', 'ad', 'feed', 'story', 'reels', 'boost'])))) {
+    $traffic_source = 'Facebook Ads';
+} elseif ($source_lower === 'instagram' && (!empty($utm_campaign) || in_array($medium_lower, ['cpc', 'paid', 'ads', 'ad', 'feed', 'story', 'reels']))) {
+    $traffic_source = 'Instagram Ads';
+} elseif (str_contains($ref_lower, 'facebook.com') || str_contains($ref_lower, 'fb.me') || $source_lower === 'facebook' || $source_lower === 'fb') {
+    $traffic_source = 'Facebook (Organic)';
+} elseif (str_contains($ref_lower, 'instagram.com') || str_contains($ref_lower, 'l.instagram.com') || $source_lower === 'instagram') {
+    $traffic_source = 'Instagram (Organic)';
+} elseif (!empty($gclid) || ($source_lower === 'google' && in_array($medium_lower, ['cpc', 'paid', 'ads', 'adwords']))) {
+    $traffic_source = 'Google Ads';
+} elseif (str_contains($ref_lower, 'google.com') || str_contains($ref_lower, 'google.co.in') || $source_lower === 'google') {
+    $traffic_source = 'Google Search';
+} elseif (str_contains($ref_lower, 'youtube.com') || $source_lower === 'youtube') {
+    $traffic_source = 'YouTube';
+} elseif (str_contains($ref_lower, 'wa.me') || str_contains($ref_lower, 'whatsapp.com') || $source_lower === 'whatsapp') {
+    $traffic_source = 'WhatsApp';
+} elseif (str_contains($ref_lower, 'pinterest.com') || $source_lower === 'pinterest') {
+    $traffic_source = 'Pinterest';
+} elseif (str_contains($ref_lower, 'twitter.com') || str_contains($ref_lower, 't.co') || $source_lower === 'twitter') {
+    $traffic_source = 'Twitter / X';
+} elseif (!empty($utm_source)) {
+    $traffic_source = ucfirst($utm_source) . (!empty($utm_medium) ? ' (' . ucfirst($utm_medium) . ')' : '');
+} elseif (!empty($referrer) && !str_contains($ref_lower, $_SERVER['HTTP_HOST'] ?? 'localhost') && !str_contains($ref_lower, 'yosshitaneha.com')) {
+    $traffic_source = 'Referral';
 }
 
 // Parse Device Type
@@ -167,7 +195,11 @@ try {
     $checkStmt->execute([$ip, substr($page_url, 0, 255)]);
     
     if (!$checkStmt->fetch()) {
-        $insStmt = $pdo->prepare("INSERT INTO visitor_logs (ip_address, page_url, page_type, product_id, category_id, referrer, traffic_source, user_agent, device_type, session_id, customer_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $insStmt = $pdo->prepare("INSERT INTO visitor_logs (
+            ip_address, page_url, page_type, product_id, category_id, referrer, traffic_source,
+            utm_source, utm_medium, utm_campaign, utm_content, utm_term, fbclid, gclid, landing_page,
+            user_agent, device_type, session_id, customer_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $insStmt->execute([
             $ip,
             substr($page_url, 0, 255),
@@ -176,6 +208,14 @@ try {
             $category_id,
             substr($referrer, 0, 255),
             $traffic_source,
+            $utm_source ?: null,
+            $utm_medium ?: null,
+            $utm_campaign ?: null,
+            $utm_content ?: null,
+            $utm_term ?: null,
+            $fbclid ?: null,
+            $gclid ?: null,
+            substr($landing_page, 0, 255) ?: null,
             substr($user_agent, 0, 255),
             $device_type,
             $session_id ?: null,

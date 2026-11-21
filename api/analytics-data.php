@@ -189,6 +189,121 @@ try {
             ]);
             break;
 
+        // ===================== CAMPAIGN & TRAFFIC SOURCES =====================
+        case 'campaigns':
+            // 1. Overall stats for date range
+            $totStats = $pdo->query("SELECT 
+                COUNT(*) as total_views, 
+                COUNT(DISTINCT ip_address) as total_visitors,
+                COUNT(DISTINCT session_id) as total_sessions
+                FROM visitor_logs v 
+                WHERE 1=1 $date_filter")->fetch(PDO::FETCH_ASSOC);
+
+            $totalViews = max(1, (int)$totStats['total_views']);
+            $totalVisitors = (int)$totStats['total_visitors'];
+            $totalSessions = max(1, (int)$totStats['total_sessions']);
+
+            // 2. Facebook Traffic (Ads + Organic)
+            $fbStats = $pdo->query("SELECT 
+                COUNT(*) as total_fb_views,
+                COUNT(DISTINCT ip_address) as total_fb_visitors,
+                COUNT(DISTINCT session_id) as total_fb_sessions,
+                SUM(CASE WHEN traffic_source = 'Facebook Ads' OR (utm_source LIKE '%facebook%' AND (utm_campaign IS NOT NULL AND utm_campaign != '' OR fbclid IS NOT NULL)) THEN 1 ELSE 0 END) as fb_ads_views,
+                COUNT(DISTINCT CASE WHEN traffic_source = 'Facebook Ads' OR (utm_source LIKE '%facebook%' AND (utm_campaign IS NOT NULL AND utm_campaign != '' OR fbclid IS NOT NULL)) THEN ip_address END) as fb_ads_visitors
+                FROM visitor_logs v
+                WHERE (traffic_source LIKE '%Facebook%' OR utm_source LIKE '%facebook%' OR fbclid IS NOT NULL) $date_filter")->fetch(PDO::FETCH_ASSOC);
+
+            // 3. Instagram Traffic
+            $igStats = $pdo->query("SELECT 
+                COUNT(*) as total_ig_views,
+                COUNT(DISTINCT ip_address) as total_ig_visitors,
+                COUNT(DISTINCT session_id) as total_ig_sessions,
+                SUM(CASE WHEN traffic_source = 'Instagram Ads' THEN 1 ELSE 0 END) as ig_ads_views
+                FROM visitor_logs v
+                WHERE (traffic_source LIKE '%Instagram%' OR utm_source LIKE '%instagram%') $date_filter")->fetch(PDO::FETCH_ASSOC);
+
+            // 4. Google Traffic (Ads + Search)
+            $googStats = $pdo->query("SELECT 
+                COUNT(*) as total_goog_views,
+                COUNT(DISTINCT ip_address) as total_goog_visitors,
+                SUM(CASE WHEN traffic_source = 'Google Ads' OR gclid IS NOT NULL THEN 1 ELSE 0 END) as goog_ads_views,
+                SUM(CASE WHEN traffic_source = 'Google Search' THEN 1 ELSE 0 END) as goog_organic_views
+                FROM visitor_logs v
+                WHERE (traffic_source LIKE '%Google%' OR utm_source LIKE '%google%' OR gclid IS NOT NULL) $date_filter")->fetch(PDO::FETCH_ASSOC);
+
+            // 5. Campaigns Breakdown (UTM Campaign or Ad Clicks)
+            $campSql = "SELECT 
+                COALESCE(NULLIF(v.utm_campaign, ''), CASE WHEN v.fbclid IS NOT NULL AND v.fbclid != '' THEN 'Facebook Ad (Untagged Campaign)' WHEN v.gclid IS NOT NULL AND v.gclid != '' THEN 'Google Ad (Untagged Campaign)' ELSE 'Direct / Other' END) as campaign_name,
+                COALESCE(NULLIF(v.utm_source, ''), CASE WHEN v.traffic_source LIKE '%Facebook%' THEN 'facebook' WHEN v.traffic_source LIKE '%Instagram%' THEN 'instagram' WHEN v.traffic_source LIKE '%Google%' THEN 'google' ELSE 'direct' END) as source,
+                COALESCE(NULLIF(v.utm_medium, ''), CASE WHEN v.fbclid IS NOT NULL THEN 'paid' WHEN v.gclid IS NOT NULL THEN 'cpc' ELSE 'referral' END) as medium,
+                COUNT(*) as views,
+                COUNT(DISTINCT v.ip_address) as visitors,
+                COUNT(DISTINCT v.session_id) as sessions,
+                COUNT(DISTINCT CASE WHEN v.page_type = 'product' THEN v.session_id END) as product_visits,
+                COUNT(DISTINCT CASE WHEN v.page_type IN ('cart', 'checkout') THEN v.session_id END) as cart_or_checkout_visits,
+                MAX(COALESCE(v.landing_page, v.page_url)) as landing_page,
+                MAX(v.created_at) as last_activity
+                FROM visitor_logs v
+                WHERE ((v.utm_campaign IS NOT NULL AND v.utm_campaign != '') 
+                    OR (v.fbclid IS NOT NULL AND v.fbclid != '') 
+                    OR (v.gclid IS NOT NULL AND v.gclid != '')
+                    OR v.traffic_source IN ('Facebook Ads', 'Instagram Ads', 'Google Ads'))
+                    $date_filter
+                GROUP BY campaign_name, source, medium
+                ORDER BY visitors DESC, views DESC
+                LIMIT 50";
+            $campaigns = $pdo->query($campSql)->fetchAll(PDO::FETCH_ASSOC);
+
+            // 6. All Traffic Sources Distribution
+            $sourcesSql = "SELECT 
+                v.traffic_source,
+                COUNT(*) as views,
+                COUNT(DISTINCT v.ip_address) as visitors,
+                COUNT(DISTINCT v.session_id) as sessions,
+                ROUND((COUNT(*) / $totalViews) * 100, 1) as percentage
+                FROM visitor_logs v
+                WHERE 1=1 $date_filter
+                GROUP BY v.traffic_source
+                ORDER BY views DESC";
+            $sources = $pdo->query($sourcesSql)->fetchAll(PDO::FETCH_ASSOC);
+
+            // 7. Recent Campaign Visits Stream (last 30)
+            $recentSql = "SELECT v.id, v.ip_address, v.page_url, v.traffic_source, v.utm_source, v.utm_medium, v.utm_campaign, v.utm_content, v.fbclid, v.device_type, v.created_at
+                FROM visitor_logs v
+                WHERE (v.traffic_source LIKE '%Facebook%' OR v.traffic_source LIKE '%Instagram%' OR v.traffic_source LIKE '%Google%' OR (v.utm_campaign IS NOT NULL AND v.utm_campaign != '') OR v.fbclid IS NOT NULL)
+                ORDER BY v.id DESC
+                LIMIT 30";
+            $recentCampaignLogs = $pdo->query($recentSql)->fetchAll(PDO::FETCH_ASSOC);
+
+            // 8. Top Campaign Name
+            $topCampaignName = 'None';
+            if (!empty($campaigns)) {
+                $topCampaignName = $campaigns[0]['campaign_name'];
+            }
+
+            echo json_encode([
+                'success' => true,
+                'summary' => [
+                    'total_views' => $totalViews,
+                    'total_visitors' => $totalVisitors,
+                    'total_sessions' => $totalSessions,
+                    'fb_total_views' => (int)($fbStats['total_fb_views'] ?? 0),
+                    'fb_total_visitors' => (int)($fbStats['total_fb_visitors'] ?? 0),
+                    'fb_ads_views' => (int)($fbStats['fb_ads_views'] ?? 0),
+                    'fb_ads_visitors' => (int)($fbStats['fb_ads_visitors'] ?? 0),
+                    'ig_total_views' => (int)($igStats['total_ig_views'] ?? 0),
+                    'ig_total_visitors' => (int)($igStats['total_ig_visitors'] ?? 0),
+                    'goog_total_views' => (int)($googStats['total_goog_views'] ?? 0),
+                    'goog_total_visitors' => (int)($googStats['total_goog_visitors'] ?? 0),
+                    'goog_ads_views' => (int)($googStats['goog_ads_views'] ?? 0),
+                    'top_campaign' => $topCampaignName
+                ],
+                'campaigns' => $campaigns,
+                'sources' => $sources,
+                'recent_logs' => $recentCampaignLogs
+            ]);
+            break;
+
         // ===================== LIVE STREAM =====================
         case 'live_stream':
             $limit = min(100, max(10, (int)($_GET['limit'] ?? 50)));

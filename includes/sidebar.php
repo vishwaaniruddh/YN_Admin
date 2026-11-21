@@ -139,7 +139,7 @@ $admin_initials = strtoupper(substr($admin_name, 0, 2));
             <li class="menu-section-label">AI &amp; Tools</li>
 
             <?php
-            $tools_active = in_array($current_script, ['desc-corrector.php', 'analytics.php', 'cache-manager.php', 'generate-yn-products-excel.php', 'sku-lookup.php', 'pos-price-sync.php', 'sync_db.php', 'bulk-ai-writer.php', 'pdf-maker.php']);
+            $tools_active = in_array($current_script, ['desc-corrector.php', 'analytics.php', 'analytics-campaigns.php', 'analytics-products.php', 'analytics-categories.php', 'analytics-pages.php', 'cache-manager.php', 'generate-yn-products-excel.php', 'sku-lookup.php', 'pos-price-sync.php', 'sync_db.php', 'bulk-ai-writer.php', 'pdf-maker.php']);
             ?>
             <li class="menu-item has-submenu <?php echo $tools_active ? 'open active-parent' : ''; ?>">
                 <a href="javascript:void(0);" class="submenu-toggle">
@@ -182,6 +182,11 @@ $admin_initials = strtoupper(substr($admin_name, 0, 2));
                     <li class="<?php echo ($current_script == 'analytics.php') ? 'active' : ''; ?>">
                         <a href="analytics.php">
                             <i class="fa-solid fa-chart-line"></i> Analytics &amp; Traffic
+                        </a>
+                    </li>
+                    <li class="<?php echo ($current_script == 'analytics-campaigns.php') ? 'active' : ''; ?>">
+                        <a href="analytics-campaigns.php">
+                            <i class="fa-solid fa-bullhorn" style="color: #1877f2;"></i> Facebook &amp; Campaigns
                         </a>
                     </li>
                     <li class="<?php echo ($current_script == 'cache-manager.php') ? 'active' : ''; ?>">

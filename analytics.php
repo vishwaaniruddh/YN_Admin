@@ -261,6 +261,18 @@ try {
 
 <!-- Quick Links to Sub-Pages -->
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 24px;">
+    <a href="analytics-campaigns.php?range=<?php echo $range; ?>" style="display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; text-decoration: none; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" onmouseover="this.style.borderColor='#1877f2';this.style.boxShadow='0 2px 8px rgba(24,119,242,0.15)'" onmouseout="this.style.borderColor='#e2e8f0';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.04)'">
+        <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(24, 119, 242, 0.1); display: flex; align-items: center; justify-content: center; color: #1877f2; font-size: 16px;">
+            <i class="fa-solid fa-bullhorn"></i>
+        </div>
+        <div>
+            <div style="font-size: 13px; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px;">
+                <span>Facebook &amp; Campaigns</span>
+                <span style="font-size: 9.5px; background: #dbeafe; color: #1d4ed8; padding: 1px 5px; border-radius: 4px; font-weight: 700;">ADS</span>
+            </div>
+            <div style="font-size: 11px; color: #64748b;">Facebook, Google &amp; UTM traffic</div>
+        </div>
+    </a>
     <a href="analytics-products.php?range=<?php echo $range; ?>" style="display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; text-decoration: none; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" onmouseover="this.style.borderColor='#3b82f6';this.style.boxShadow='0 2px 8px rgba(59,130,246,0.1)'" onmouseout="this.style.borderColor='#e2e8f0';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.04)'">
         <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(59, 130, 246, 0.1); display: flex; align-items: center; justify-content: center; color: #3b82f6; font-size: 16px;">
             <i class="fa-solid fa-chart-bar"></i>
@@ -491,8 +503,11 @@ try {
 
         <!-- Traffic Sources Breakdown -->
         <div class="postbox" style="margin-bottom: 24px;">
-            <div class="postbox-header">
+            <div class="postbox-header" style="display: flex; justify-content: space-between; align-items: center;">
                 <h2><i class="fa-solid fa-chart-pie" style="color: #9b59b6;"></i> Traffic Sources</h2>
+                <a href="analytics-campaigns.php?range=<?php echo $range; ?>" style="font-size: 11.5px; color: #1877f2; text-decoration: none; font-weight: 600;">
+                    Campaigns <i class="fa-solid fa-arrow-right"></i>
+                </a>
             </div>
             <div class="postbox-body" style="padding: 16px;">
                 <?php if (empty($traffic_sources)): ?>
@@ -503,16 +518,27 @@ try {
                             <?php
                             $pct = $total_pageviews > 0 ? round(($src['cnt'] / $total_pageviews) * 100) : 0;
                             $barBg = '#059669';
-                            if ($src['traffic_source'] === 'Instagram') $barBg = '#e1306c';
-                            elseif ($src['traffic_source'] === 'Facebook') $barBg = '#1877f2';
-                            elseif ($src['traffic_source'] === 'Google Search') $barBg = '#ea4335';
-                            elseif ($src['traffic_source'] === 'Googlebot / Crawler') $barBg = '#6366f1';
-                            elseif ($src['traffic_source'] === 'WhatsApp') $barBg = '#25d366';
-                            elseif ($src['traffic_source'] === 'Pinterest') $barBg = '#e60023';
+                            $sourceName = $src['traffic_source'];
+                            $isAd = false;
+
+                            if ($sourceName === 'Facebook Ads') { $barBg = '#1877f2'; $isAd = true; }
+                            elseif ($sourceName === 'Facebook (Organic)' || $sourceName === 'Facebook') { $barBg = '#3b82f6'; }
+                            elseif ($sourceName === 'Instagram Ads') { $barBg = '#e1306c'; $isAd = true; }
+                            elseif ($sourceName === 'Instagram (Organic)' || $sourceName === 'Instagram') { $barBg = '#ec4899'; }
+                            elseif ($sourceName === 'Google Ads') { $barBg = '#ea4335'; $isAd = true; }
+                            elseif ($sourceName === 'Google Search') { $barBg = '#f59e0b'; }
+                            elseif ($sourceName === 'Googlebot / Crawler') { $barBg = '#6366f1'; }
+                            elseif ($sourceName === 'WhatsApp') { $barBg = '#25d366'; }
+                            elseif ($sourceName === 'Pinterest') { $barBg = '#e60023'; }
                             ?>
                             <div>
                                 <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #334155;">
-                                    <span><?php echo htmlspecialchars($src['traffic_source']); ?></span>
+                                    <span style="display: flex; align-items: center; gap: 5px;">
+                                        <?php echo htmlspecialchars($sourceName); ?>
+                                        <?php if ($isAd): ?>
+                                            <span style="background: #e0f2fe; color: #0369a1; font-size: 9.5px; padding: 1px 4px; border-radius: 3px; font-weight: 700;">PAID</span>
+                                        <?php endif; ?>
+                                    </span>
                                     <span><?php echo number_format($src['cnt']); ?> (<?php echo $pct; ?>%)</span>
                                 </div>
                                 <div style="width: 100%; background: #e2e8f0; height: 8px; border-radius: 4px; overflow: hidden;">
@@ -520,6 +546,11 @@ try {
                                 </div>
                             </div>
                         <?php endforeach; ?>
+                    </div>
+                    <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #f1f5f9; text-align: center;">
+                        <a href="analytics-campaigns.php?range=<?php echo $range; ?>" style="color: #1877f2; font-size: 12px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fa-solid fa-bullhorn"></i> View Facebook &amp; Campaign Details &rarr;
+                        </a>
                     </div>
                 <?php endif; ?>
             </div>
