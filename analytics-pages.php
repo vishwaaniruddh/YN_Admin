@@ -8,190 +8,79 @@ require_once __DIR__ . '/includes/sidebar.php';
 ?>
 
 <style>
-/* KPI Cards */
-.pages-kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 20px;
-    margin-bottom: 28px;
-}
-.pages-kpi-card {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 22px 24px;
-    display: flex;
-    align-items: center;
-    gap: 18px;
-    transition: box-shadow 0.2s, transform 0.15s;
-}
-.pages-kpi-card:hover {
-    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-    transform: translateY(-2px);
-}
-.pages-kpi-icon {
-    width: 52px;
-    height: 52px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-    color: #fff;
-    flex-shrink: 0;
-}
-.pages-kpi-icon.blue { background: linear-gradient(135deg, #0284c7, #0ea5e9); }
-.pages-kpi-icon.emerald { background: linear-gradient(135deg, #059669, #10b981); }
-.pages-kpi-icon.amber { background: linear-gradient(135deg, #d97706, #f59e0b); }
-.pages-kpi-icon.rose { background: linear-gradient(135deg, #e11d48, #f43f5e); }
-.pages-kpi-info h4 {
-    font-size: 13px;
-    color: #64748b;
-    font-weight: 500;
-    margin: 0 0 4px 0;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-.pages-kpi-info .kpi-value {
-    font-size: 26px;
-    font-weight: 700;
-    color: #1e293b;
-    margin: 0;
-    line-height: 1.1;
-}
-.pages-kpi-info .kpi-sub {
-    font-size: 12px;
-    color: #94a3b8;
-    margin-top: 3px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 180px;
-}
-
-/* Controls Row */
-.pages-controls {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-bottom: 20px;
-}
-.pages-controls-left {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-.date-range-select {
-    padding: 8px 14px;
-    border: 1px solid #cbd5e1;
-    border-radius: 8px;
-    font-size: 13px;
-    color: #334155;
-    background: #fff;
-    cursor: pointer;
-    outline: none;
-    transition: border-color 0.2s;
-}
-.date-range-select:focus { border-color: #0284c7; }
-.btn-export-csv {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 18px;
-    background: #059669;
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-.btn-export-csv:hover { background: #047857; }
-
 /* Page Type Tabs */
 .page-type-tabs {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 20px;
+    gap: 4px;
+    margin-bottom: 12px;
 }
 .page-type-tab {
-    padding: 6px 16px;
-    border: 1px solid #e2e8f0;
-    border-radius: 20px;
-    font-size: 12.5px;
-    font-weight: 600;
+    padding: 3px 10px;
+    border: 1px solid #e4e4e7;
+    border-radius: 4px;
+    font-size: 11.5px;
+    font-weight: 500;
     cursor: pointer;
     background: #fff;
-    color: #64748b;
-    transition: all 0.2s;
+    color: #71717a;
+    transition: all 0.15s;
     text-transform: capitalize;
 }
-.page-type-tab:hover { border-color: #94a3b8; color: #334155; }
+.page-type-tab:hover { border-color: #a1a1aa; color: #09090b; }
 .page-type-tab.active {
-    background: #0284c7;
+    background: #18181b;
     color: #fff;
-    border-color: #0284c7;
+    border-color: #18181b;
 }
 
 /* Table */
-.pages-table-wrap {
-    overflow-x: auto;
-    border-radius: 10px;
-    border: 1px solid #e2e8f0;
-    background: #fff;
-    margin-bottom: 24px;
-}
 .pages-table {
     width: 100%;
     border-collapse: collapse;
 }
 .pages-table thead th {
     background: #f8fafc;
-    border-bottom: 2px solid #e2e8f0;
-    padding: 12px 16px;
-    font-size: 12px;
-    font-weight: 700;
-    color: #475569;
+    border-bottom: 1px solid #e4e4e7;
+    padding: 8px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #71717a;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     text-align: left;
     white-space: nowrap;
 }
 .pages-table tbody td {
-    padding: 12px 16px;
-    font-size: 13.5px;
-    color: #334155;
-    border-bottom: 1px solid #f1f5f9;
+    padding: 8px 14px;
+    font-size: 12px;
+    color: #27272a;
+    border-bottom: 1px solid #f4f4f5;
     vertical-align: middle;
 }
-.pages-table tbody tr:hover { background: #f8fafc; }
+.pages-table tbody tr:hover { background: #fafafa; }
 .pages-table tbody tr:last-child td { border-bottom: none; }
 .url-cell {
-    max-width: 300px;
+    max-width: 320px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-family: 'Courier New', monospace;
-    font-size: 12.5px;
-    color: #0284c7;
+    font-family: inherit;
+    font-size: 12px;
+    color: #09090b;
     cursor: default;
     position: relative;
 }
-.url-cell:hover { color: #0369a1; }
+.url-cell:hover { color: #2563eb; }
 .url-tooltip {
     display: none;
     position: absolute;
     bottom: 100%;
     left: 0;
-    background: #1e293b;
+    background: #18181b;
     color: #fff;
-    padding: 6px 10px;
-    border-radius: 6px;
+    padding: 4px 8px;
+    border-radius: 4px;
     font-size: 11px;
     white-space: nowrap;
     z-index: 100;
@@ -202,25 +91,26 @@ require_once __DIR__ . '/includes/sidebar.php';
 /* Badges */
 .badge-page-type {
     display: inline-block;
-    padding: 3px 10px;
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 10.5px;
+    font-weight: 600;
     color: #fff;
     text-transform: capitalize;
 }
 .badge-source {
     display: inline-block;
-    padding: 3px 10px;
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 600;
-    background: #f1f5f9;
-    color: #475569;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10.5px;
+    font-weight: 500;
+    background: #f4f4f5;
+    color: #71717a;
+    border: 1px solid #e4e4e7;
 }
 .views-col {
     font-weight: 700;
-    color: #1e293b;
+    color: #09090b;
 }
 
 /* Pagination */
@@ -229,227 +119,231 @@ require_once __DIR__ . '/includes/sidebar.php';
     align-items: center;
     justify-content: center;
     gap: 4px;
-    margin-bottom: 32px;
+    margin: 12px 0 16px 0;
 }
 .pages-pagination button {
-    min-width: 36px;
-    height: 36px;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 8px;
+    border: 1px solid #e4e4e7;
+    border-radius: 4px;
     background: #fff;
-    color: #475569;
-    font-size: 13px;
-    font-weight: 600;
+    color: #71717a;
+    font-size: 11.5px;
+    font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.15s;
 }
-.pages-pagination button:hover { border-color: #0284c7; color: #0284c7; }
-.pages-pagination button.active { background: #0284c7; color: #fff; border-color: #0284c7; }
-.pages-pagination button:disabled { opacity: 0.4; cursor: default; }
+.pages-pagination button:hover { border-color: #09090b; color: #09090b; }
+.pages-pagination button.active { background: #18181b; color: #fff; border-color: #18181b; }
+.pages-pagination button:disabled { opacity: 0.35; cursor: default; }
 .pages-pagination .pg-info {
-    font-size: 12px;
-    color: #94a3b8;
-    margin: 0 10px;
+    font-size: 11.5px;
+    color: #71717a;
+    margin: 0 8px;
 }
 
-/* Search Analytics Section */
-.search-analytics-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    margin-bottom: 24px;
-}
-@media (max-width: 900px) {
-    .search-analytics-grid { grid-template-columns: 1fr; }
-}
-.search-card {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    overflow: hidden;
-}
-.search-card.zero-results { border-color: #fcd34d; }
-.search-card-header {
-    padding: 16px 20px;
-    font-size: 15px;
-    font-weight: 700;
-    color: #1e293b;
-    border-bottom: 1px solid #e2e8f0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.search-card.zero-results .search-card-header {
-    background: linear-gradient(90deg, #fffbeb, #fff1f2);
-    color: #92400e;
-    border-bottom-color: #fcd34d;
-}
-.search-card-body { padding: 0; }
+/* Search Tables */
 .search-table {
     width: 100%;
     border-collapse: collapse;
 }
 .search-table thead th {
     background: #f8fafc;
-    padding: 10px 16px;
+    padding: 8px 14px;
     font-size: 11px;
-    font-weight: 700;
-    color: #64748b;
+    font-weight: 600;
+    color: #71717a;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     text-align: left;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e4e4e7;
 }
 .search-table tbody td {
-    padding: 10px 16px;
-    font-size: 13px;
-    color: #334155;
-    border-bottom: 1px solid #f1f5f9;
+    padding: 8px 14px;
+    font-size: 12px;
+    color: #27272a;
+    border-bottom: 1px solid #f4f4f5;
 }
 .search-table tbody tr:last-child td { border-bottom: none; }
-.search-table tbody tr:hover { background: #f8fafc; }
+.search-table tbody tr:hover { background: #fafafa; }
 .search-term-cell {
     font-weight: 600;
-    color: #1e293b;
+    color: #09090b;
 }
-.zero-results .search-term-cell { color: #dc2626; }
 .zero-badge {
     display: inline-block;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 10px;
-    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 10.5px;
+    font-weight: 600;
     background: #fee2e2;
     color: #dc2626;
 }
-
-/* Loading / Empty */
-.loading-state, .empty-state {
-    text-align: center;
-    padding: 60px 20px;
-    color: #94a3b8;
-}
-.loading-state i { font-size: 32px; margin-bottom: 12px; animation: spin 1s linear infinite; }
-.empty-state i { font-size: 40px; margin-bottom: 12px; }
-@keyframes spin { to { transform: rotate(360deg); } }
 </style>
 
-<div class="content-area">
-    <!-- Page Header -->
-    <div class="content-header">
-        <h1><i class="fa-solid fa-globe" style="color:#0284c7;margin-right:8px;"></i> Pages, URLs & Search Analytics</h1>
+<div class="dashboard-header-banner" style="margin-bottom: 16px;">
+    <div class="dashboard-header-info">
+        <div class="dashboard-greeting">
+            <h1>Pages, URLs &amp; Search Analytics</h1>
+            <span class="shadcn-badge shadcn-badge-sky" style="font-size: 11px; padding: 2px 8px;">
+                URLs &amp; Searches
+            </span>
+        </div>
+        <p class="dashboard-subtitle">
+            Track page views, traffic per URL, most visited pages, and shopper search terms.
+        </p>
     </div>
 
-    <!-- Controls -->
-    <div class="pages-controls">
-        <div class="pages-controls-left">
-            <select class="date-range-select" id="dateRange" onchange="loadAllData()">
-                <option value="today">Today</option>
-                <option value="7days" selected>Last 7 Days</option>
-                <option value="30days">Last 30 Days</option>
-                <option value="90days">Last 90 Days</option>
-            </select>
+    <div class="dashboard-actions">
+        <!-- Date Range Selector -->
+        <div style="display: flex; background: #f4f4f5; border-radius: 6px; padding: 2px; border: 1px solid #e4e4e7;">
+            <button class="date-range-btn shadcn-btn shadcn-btn-ghost" data-range="today" style="height: 28px; font-size: 12px; padding: 0 10px;">Today</button>
+            <button class="date-range-btn shadcn-btn shadcn-btn-primary" data-range="7days" style="height: 28px; font-size: 12px; padding: 0 10px;">7 Days</button>
+            <button class="date-range-btn shadcn-btn shadcn-btn-ghost" data-range="30days" style="height: 28px; font-size: 12px; padding: 0 10px;">30 Days</button>
+            <button class="date-range-btn shadcn-btn shadcn-btn-ghost" data-range="90days" style="height: 28px; font-size: 12px; padding: 0 10px;">90 Days</button>
         </div>
-        <button class="btn-export-csv" onclick="exportCSV()">
-            <i class="fa-solid fa-file-csv"></i> Export CSV
+
+        <!-- Export CSV -->
+        <button onclick="exportCSV()" class="shadcn-btn shadcn-btn-outline" style="height: 32px; font-size: 12px;">
+            <i class="fa-solid fa-file-csv" style="margin-right: 4px;"></i> Export CSV
         </button>
     </div>
+</div>
 
-    <!-- KPI Cards -->
-    <div class="pages-kpi-grid">
-        <div class="pages-kpi-card">
-            <div class="pages-kpi-icon blue"><i class="fa-solid fa-link"></i></div>
-            <div class="pages-kpi-info">
-                <h4>Unique URLs Visited</h4>
-                <div class="kpi-value" id="kpiTotalUrls">—</div>
+<!-- Navigation Tabs -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+    <div style="display: flex; align-items: center; gap: 6px; font-size: 13px;">
+        <a href="analytics.php" class="shadcn-btn shadcn-btn-outline" style="height: 30px; font-size: 12px; padding: 0 12px; font-weight: 500; text-decoration: none;">
+            Overview
+        </a>
+        <a href="analytics-campaigns.php" class="shadcn-btn shadcn-btn-outline" style="height: 30px; font-size: 12px; padding: 0 12px; font-weight: 500; text-decoration: none;">
+            Facebook &amp; Campaigns
+        </a>
+        <a href="analytics-products.php" class="shadcn-btn shadcn-btn-outline" style="height: 30px; font-size: 12px; padding: 0 12px; font-weight: 500; text-decoration: none;">
+            Products
+        </a>
+        <a href="analytics-categories.php" class="shadcn-btn shadcn-btn-outline" style="height: 30px; font-size: 12px; padding: 0 12px; font-weight: 500; text-decoration: none;">
+            Categories
+        </a>
+        <a href="analytics-pages.php" class="shadcn-btn shadcn-btn-primary" style="height: 30px; font-size: 12px; padding: 0 12px; font-weight: 500; text-decoration: none;">
+            Pages &amp; Search
+        </a>
+    </div>
+</div>
+
+<!-- Compact Neutral KPI Cards Grid -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 16px;">
+    <div class="shadcn-card" style="padding: 12px 14px; margin-bottom: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 11px; font-weight: 600; color: #71717a; text-transform: uppercase; letter-spacing: 0.02em;">Unique URLs</span>
+            <i class="fa-solid fa-link" style="color: #a1a1aa; font-size: 12px;"></i>
+        </div>
+        <div>
+            <div class="shadcn-stat-value" id="kpiTotalUrls" style="font-size: 18px; font-weight: 700; color: #09090b; line-height: 1.2;">—</div>
+            <div class="shadcn-stat-note" style="font-size: 11px; color: #71717a; margin-top: 2px;">Tracked site paths</div>
+        </div>
+    </div>
+
+    <div class="shadcn-card" style="padding: 12px 14px; margin-bottom: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 11px; font-weight: 600; color: #71717a; text-transform: uppercase; letter-spacing: 0.02em;">Most Visited Page</span>
+            <i class="fa-solid fa-trophy" style="color: #a1a1aa; font-size: 12px;"></i>
+        </div>
+        <div style="min-width: 0; overflow: hidden;">
+            <div class="shadcn-stat-value" id="kpiMostVisited" style="font-size: 18px; font-weight: 700; color: #09090b; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">—</div>
+            <div class="shadcn-stat-note" id="kpiMostVisitedUrl" style="font-size: 11px; color: #71717a; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
+        </div>
+    </div>
+
+    <div class="shadcn-card" style="padding: 12px 14px; margin-bottom: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 11px; font-weight: 600; color: #71717a; text-transform: uppercase; letter-spacing: 0.02em;">Top Traffic Source</span>
+            <i class="fa-solid fa-arrow-up-right-from-square" style="color: #a1a1aa; font-size: 12px;"></i>
+        </div>
+        <div>
+            <div class="shadcn-stat-value" id="kpiTopSource" style="font-size: 18px; font-weight: 700; color: #09090b; line-height: 1.2;">—</div>
+            <div class="shadcn-stat-note" style="font-size: 11px; color: #71717a; margin-top: 2px;">Primary referrer channel</div>
+        </div>
+    </div>
+
+    <div class="shadcn-card" style="padding: 12px 14px; margin-bottom: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 11px; font-weight: 600; color: #71717a; text-transform: uppercase; letter-spacing: 0.02em;">Search Queries</span>
+            <i class="fa-solid fa-magnifying-glass" style="color: #a1a1aa; font-size: 12px;"></i>
+        </div>
+        <div>
+            <div class="shadcn-stat-value" id="kpiSearchQueries" style="font-size: 18px; font-weight: 700; color: #09090b; line-height: 1.2;">—</div>
+            <div class="shadcn-stat-note" style="font-size: 11px; color: #71717a; margin-top: 2px;">Storefront search requests</div>
+        </div>
+    </div>
+</div>
+
+<!-- Page Type Filter Tabs -->
+<div class="page-type-tabs" id="pageTypeTabs">
+    <button class="page-type-tab active" data-type="all" onclick="filterPageType('all', this)">All</button>
+    <button class="page-type-tab" data-type="home" onclick="filterPageType('home', this)">Home</button>
+    <button class="page-type-tab" data-type="product" onclick="filterPageType('product', this)">Product</button>
+    <button class="page-type-tab" data-type="category" onclick="filterPageType('category', this)">Category</button>
+    <button class="page-type-tab" data-type="cart" onclick="filterPageType('cart', this)">Cart</button>
+    <button class="page-type-tab" data-type="checkout" onclick="filterPageType('checkout', this)">Checkout</button>
+    <button class="page-type-tab" data-type="auth" onclick="filterPageType('auth', this)">Auth</button>
+    <button class="page-type-tab" data-type="search" onclick="filterPageType('search', this)">Search</button>
+    <button class="page-type-tab" data-type="studio" onclick="filterPageType('studio', this)">Studio</button>
+    <button class="page-type-tab" data-type="portfolio" onclick="filterPageType('portfolio', this)">Portfolio</button>
+    <button class="page-type-tab" data-type="other" onclick="filterPageType('other', this)">Other</button>
+</div>
+
+<!-- URL Analytics Table Card -->
+<div class="shadcn-card" style="margin-bottom: 16px;">
+    <div class="shadcn-card-header" style="padding: 10px 14px; border-bottom: 1px solid #e4e4e7;">
+        <h2 class="shadcn-card-title"><i class="fa-solid fa-table-list" style="margin-right: 6px; color: #71717a;"></i> Page &amp; URL Performance</h2>
+    </div>
+    <div class="shadcn-card-body" style="padding: 0;">
+        <div id="pagesTableContainer">
+            <div class="loading-state" id="pagesLoading" style="padding: 30px; text-align: center; color: #71717a;">
+                <i class="fa-solid fa-spinner fa-spin"></i>
+                <p style="margin: 4px 0 0; font-size: 12px;">Loading page analytics...</p>
             </div>
         </div>
-        <div class="pages-kpi-card">
-            <div class="pages-kpi-icon emerald"><i class="fa-solid fa-trophy"></i></div>
-            <div class="pages-kpi-info">
-                <h4>Most Visited Page</h4>
-                <div class="kpi-value" id="kpiMostVisited">—</div>
-                <div class="kpi-sub" id="kpiMostVisitedUrl"></div>
-            </div>
+    </div>
+</div>
+
+<!-- Pagination -->
+<div class="pages-pagination" id="pagesPagination"></div>
+
+<!-- Search Analytics Section -->
+<div style="margin-top: 14px; margin-bottom: 10px;">
+    <h3 style="font-size: 13px; font-weight: 600; color: #09090b; margin: 0; display: flex; align-items: center; gap: 6px;">
+        <i class="fa-solid fa-magnifying-glass-chart" style="color: #71717a;"></i> Search Analytics
+    </h3>
+</div>
+
+<div class="search-analytics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; margin-bottom: 16px;">
+    <!-- Top Search Terms -->
+    <div class="shadcn-card" style="margin-bottom: 0;">
+        <div class="shadcn-card-header" style="padding: 10px 14px; border-bottom: 1px solid #e4e4e7; display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-arrow-trend-up" style="color: #71717a; font-size: 12px;"></i>
+            <h2 class="shadcn-card-title">Top Search Terms</h2>
         </div>
-        <div class="pages-kpi-card">
-            <div class="pages-kpi-icon amber"><i class="fa-solid fa-arrow-up-right-from-square"></i></div>
-            <div class="pages-kpi-info">
-                <h4>Top Traffic Source</h4>
-                <div class="kpi-value" id="kpiTopSource">—</div>
-            </div>
-        </div>
-        <div class="pages-kpi-card">
-            <div class="pages-kpi-icon rose"><i class="fa-solid fa-magnifying-glass"></i></div>
-            <div class="pages-kpi-info">
-                <h4>Total Search Queries</h4>
-                <div class="kpi-value" id="kpiSearchQueries">—</div>
+        <div class="shadcn-card-body" id="topSearchContainer" style="padding: 0;">
+            <div class="loading-state" style="padding: 30px; text-align: center; color: #71717a;">
+                <i class="fa-solid fa-spinner fa-spin"></i>
+                <p style="margin: 4px 0 0; font-size: 12px;">Loading...</p>
             </div>
         </div>
     </div>
 
-    <!-- Page Type Filter Tabs -->
-    <div class="page-type-tabs" id="pageTypeTabs">
-        <button class="page-type-tab active" data-type="all" onclick="filterPageType('all', this)">All</button>
-        <button class="page-type-tab" data-type="home" onclick="filterPageType('home', this)">Home</button>
-        <button class="page-type-tab" data-type="product" onclick="filterPageType('product', this)">Product</button>
-        <button class="page-type-tab" data-type="category" onclick="filterPageType('category', this)">Category</button>
-        <button class="page-type-tab" data-type="cart" onclick="filterPageType('cart', this)">Cart</button>
-        <button class="page-type-tab" data-type="checkout" onclick="filterPageType('checkout', this)">Checkout</button>
-        <button class="page-type-tab" data-type="auth" onclick="filterPageType('auth', this)">Auth</button>
-        <button class="page-type-tab" data-type="search" onclick="filterPageType('search', this)">Search</button>
-        <button class="page-type-tab" data-type="studio" onclick="filterPageType('studio', this)">Studio</button>
-        <button class="page-type-tab" data-type="portfolio" onclick="filterPageType('portfolio', this)">Portfolio</button>
-        <button class="page-type-tab" data-type="other" onclick="filterPageType('other', this)">Other</button>
-    </div>
-
-    <!-- URL Analytics Table -->
-    <div class="postbox">
-        <div class="postbox-header">
-            <h2><i class="fa-solid fa-table-list"></i> Page & URL Performance</h2>
+    <!-- Zero-Result Searches -->
+    <div class="shadcn-card" style="margin-bottom: 0;">
+        <div class="shadcn-card-header" style="padding: 10px 14px; border-bottom: 1px solid #e4e4e7; display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-triangle-exclamation" style="color: #dc2626; font-size: 12px;"></i>
+            <h2 class="shadcn-card-title">Zero-Result Searches (Missed Demand)</h2>
         </div>
-        <div class="postbox-body" style="padding:0;">
-            <div id="pagesTableContainer">
-                <div class="loading-state" id="pagesLoading">
-                    <i class="fa-solid fa-spinner"></i>
-                    <p>Loading page analytics...</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Pagination -->
-    <div class="pages-pagination" id="pagesPagination"></div>
-
-    <!-- Search Analytics Section -->
-    <div class="content-header" style="margin-top:12px;">
-        <h2><i class="fa-solid fa-magnifying-glass-chart" style="color:#e11d48;margin-right:8px;"></i> Search Analytics</h2>
-    </div>
-
-    <div class="search-analytics-grid">
-        <!-- Top Search Terms -->
-        <div class="search-card">
-            <div class="search-card-header">
-                <i class="fa-solid fa-arrow-trend-up" style="color:#059669;"></i> Top Search Terms
-            </div>
-            <div class="search-card-body" id="topSearchContainer">
-                <div class="loading-state">
-                    <i class="fa-solid fa-spinner"></i>
-                    <p>Loading...</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Zero-Result Searches -->
-        <div class="search-card zero-results">
-            <div class="search-card-header">
-                <i class="fa-solid fa-triangle-exclamation" style="color:#dc2626;"></i> Zero-Result Searches (Missed Opportunities)
-            </div>
-            <div class="search-card-body" id="zeroResultsContainer">
-                <div class="loading-state">
-                    <i class="fa-solid fa-spinner"></i>
-                    <p>Loading...</p>
-                </div>
+        <div class="shadcn-card-body" id="zeroResultsContainer" style="padding: 0;">
+            <div class="loading-state" style="padding: 30px; text-align: center; color: #71717a;">
+                <i class="fa-solid fa-spinner fa-spin"></i>
+                <p style="margin: 4px 0 0; font-size: 12px;">Loading...</p>
             </div>
         </div>
     </div>
@@ -473,10 +367,28 @@ let currentPage = 1;
 let currentPageType = 'all';
 let pagesData = null;
 let searchesData = null;
+let currentRange = '7days';
 
 function getDateRange() {
-    return document.getElementById('dateRange').value;
+    return currentRange;
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.date-range-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.date-range-btn').forEach(b => {
+                b.classList.remove('shadcn-btn-primary');
+                b.classList.add('shadcn-btn-ghost');
+            });
+            this.classList.remove('shadcn-btn-ghost');
+            this.classList.add('shadcn-btn-primary');
+            currentRange = this.getAttribute('data-range');
+            loadAllData();
+        });
+    });
+
+    loadAllData();
+});
 
 function loadAllData() {
     currentPage = 1;
@@ -775,9 +687,6 @@ function formatDate(dateStr) {
     hours = hours % 12 || 12;
     return `${day} ${month} ${year}, ${hours}:${mins} ${ampm}`;
 }
-
-// ── Init ──
-document.addEventListener('DOMContentLoaded', loadAllData);
 </script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

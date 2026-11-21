@@ -160,189 +160,167 @@ try {
 } catch (Exception $e) {}
 ?>
 
-<div class="wrap-header">
-    <h1><i class="fa-solid fa-chart-line" style="color: var(--wp-blue);"></i> Traffic & Visitor Analytics
-    </h1>
-    <div style="display: flex; gap: 10px; align-items: center;">
-        <form method="GET" action="analytics.php">
-            <select name="range" onchange="this.form.submit()" class="form-control"
-                style="padding: 6px 12px; font-size: 13px; font-weight: 600;">
-                <option value="today" <?php echo $range === 'today' ? 'selected' : ''; ?>>Today</option>
-                <option value="7days" <?php echo $range === '7days' ? 'selected' : ''; ?>>Last 7 Days</option>
-                <option value="30days" <?php echo $range === '30days' ? 'selected' : ''; ?>>Last 30 Days</option>
-                <option value="90days" <?php echo $range === '90days' ? 'selected' : ''; ?>>Last 90 Days</option>
-            </select>
-        </form>
+<div class="dashboard-header-banner" style="margin-bottom: 16px;">
+    <div class="dashboard-header-info">
+        <div class="dashboard-greeting">
+            <h1>Traffic &amp; Visitor Analytics</h1>
+            <span class="shadcn-badge shadcn-badge-sky" style="font-size: 11px; padding: 2px 8px;">
+                Live Tracker
+            </span>
+        </div>
+        <p class="dashboard-subtitle">
+            Monitor real-time visitors, pageviews, session engagement, and traffic channels.
+        </p>
     </div>
-</div>
-
-<!-- Stats Overview Grid — 6 KPI Cards -->
-<div class="dashboard-grid" style="margin-bottom: 25px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));">
-    <div class="dash-card">
-        <div class="dash-card-icon" style="background-color: rgba(52, 152, 219, 0.12); color: #3498db;">
-            <i class="fa-solid fa-eye"></i>
-        </div>
-        <div class="dash-card-info">
-            <h3>Total Pageviews</h3>
-            <p><?php echo number_format($total_pageviews); ?></p>
-        </div>
-    </div>
-
-    <div class="dash-card">
-        <div class="dash-card-icon" style="background-color: rgba(46, 204, 113, 0.12); color: #2ecc71;">
-            <i class="fa-solid fa-users"></i>
-        </div>
-        <div class="dash-card-info">
-            <h3>Unique Visitors</h3>
-            <p><?php echo number_format($unique_visitors); ?></p>
-        </div>
-    </div>
-
-    <div class="dash-card">
-        <div class="dash-card-icon" style="background-color: rgba(14, 165, 233, 0.12); color: #0ea5e9;">
-            <i class="fa-solid fa-window-restore"></i>
-        </div>
-        <div class="dash-card-info">
-            <h3>Sessions</h3>
-            <p><?php echo number_format($total_sessions); ?></p>
-        </div>
-    </div>
-
-    <div class="dash-card">
-        <div class="dash-card-icon" style="background-color: rgba(239, 68, 68, 0.12); color: #ef4444;">
-            <i class="fa-solid fa-person-walking-arrow-right"></i>
-        </div>
-        <div class="dash-card-info">
-            <h3>Bounce Rate</h3>
-            <p style="font-size: 22px; color: <?php echo $bounce_rate > 70 ? '#ef4444' : ($bounce_rate > 50 ? '#f59e0b' : '#059669'); ?>;"><?php echo $bounce_rate; ?>%</p>
-        </div>
-    </div>
-
-    <div class="dash-card">
-        <div class="dash-card-icon" style="background-color: rgba(155, 89, 182, 0.12); color: #9b59b6;">
-            <i class="fa-solid fa-layer-group"></i>
-        </div>
-        <div class="dash-card-info">
-            <h3>Pages / Session</h3>
-            <p style="font-size: 22px;"><?php echo $avg_pages_per_session; ?></p>
-        </div>
-    </div>
-
-    <div class="dash-card">
-        <div class="dash-card-icon" style="background-color: rgba(241, 196, 15, 0.12); color: #f1c40f;">
-            <i class="fa-solid fa-compass"></i>
-        </div>
-        <div class="dash-card-info">
-            <h3>Top Source</h3>
-            <p style="font-size: 16px; color: #9b59b6;"><?php echo htmlspecialchars($top_source_name); ?></p>
+    <div class="dashboard-actions">
+        <!-- Date Range Filter Selector (Products Style) -->
+        <div style="display: flex; background: #f4f4f5; border-radius: 6px; padding: 2px; border: 1px solid #e4e4e7;">
+            <a href="analytics.php?range=today" class="shadcn-btn <?php echo ($range === 'today') ? 'shadcn-btn-primary' : 'shadcn-btn-ghost'; ?>" style="height: 28px; font-size: 12px; padding: 0 10px; text-decoration: none;">Today</a>
+            <a href="analytics.php?range=7days" class="shadcn-btn <?php echo ($range === '7days') ? 'shadcn-btn-primary' : 'shadcn-btn-ghost'; ?>" style="height: 28px; font-size: 12px; padding: 0 10px; text-decoration: none;">7 Days</a>
+            <a href="analytics.php?range=30days" class="shadcn-btn <?php echo ($range === '30days') ? 'shadcn-btn-primary' : 'shadcn-btn-ghost'; ?>" style="height: 28px; font-size: 12px; padding: 0 10px; text-decoration: none;">30 Days</a>
+            <a href="analytics.php?range=90days" class="shadcn-btn <?php echo ($range === '90days') ? 'shadcn-btn-primary' : 'shadcn-btn-ghost'; ?>" style="height: 28px; font-size: 12px; padding: 0 10px; text-decoration: none;">90 Days</a>
         </div>
     </div>
 </div>
 
-<!-- Checkout Traffic & Abandoned Carts Banner -->
-<div style="background: linear-gradient(135deg, #18181b 0%, #27272a 100%); border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; color: #fff; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-    <div style="display: flex; align-items: center; gap: 14px;">
-        <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(176, 141, 87, 0.2); border: 1px solid rgba(176, 141, 87, 0.4); display: flex; align-items: center; justify-content: center; font-size: 20px; color: #fbbf24;">
-            <i class="fa-solid fa-cart-shopping"></i>
-        </div>
-        <div>
-            <div style="font-size: 15px; font-weight: 700; color: #fff;">
-                Checkout Visitors: <?php echo number_format($checkout_visits_count); ?> Visitors &bull; <?php echo number_format($checkout_abandoned_count); ?> Abandoned Carts
-            </div>
-            <div style="font-size: 12px; color: #a1a1aa; margin-top: 2px;">
-                Monitor shoppers who reached checkout, track cart details, and recover lost orders in real-time.
-            </div>
-        </div>
+<!-- Navigation Tabs (Aligned with products.php tab bar) -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+    <div style="display: flex; align-items: center; gap: 6px; font-size: 13px;">
+        <a href="analytics.php?range=<?php echo $range; ?>" class="shadcn-btn shadcn-btn-primary" style="height: 30px; font-size: 12px; padding: 0 12px; font-weight: 500; text-decoration: none;">
+            Overview
+        </a>
+        <a href="analytics-campaigns.php?range=<?php echo $range; ?>" class="shadcn-btn shadcn-btn-outline" style="height: 30px; font-size: 12px; padding: 0 12px; font-weight: 500; text-decoration: none;">
+            Facebook &amp; Campaigns
+        </a>
+        <a href="analytics-products.php?range=<?php echo $range; ?>" class="shadcn-btn shadcn-btn-outline" style="height: 30px; font-size: 12px; padding: 0 12px; font-weight: 500; text-decoration: none;">
+            Products
+        </a>
+        <a href="analytics-categories.php?range=<?php echo $range; ?>" class="shadcn-btn shadcn-btn-outline" style="height: 30px; font-size: 12px; padding: 0 12px; font-weight: 500; text-decoration: none;">
+            Categories
+        </a>
+        <a href="analytics-pages.php?range=<?php echo $range; ?>" class="shadcn-btn shadcn-btn-outline" style="height: 30px; font-size: 12px; padding: 0 12px; font-weight: 500; text-decoration: none;">
+            Pages &amp; Search
+        </a>
     </div>
-    <a href="checkout-visitors.php" class="button" style="background: #B08D57; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-        View Checkout Visitors <i class="fa-solid fa-arrow-right"></i>
-    </a>
+    <div style="display: flex; align-items: center; gap: 8px;">
+        <a href="checkout-visitors.php" class="shadcn-btn shadcn-btn-outline" style="height: 30px; font-size: 12px; padding: 0 12px; text-decoration: none; color: #71717a;" title="View shoppers who reached checkout">
+            <i class="fa-solid fa-cart-shopping" style="margin-right: 5px; font-size: 11px;"></i> Checkout Visitors
+            <span style="background: #f4f4f5; color: #09090b; font-size: 10.5px; padding: 1px 6px; border-radius: 999px; font-weight: 600; margin-left: 4px;">
+                <?php echo number_format($checkout_visits_count); ?>
+            </span>
+        </a>
+    </div>
 </div>
 
-<!-- Quick Links to Sub-Pages -->
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 24px;">
-    <a href="analytics-campaigns.php?range=<?php echo $range; ?>" style="display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; text-decoration: none; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" onmouseover="this.style.borderColor='#1877f2';this.style.boxShadow='0 2px 8px rgba(24,119,242,0.15)'" onmouseout="this.style.borderColor='#e2e8f0';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.04)'">
-        <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(24, 119, 242, 0.1); display: flex; align-items: center; justify-content: center; color: #1877f2; font-size: 16px;">
-            <i class="fa-solid fa-bullhorn"></i>
+<!-- Compact Neutral KPI Cards Grid -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 16px;">
+    <!-- Pageviews -->
+    <div class="shadcn-card" style="padding: 12px 14px; margin-bottom: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 11px; font-weight: 600; color: #71717a; text-transform: uppercase; letter-spacing: 0.02em;">Total Views</span>
+            <i class="fa-solid fa-eye" style="color: #a1a1aa; font-size: 12px;"></i>
         </div>
         <div>
-            <div style="font-size: 13px; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px;">
-                <span>Facebook &amp; Campaigns</span>
-                <span style="font-size: 9.5px; background: #dbeafe; color: #1d4ed8; padding: 1px 5px; border-radius: 4px; font-weight: 700;">ADS</span>
-            </div>
-            <div style="font-size: 11px; color: #64748b;">Facebook, Google &amp; UTM traffic</div>
+            <div style="font-size: 18px; font-weight: 700; color: #09090b; line-height: 1.2;"><?php echo number_format($total_pageviews); ?></div>
+            <div style="font-size: 11px; color: #71717a; margin-top: 2px;">All visitor hits</div>
         </div>
-    </a>
-    <a href="analytics-products.php?range=<?php echo $range; ?>" style="display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; text-decoration: none; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" onmouseover="this.style.borderColor='#3b82f6';this.style.boxShadow='0 2px 8px rgba(59,130,246,0.1)'" onmouseout="this.style.borderColor='#e2e8f0';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.04)'">
-        <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(59, 130, 246, 0.1); display: flex; align-items: center; justify-content: center; color: #3b82f6; font-size: 16px;">
-            <i class="fa-solid fa-chart-bar"></i>
-        </div>
-        <div>
-            <div style="font-size: 13px; font-weight: 700; color: #1e293b;">Product Analytics</div>
-            <div style="font-size: 11px; color: #64748b;">Views, conversions per product</div>
-        </div>
-    </a>
-    <a href="analytics-categories.php?range=<?php echo $range; ?>" style="display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; text-decoration: none; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" onmouseover="this.style.borderColor='#7c3aed';this.style.boxShadow='0 2px 8px rgba(124,58,237,0.1)'" onmouseout="this.style.borderColor='#e2e8f0';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.04)'">
-        <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(124, 58, 237, 0.1); display: flex; align-items: center; justify-content: center; color: #7c3aed; font-size: 16px;">
-            <i class="fa-solid fa-layer-group"></i>
+    </div>
+
+    <!-- Unique Visitors -->
+    <div class="shadcn-card" style="padding: 12px 14px; margin-bottom: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 11px; font-weight: 600; color: #71717a; text-transform: uppercase; letter-spacing: 0.02em;">Unique Visitors</span>
+            <i class="fa-solid fa-users" style="color: #a1a1aa; font-size: 12px;"></i>
         </div>
         <div>
-            <div style="font-size: 13px; font-weight: 700; color: #1e293b;">Category Analytics</div>
-            <div style="font-size: 11px; color: #64748b;">Traffic per collection</div>
+            <div style="font-size: 18px; font-weight: 700; color: #09090b; line-height: 1.2;"><?php echo number_format($unique_visitors); ?></div>
+            <div style="font-size: 11px; color: #71717a; margin-top: 2px;">Distinct IPs</div>
         </div>
-    </a>
-    <a href="analytics-pages.php?range=<?php echo $range; ?>" style="display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; text-decoration: none; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" onmouseover="this.style.borderColor='#059669';this.style.boxShadow='0 2px 8px rgba(5,150,105,0.1)'" onmouseout="this.style.borderColor='#e2e8f0';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.04)'">
-        <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(5, 150, 105, 0.1); display: flex; align-items: center; justify-content: center; color: #059669; font-size: 16px;">
-            <i class="fa-solid fa-globe"></i>
+    </div>
+
+    <!-- Sessions -->
+    <div class="shadcn-card" style="padding: 12px 14px; margin-bottom: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 11px; font-weight: 600; color: #71717a; text-transform: uppercase; letter-spacing: 0.02em;">Sessions</span>
+            <i class="fa-solid fa-window-restore" style="color: #a1a1aa; font-size: 12px;"></i>
         </div>
         <div>
-            <div style="font-size: 13px; font-weight: 700; color: #1e293b;">Pages & Search</div>
-            <div style="font-size: 11px; color: #64748b;">URL-level traffic, search terms</div>
+            <div style="font-size: 18px; font-weight: 700; color: #09090b; line-height: 1.2;"><?php echo number_format($total_sessions); ?></div>
+            <div style="font-size: 11px; color: #71717a; margin-top: 2px;">30-min browsing sessions</div>
         </div>
-    </a>
+    </div>
+
+    <!-- Bounce Rate -->
+    <div class="shadcn-card" style="padding: 12px 14px; margin-bottom: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 11px; font-weight: 600; color: #71717a; text-transform: uppercase; letter-spacing: 0.02em;">Bounce Rate</span>
+            <i class="fa-solid fa-person-walking-arrow-right" style="color: #a1a1aa; font-size: 12px;"></i>
+        </div>
+        <div>
+            <div style="font-size: 18px; font-weight: 700; color: #09090b; line-height: 1.2;"><?php echo $bounce_rate; ?>%</div>
+            <div style="font-size: 11px; color: #71717a; margin-top: 2px;">Single-page visits</div>
+        </div>
+    </div>
+
+    <!-- Pages / Session -->
+    <div class="shadcn-card" style="padding: 12px 14px; margin-bottom: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 11px; font-weight: 600; color: #71717a; text-transform: uppercase; letter-spacing: 0.02em;">Pages / Session</span>
+            <i class="fa-solid fa-layer-group" style="color: #a1a1aa; font-size: 12px;"></i>
+        </div>
+        <div>
+            <div style="font-size: 18px; font-weight: 700; color: #09090b; line-height: 1.2;"><?php echo $avg_pages_per_session; ?></div>
+            <div style="font-size: 11px; color: #71717a; margin-top: 2px;">Avg depth per visit</div>
+        </div>
+    </div>
+
+    <!-- Top Source -->
+    <div class="shadcn-card" style="padding: 12px 14px; margin-bottom: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 11px; font-weight: 600; color: #71717a; text-transform: uppercase; letter-spacing: 0.02em;">Top Source</span>
+            <i class="fa-solid fa-compass" style="color: #a1a1aa; font-size: 12px;"></i>
+        </div>
+        <div>
+            <div style="font-size: 15px; font-weight: 700; color: #09090b; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo htmlspecialchars($top_source_name); ?></div>
+            <div style="font-size: 11px; color: #71717a; margin-top: 2px;">Leading channel</div>
+        </div>
+    </div>
 </div>
 
 <!-- Page Type Breakdown Table -->
 <?php if (!empty($page_type_breakdown)): ?>
-<div class="postbox" style="margin-bottom: 24px;">
-    <div class="postbox-header">
-        <h2><i class="fa-solid fa-sitemap" style="color: #0ea5e9;"></i> Page Type Breakdown</h2>
+<div class="shadcn-card" style="margin-bottom: 16px;">
+    <div class="shadcn-card-header">
+        <h2 class="shadcn-card-title"><i class="fa-solid fa-sitemap" style="color: #71717a; margin-right: 6px;"></i> Page Type Breakdown</h2>
     </div>
-    <div class="postbox-body" style="padding: 0;">
+    <div class="shadcn-card-body">
         <table class="wp-list-table widefat fixed striped" style="margin: 0;">
             <thead>
                 <tr>
-                    <th>Page Type</th>
-                    <th style="text-align: right;">Pageviews</th>
-                    <th style="text-align: right;">Unique Visitors</th>
-                    <th style="text-align: right;">% of Traffic</th>
-                    <th style="width: 30%;">Distribution</th>
+                    <th style="font-size: 11.5px; font-weight: 600; color: #71717a;">Page Type</th>
+                    <th style="text-align: right; font-size: 11.5px; font-weight: 600; color: #71717a;">Views</th>
+                    <th style="text-align: right; font-size: 11.5px; font-weight: 600; color: #71717a;">Unique Visitors</th>
+                    <th style="text-align: right; font-size: 11.5px; font-weight: 600; color: #71717a;">% of Traffic</th>
+                    <th style="width: 30%; font-size: 11.5px; font-weight: 600; color: #71717a;">Distribution</th>
                 </tr>
             </thead>
             <tbody>
                 <?php 
-                $type_colors = [
-                    'home' => '#059669', 'product' => '#0284c7', 'category' => '#7c3aed',
-                    'cart' => '#d97706', 'checkout' => '#dc2626', 'auth' => '#64748b',
-                    'search' => '#0891b2', 'studio' => '#db2777', 'portfolio' => '#8b5cf6',
-                    'account' => '#6366f1', 'order' => '#ea580c', 'other' => '#94a3b8'
-                ];
                 foreach ($page_type_breakdown as $pt): 
                     $pct = $total_pageviews > 0 ? round(($pt['views'] / $total_pageviews) * 100, 1) : 0;
-                    $color = $type_colors[$pt['page_type']] ?? '#94a3b8';
                 ?>
                 <tr>
                     <td>
-                        <span style="display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; color: #fff; background: <?php echo $color; ?>; text-transform: capitalize;">
+                        <span style="display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; color: #09090b; background: #f4f4f5; text-transform: uppercase;">
                             <?php echo htmlspecialchars($pt['page_type']); ?>
                         </span>
                     </td>
-                    <td style="text-align: right; font-weight: 700; color: #1e293b;"><?php echo number_format($pt['views']); ?></td>
-                    <td style="text-align: right; color: #0284c7; font-weight: 600;"><?php echo number_format($pt['unique_ips']); ?></td>
-                    <td style="text-align: right; font-weight: 600; color: #64748b;"><?php echo $pct; ?>%</td>
+                    <td style="text-align: right; font-weight: 600; color: #09090b; font-size: 12px;"><?php echo number_format($pt['views']); ?></td>
+                    <td style="text-align: right; color: #71717a; font-size: 12px;"><?php echo number_format($pt['unique_ips']); ?></td>
+                    <td style="text-align: right; font-weight: 600; color: #71717a; font-size: 12px;"><?php echo $pct; ?>%</td>
                     <td>
-                        <div style="width: 100%; background: #f1f5f9; height: 8px; border-radius: 4px; overflow: hidden;">
-                            <div style="width: <?php echo $pct; ?>%; background: <?php echo $color; ?>; height: 100%; border-radius: 4px; transition: width 0.3s;"></div>
+                        <div style="width: 100%; background: #f4f4f5; height: 6px; border-radius: 3px; overflow: hidden;">
+                            <div style="width: <?php echo $pct; ?>%; background: #09090b; height: 100%; border-radius: 3px; transition: width 0.3s;"></div>
                         </div>
                     </td>
                 </tr>
@@ -354,82 +332,65 @@ try {
 <?php endif; ?>
 
 <!-- Main Two-Column Layout -->
-<div class="wp-editor-columns">
+<div class="wp-editor-columns" style="gap: 16px;">
 
     <!-- Left Main Column: Live Traffic Stream & Products -->
     <div class="main-column">
 
         <!-- Live Visitor Stream -->
-        <div class="postbox" style="margin-bottom: 24px;">
-            <div class="postbox-header">
-                <h2><i class="fa-solid fa-tower-cell" style="color: #2ecc71;"></i> Real-Time Visitor Activity Stream
+        <div class="shadcn-card" style="margin-bottom: 16px;">
+            <div class="shadcn-card-header">
+                <h2 class="shadcn-card-title">
+                    <i class="fa-solid fa-tower-cell" style="color: #71717a; margin-right: 6px;"></i> Live Visitor Activity Stream
                 </h2>
+                <span style="font-size: 11px; color: #71717a;">Auto-recorded</span>
             </div>
-            <div class="postbox-body" style="padding: 0; max-height: 480px; overflow-y: auto;">
+            <div class="shadcn-card-body" style="max-height: 440px; overflow-y: auto;">
                 <?php if (empty($recent_logs)): ?>
-                    <div style="text-align: center; padding: 40px; color: #646970;">
-                        <i class="fa-solid fa-user-clock" style="font-size: 36px; margin-bottom: 12px; color: #a7aaad;"></i>
-                        <p style="margin: 0; font-size: 14px;">No visitor traffic logs recorded yet. Visit the storefront to
-                            generate live logs!</p>
+                    <div style="text-align: center; padding: 40px; color: #71717a;">
+                        <i class="fa-solid fa-user-clock" style="font-size: 32px; margin-bottom: 8px; color: #d4d4d8;"></i>
+                        <p style="margin: 0; font-size: 13px;">No visitor traffic logs recorded yet. Real-time visits will stream here.</p>
                     </div>
                 <?php else: ?>
-                    <table class="wp-list-table widefat fixed striped" style="margin: 0;">
+                    <table class="wp-list-table widefat fixed striped" style="margin: 0; font-size: 12px;">
                         <thead style="position: sticky; top: 0; z-index: 10; background: #fff;">
                             <tr>
-                                <th style="width: 12%;">IP Address</th>
-                                <th style="width: 12%;">Source</th>
-                                <th style="width: 10%;">Type</th>
-                                <th style="width: 30%;">Visited Page</th>
-                                <th style="width: 10%;">Device</th>
-                                <th style="width: 12%;">Session</th>
-                                <th style="width: 14%; text-align: right;">Time (IST)</th>
+                                <th style="width: 14%; font-size: 11.5px; color: #71717a;">IP Address</th>
+                                <th style="width: 14%; font-size: 11.5px; color: #71717a;">Source</th>
+                                <th style="width: 10%; font-size: 11.5px; color: #71717a;">Type</th>
+                                <th style="width: 30%; font-size: 11.5px; color: #71717a;">Visited Page</th>
+                                <th style="width: 10%; font-size: 11.5px; color: #71717a;">Device</th>
+                                <th style="width: 10%; font-size: 11.5px; color: #71717a;">Session</th>
+                                <th style="width: 12%; text-align: right; font-size: 11.5px; color: #71717a;">Time</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($recent_logs as $log): ?>
                                 <tr>
-                                    <td><code
-                                            style="font-family: monospace; font-weight: 600; color: #334155; font-size: 11px;"><?php echo htmlspecialchars($log['ip_address']); ?></code>
-                                    </td>
+                                    <td><code style="font-family: monospace; font-size: 11px; color: #09090b;"><?php echo htmlspecialchars($log['ip_address']); ?></code></td>
                                     <td>
-                                        <?php
-                                        $src = $log['traffic_source'];
-                                        $badgeBg = '#64748b';
-                                        if ($src === 'Instagram') $badgeBg = '#e1306c';
-                                        elseif ($src === 'Facebook') $badgeBg = '#1877f2';
-                                        elseif ($src === 'Google Search') $badgeBg = '#ea4335';
-                                        elseif ($src === 'Direct') $badgeBg = '#059669';
-                                        elseif ($src === 'Googlebot / Crawler') $badgeBg = '#6366f1';
-                                        elseif ($src === 'WhatsApp') $badgeBg = '#25d366';
-                                        elseif ($src === 'Pinterest') $badgeBg = '#e60023';
-                                        ?>
-                                        <span
-                                            style="background: <?php echo $badgeBg; ?>; color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600;white-space:nowrap;">
-                                            <?php echo htmlspecialchars($src); ?>
+                                        <span style="background: #f4f4f5; color: #09090b; border: 1px solid #e4e4e7; padding: 1px 6px; border-radius: 4px; font-size: 10.5px; font-weight: 500; white-space: nowrap;">
+                                            <?php echo htmlspecialchars($log['traffic_source']); ?>
                                         </span>
                                     </td>
                                     <td>
-                                        <?php
-                                        $ptColor = $type_colors[$log['page_type']] ?? '#94a3b8';
-                                        ?>
-                                        <span style="font-size: 10px; font-weight: 600; color: <?php echo $ptColor; ?>; text-transform: uppercase;">
+                                        <span style="font-size: 10.5px; font-weight: 600; color: #71717a; text-transform: uppercase;">
                                             <?php echo htmlspecialchars($log['page_type'] ?? 'other'); ?>
                                         </span>
                                     </td>
                                     <td style="word-break: break-all;">
-                                        <span style="font-size: 11px; color: #0f172a; font-weight: 500;">
+                                        <span style="font-size: 11.5px; color: #09090b; font-weight: 500;">
                                             <?php echo htmlspecialchars($log['page_url']); ?>
                                         </span>
                                     </td>
-                                    <td style="white-space: nowrap; font-size: 12px;">
-                                        <i
-                                            class="fa-solid fa-<?php echo strtolower($log['device_type']) === 'mobile' ? 'mobile-screen' : (strtolower($log['device_type']) === 'tablet' ? 'tablet-screen-button' : 'desktop'); ?>"></i>
+                                    <td style="white-space: nowrap; font-size: 11.5px; color: #71717a;">
+                                        <i class="fa-solid fa-<?php echo strtolower($log['device_type']) === 'mobile' ? 'mobile-screen' : (strtolower($log['device_type']) === 'tablet' ? 'tablet-screen-button' : 'desktop'); ?>"></i>
                                         <?php echo htmlspecialchars($log['device_type']); ?>
                                     </td>
                                     <td>
-                                        <code style="font-size: 10px; color: #64748b;"><?php echo htmlspecialchars(substr($log['session_id'] ?? '-', 0, 12)); ?></code>
+                                        <code style="font-size: 10px; color: #71717a;"><?php echo htmlspecialchars(substr($log['session_id'] ?? '-', 0, 8)); ?></code>
                                     </td>
-                                    <td style="text-align: right; color: #64748b; font-size: 12px;">
+                                    <td style="text-align: right; color: #71717a; font-size: 11.5px;">
                                         <?php echo date('M d, g:i a', strtotime($log['created_at'])); ?>
                                     </td>
                                 </tr>
@@ -441,10 +402,10 @@ try {
         </div>
 
         <!-- Top Viewed Products Table -->
-        <div class="postbox">
-            <div class="postbox-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <h2><i class="fa-solid fa-fire" style="color: #f1c40f;"></i> Top Viewed Products</h2>
-                <a href="analytics-products.php?range=<?php echo $range; ?>" style="font-size: 12px; font-weight: 600; color: #3b82f6; text-decoration: none; padding-right: 12px;">View All Products →</a>
+        <div class="shadcn-card" style="margin-bottom: 16px;">
+            <div class="shadcn-card-header">
+                <h2 class="shadcn-card-title"><i class="fa-solid fa-fire" style="color: #71717a; margin-right: 6px;"></i> Top Viewed Products</h2>
+                <a href="analytics-products.php?range=<?php echo $range; ?>" style="font-size: 12px; font-weight: 500; color: #09090b; text-decoration: none;">View All Products &rarr;</a>
             </div>
             <div class="postbox-body" style="padding: 0;">
                 <?php 
@@ -513,90 +474,70 @@ try {
     <div class="sidebar-column" style="width: 320px; flex-shrink: 0;">
 
         <!-- Traffic Sources Breakdown -->
-        <div class="postbox" style="margin-bottom: 24px;">
-            <div class="postbox-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <h2><i class="fa-solid fa-chart-pie" style="color: #9b59b6;"></i> Traffic Sources</h2>
-                <a href="analytics-campaigns.php?range=<?php echo $range; ?>" style="font-size: 11.5px; color: #1877f2; text-decoration: none; font-weight: 600;">
-                    Campaigns <i class="fa-solid fa-arrow-right"></i>
+        <div class="shadcn-card" style="margin-bottom: 16px;">
+            <div class="shadcn-card-header">
+                <h2 class="shadcn-card-title"><i class="fa-solid fa-chart-pie" style="color: #71717a; margin-right: 6px;"></i> Traffic Sources</h2>
+                <a href="analytics-campaigns.php?range=<?php echo $range; ?>" style="font-size: 11.5px; color: #09090b; text-decoration: none; font-weight: 500;">
+                    Campaigns &rarr;
                 </a>
             </div>
-            <div class="postbox-body" style="padding: 16px;">
+            <div class="shadcn-card-body" style="padding: 14px;">
                 <?php if (empty($traffic_sources)): ?>
-                    <p style="text-align: center; color: #646970; font-size: 13px; margin: 10px 0;">No traffic source data available.</p>
+                    <p style="text-align: center; color: #71717a; font-size: 12.5px; margin: 6px 0;">No traffic source data available.</p>
                 <?php else: ?>
-                    <div style="display: flex; flex-direction: column; gap: 14px;">
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
                         <?php foreach ($traffic_sources as $src): ?>
                             <?php
                             $pct = $total_pageviews > 0 ? round(($src['cnt'] / $total_pageviews) * 100) : 0;
-                            $barBg = '#059669';
                             $sourceName = $src['traffic_source'];
-                            $isAd = false;
-
-                            if ($sourceName === 'Facebook Ads') { $barBg = '#1877f2'; $isAd = true; }
-                            elseif ($sourceName === 'Facebook (Organic)' || $sourceName === 'Facebook') { $barBg = '#3b82f6'; }
-                            elseif ($sourceName === 'Instagram Ads') { $barBg = '#e1306c'; $isAd = true; }
-                            elseif ($sourceName === 'Instagram (Organic)' || $sourceName === 'Instagram') { $barBg = '#ec4899'; }
-                            elseif ($sourceName === 'Google Ads') { $barBg = '#ea4335'; $isAd = true; }
-                            elseif ($sourceName === 'Google Search') { $barBg = '#f59e0b'; }
-                            elseif ($sourceName === 'Googlebot / Crawler') { $barBg = '#6366f1'; }
-                            elseif ($sourceName === 'WhatsApp') { $barBg = '#25d366'; }
-                            elseif ($sourceName === 'Pinterest') { $barBg = '#e60023'; }
+                            $isAd = str_contains($sourceName, 'Ads');
                             ?>
                             <div>
-                                <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #334155;">
+                                <div style="display: flex; justify-content: space-between; font-size: 11.5px; font-weight: 500; margin-bottom: 3px; color: #09090b;">
                                     <span style="display: flex; align-items: center; gap: 5px;">
                                         <?php echo htmlspecialchars($sourceName); ?>
                                         <?php if ($isAd): ?>
-                                            <span style="background: #e0f2fe; color: #0369a1; font-size: 9.5px; padding: 1px 4px; border-radius: 3px; font-weight: 700;">PAID</span>
+                                            <span style="background: #f4f4f5; color: #09090b; border: 1px solid #e4e4e7; font-size: 9px; padding: 1px 4px; border-radius: 3px; font-weight: 600;">PAID</span>
                                         <?php endif; ?>
                                     </span>
-                                    <span><?php echo number_format($src['cnt']); ?> (<?php echo $pct; ?>%)</span>
+                                    <span style="color: #71717a;"><?php echo number_format($src['cnt']); ?> (<?php echo $pct; ?>%)</span>
                                 </div>
-                                <div style="width: 100%; background: #e2e8f0; height: 8px; border-radius: 4px; overflow: hidden;">
-                                    <div style="width: <?php echo $pct; ?>%; background: <?php echo $barBg; ?>; height: 100%; border-radius: 4px;"></div>
+                                <div style="width: 100%; background: #f4f4f5; height: 5px; border-radius: 3px; overflow: hidden;">
+                                    <div style="width: <?php echo $pct; ?>%; background: #09090b; height: 100%; border-radius: 3px;"></div>
                                 </div>
                             </div>
                         <?php endforeach; ?>
-                    </div>
-                    <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #f1f5f9; text-align: center;">
-                        <a href="analytics-campaigns.php?range=<?php echo $range; ?>" style="color: #1877f2; font-size: 12px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
-                            <i class="fa-solid fa-bullhorn"></i> View Facebook &amp; Campaign Details &rarr;
-                        </a>
                     </div>
                 <?php endif; ?>
             </div>
         </div>
 
         <!-- Device Breakdown -->
-        <div class="postbox" style="margin-bottom: 24px;">
-            <div class="postbox-header">
-                <h2><i class="fa-solid fa-mobile-screen" style="color: #0ea5e9;"></i> Device Breakdown</h2>
+        <div class="shadcn-card" style="margin-bottom: 16px;">
+            <div class="shadcn-card-header">
+                <h2 class="shadcn-card-title"><i class="fa-solid fa-mobile-screen" style="color: #71717a; margin-right: 6px;"></i> Devices</h2>
             </div>
-            <div class="postbox-body" style="padding: 16px;">
+            <div class="shadcn-card-body" style="padding: 14px;">
                 <?php if (empty($device_breakdown)): ?>
-                    <p style="text-align: center; color: #646970; font-size: 13px;">No device data.</p>
+                    <p style="text-align: center; color: #71717a; font-size: 12.5px; margin: 6px 0;">No device data.</p>
                 <?php else: ?>
-                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
                         <?php 
                         $deviceIcons = ['Mobile' => 'fa-mobile-screen', 'Desktop' => 'fa-desktop', 'Tablet' => 'fa-tablet-screen-button', 'Search Bot' => 'fa-robot'];
-                        $deviceColors = ['Mobile' => '#0ea5e9', 'Desktop' => '#8b5cf6', 'Tablet' => '#f59e0b', 'Search Bot' => '#6366f1'];
                         foreach ($device_breakdown as $dev):
                             $devPct = $total_pageviews > 0 ? round(($dev['cnt'] / $total_pageviews) * 100, 1) : 0;
-                            $dColor = $deviceColors[$dev['device_type']] ?? '#64748b';
                             $dIcon = $deviceIcons[$dev['device_type']] ?? 'fa-question';
                         ?>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <div style="width: 32px; height: 32px; border-radius: 8px; background: <?php echo $dColor; ?>15; display: flex; align-items: center; justify-content: center; color: <?php echo $dColor; ?>; font-size: 14px;">
-                                <i class="fa-solid <?php echo $dIcon; ?>"></i>
+                        <div>
+                            <div style="display: flex; justify-content: space-between; font-size: 11.5px; font-weight: 500; color: #09090b; margin-bottom: 3px;">
+                                <span style="display: flex; align-items: center; gap: 6px;">
+                                    <i class="fa-solid <?php echo $dIcon; ?>" style="color: #71717a; font-size: 11px;"></i>
+                                    <?php echo htmlspecialchars($dev['device_type']); ?>
+                                </span>
+                                <span style="color: #71717a;"><?php echo number_format($dev['cnt']); ?> (<?php echo $devPct; ?>%)</span>
                             </div>
-                            <div style="flex: 1;">
-                                <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 3px;">
-                                    <span><?php echo htmlspecialchars($dev['device_type']); ?></span>
-                                    <span><?php echo number_format($dev['cnt']); ?> (<?php echo $devPct; ?>%)</span>
-                                </div>
-                                <div style="width: 100%; background: #f1f5f9; height: 6px; border-radius: 3px; overflow: hidden;">
-                                    <div style="width: <?php echo $devPct; ?>%; background: <?php echo $dColor; ?>; height: 100%; border-radius: 3px;"></div>
-                                </div>
+                            <div style="width: 100%; background: #f4f4f5; height: 5px; border-radius: 3px; overflow: hidden;">
+                                <div style="width: <?php echo $devPct; ?>%; background: #71717a; height: 100%; border-radius: 3px;"></div>
                             </div>
                         </div>
                         <?php endforeach; ?>
@@ -606,23 +547,22 @@ try {
         </div>
 
         <!-- Top Categories Breakdown -->
-        <div class="postbox" style="margin-bottom: 24px;">
-            <div class="postbox-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <h2><i class="fa-solid fa-layer-group" style="color: #3b82f6;"></i> Top Categories</h2>
-                <a href="analytics-categories.php?range=<?php echo $range; ?>" style="font-size: 11px; font-weight: 600; color: #3b82f6; text-decoration: none; padding-right: 12px;">View All →</a>
+        <div class="shadcn-card" style="margin-bottom: 16px;">
+            <div class="shadcn-card-header">
+                <h2 class="shadcn-card-title"><i class="fa-solid fa-layer-group" style="color: #71717a; margin-right: 6px;"></i> Categories</h2>
+                <a href="analytics-categories.php?range=<?php echo $range; ?>" style="font-size: 11.5px; font-weight: 500; color: #09090b; text-decoration: none;">View All &rarr;</a>
             </div>
-            <div class="postbox-body" style="padding: 16px;">
+            <div class="shadcn-card-body" style="padding: 10px 14px;">
                 <?php if (empty($top_categories)): ?>
-                    <p style="text-align: center; color: #646970; font-size: 13px; margin: 10px 0;">No categories found in
-                        database.</p>
+                    <p style="text-align: center; color: #71717a; font-size: 12.5px; margin: 6px 0;">No categories found.</p>
                 <?php else: ?>
-                    <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px;">
+                    <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px;">
                         <?php foreach ($top_categories as $cat): ?>
-                            <li style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9;">
-                                <span style="font-size: 13px; font-weight: 600; color: #1e293b;">
+                            <li style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 6px; border-bottom: 1px solid #f4f4f5; font-size: 12px;">
+                                <span style="font-weight: 500; color: #09090b;">
                                     <?php echo htmlspecialchars($cat['name']); ?>
                                 </span>
-                                <span style="font-size: 12px; font-weight: 700; color: #3b82f6; background: #eff6ff; padding: 2px 8px; border-radius: 10px;">
+                                <span style="font-size: 11px; font-weight: 600; color: #71717a;">
                                     <?php echo number_format($cat['cat_views'] ?? 0); ?> views
                                 </span>
                             </li>
@@ -634,25 +574,21 @@ try {
 
         <!-- Top Search Terms -->
         <?php if (!empty($top_searches)): ?>
-        <div class="postbox">
-            <div class="postbox-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <h2><i class="fa-solid fa-magnifying-glass" style="color: #0891b2;"></i> Top Searches</h2>
-                <a href="analytics-pages.php?range=<?php echo $range; ?>" style="font-size: 11px; font-weight: 600; color: #3b82f6; text-decoration: none; padding-right: 12px;">All Searches →</a>
+        <div class="shadcn-card" style="margin-bottom: 16px;">
+            <div class="shadcn-card-header">
+                <h2 class="shadcn-card-title"><i class="fa-solid fa-magnifying-glass" style="color: #71717a; margin-right: 6px;"></i> Top Searches</h2>
+                <a href="analytics-pages.php?range=<?php echo $range; ?>" style="font-size: 11.5px; font-weight: 500; color: #09090b; text-decoration: none;">All &rarr;</a>
             </div>
-            <div class="postbox-body" style="padding: 0;">
-                <table class="wp-list-table widefat fixed striped" style="margin: 0;">
+            <div class="shadcn-card-body">
+                <table class="wp-list-table widefat fixed striped" style="margin: 0; font-size: 11.5px;">
                     <tbody>
                         <?php foreach ($top_searches as $st): ?>
                         <tr>
-                            <td style="font-weight: 600; color: #1e293b; font-size: 13px;">
+                            <td style="font-weight: 500; color: #09090b;">
                                 "<?php echo htmlspecialchars($st['search_term']); ?>"
                             </td>
-                            <td style="text-align: right; font-size: 12px;">
-                                <span style="font-weight: 700; color: #0891b2;"><?php echo number_format($st['cnt']); ?></span>
-                                <span style="color: #94a3b8;"> searches</span>
-                            </td>
-                            <td style="text-align: right; font-size: 11px; color: <?php echo round($st['avg_res']) == 0 ? '#ef4444' : '#64748b'; ?>;">
-                                <?php echo round($st['avg_res']); ?> avg results
+                            <td style="text-align: right; color: #71717a;">
+                                <span style="font-weight: 600; color: #09090b;"><?php echo number_format($st['cnt']); ?></span> searches
                             </td>
                         </tr>
                         <?php endforeach; ?>

@@ -9,258 +9,222 @@ require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 ?>
 
-<div class="content-area" style="padding: 24px;">
+<div class="dashboard-header-banner" style="margin-bottom: 16px;">
+    <div class="dashboard-header-info">
+        <div class="dashboard-greeting">
+            <h1>Campaigns &amp; Traffic Sources</h1>
+            <span class="shadcn-badge shadcn-badge-sky" style="font-size: 11px; padding: 2px 8px;">
+                Meta &amp; Google Ads
+            </span>
+        </div>
+        <p class="dashboard-subtitle">
+            Track visitors and engagement from Facebook Ads, Instagram, Google, and UTM marketing links.
+        </p>
+    </div>
 
-    <!-- Page Header -->
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 14px;">
-        <div style="display: flex; align-items: center; gap: 14px;">
-            <div style="width: 44px; height: 44px; background: linear-gradient(135deg, #1877f2, #0d5cb6); border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(24, 119, 242, 0.25);">
-                <i class="fa-solid fa-bullhorn" style="color: #fff; font-size: 19px;"></i>
-            </div>
-            <div>
-                <h1 style="margin: 0; font-size: 22px; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 8px;">
-                    Campaigns &amp; Traffic Sources
-                    <span style="background: #e0f2fe; color: #0284c7; font-size: 11px; padding: 2px 8px; border-radius: 9999px; font-weight: 700;">Meta &amp; Google Ads</span>
-                </h1>
-                <p style="margin: 2px 0 0; font-size: 13px; color: #64748b;">Monitor traffic from Facebook Ads, Google, Instagram campaigns &amp; direct visitors in real-time</p>
-            </div>
+    <div class="dashboard-actions">
+        <!-- Date Range Selector -->
+        <div style="display: flex; background: #f4f4f5; border-radius: 6px; padding: 2px; border: 1px solid #e4e4e7;">
+            <button class="date-range-btn shadcn-btn shadcn-btn-ghost" data-range="today" onclick="changeRange('today', this)" style="height: 28px; font-size: 12px; padding: 0 10px;">Today</button>
+            <button class="date-range-btn shadcn-btn shadcn-btn-primary" data-range="7days" onclick="changeRange('7days', this)" style="height: 28px; font-size: 12px; padding: 0 10px;">7 Days</button>
+            <button class="date-range-btn shadcn-btn shadcn-btn-ghost" data-range="30days" onclick="changeRange('30days', this)" style="height: 28px; font-size: 12px; padding: 0 10px;">30 Days</button>
+            <button class="date-range-btn shadcn-btn shadcn-btn-ghost" data-range="90days" onclick="changeRange('90days', this)" style="height: 28px; font-size: 12px; padding: 0 10px;">90 Days</button>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-            <!-- Date Range Selector -->
-            <div style="display: flex; background: #f1f5f9; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0;">
-                <button class="date-range-btn" data-range="today" onclick="changeRange('today', this)" style="padding: 8px 14px; font-size: 13px; font-weight: 500; border: none; cursor: pointer; transition: all .2s; background: transparent; color: #475569;">Today</button>
-                <button class="date-range-btn active" data-range="7days" onclick="changeRange('7days', this)" style="padding: 8px 14px; font-size: 13px; font-weight: 500; border: none; cursor: pointer; transition: all .2s; background: #1877f2; color: #fff;">7 Days</button>
-                <button class="date-range-btn" data-range="30days" onclick="changeRange('30days', this)" style="padding: 8px 14px; font-size: 13px; font-weight: 500; border: none; cursor: pointer; transition: all .2s; background: transparent; color: #475569;">30 Days</button>
-                <button class="date-range-btn" data-range="90days" onclick="changeRange('90days', this)" style="padding: 8px 14px; font-size: 13px; font-weight: 500; border: none; cursor: pointer; transition: all .2s; background: transparent; color: #475569;">90 Days</button>
-            </div>
+        <!-- Campaign URL Builder Modal Trigger -->
+        <button onclick="openUrlBuilderModal()" class="shadcn-btn shadcn-btn-outline" style="height: 32px; font-size: 12px;">
+            <i class="fa-solid fa-link" style="margin-right: 4px;"></i> URL Generator
+        </button>
 
-            <!-- Campaign URL Builder Modal Trigger -->
-            <button onclick="openUrlBuilderModal()" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; font-size: 13px; font-weight: 500; color: #1e293b; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; transition: all .2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05);" onmouseover="this.style.borderColor='#1877f2';this.style.color='#1877f2'" onmouseout="this.style.borderColor='#cbd5e1';this.style.color='#1e293b'">
-                <i class="fa-solid fa-link" style="color: #1877f2;"></i> Campaign URL Generator
+        <!-- Export CSV -->
+        <button id="exportCsvBtn" onclick="exportCampaignsCSV()" class="shadcn-btn shadcn-btn-outline" style="height: 32px; font-size: 12px;">
+            <i class="fa-solid fa-file-csv" style="margin-right: 4px;"></i> Export CSV
+        </button>
+    </div>
+</div>
+
+<!-- Navigation Tabs (Aligned with products.php tab bar) -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+    <div style="display: flex; align-items: center; gap: 6px; font-size: 13px;">
+        <a href="analytics.php?range=7days" class="shadcn-btn shadcn-btn-outline" style="height: 30px; font-size: 12px; padding: 0 12px; font-weight: 500; text-decoration: none;">
+            Overview
+        </a>
+        <a href="analytics-campaigns.php?range=7days" class="shadcn-btn shadcn-btn-primary" style="height: 30px; font-size: 12px; padding: 0 12px; font-weight: 500; text-decoration: none;">
+            Facebook &amp; Campaigns
+        </a>
+        <a href="analytics-products.php?range=7days" class="shadcn-btn shadcn-btn-outline" style="height: 30px; font-size: 12px; padding: 0 12px; font-weight: 500; text-decoration: none;">
+            Products
+        </a>
+        <a href="analytics-categories.php?range=7days" class="shadcn-btn shadcn-btn-outline" style="height: 30px; font-size: 12px; padding: 0 12px; font-weight: 500; text-decoration: none;">
+            Categories
+        </a>
+        <a href="analytics-pages.php?range=7days" class="shadcn-btn shadcn-btn-outline" style="height: 30px; font-size: 12px; padding: 0 12px; font-weight: 500; text-decoration: none;">
+            Pages &amp; Search
+        </a>
+    </div>
+</div>
+
+<!-- Compact Neutral KPI Cards Grid -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 16px;">
+    <!-- Facebook Ads -->
+    <div class="shadcn-card" style="padding: 12px 14px; margin-bottom: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 11px; font-weight: 600; color: #71717a; text-transform: uppercase; letter-spacing: 0.02em;">Facebook Ads</span>
+            <i class="fa-brands fa-facebook-f" style="color: #a1a1aa; font-size: 12px;"></i>
+        </div>
+        <div>
+            <div class="shadcn-stat-value" id="kpiFbAdsViews" style="font-size: 18px; font-weight: 700; color: #09090b; line-height: 1.2;">0</div>
+            <div class="shadcn-stat-note" id="kpiFbAdsVisitors" style="font-size: 11px; color: #71717a; margin-top: 2px;">0 unique shoppers from ads</div>
+        </div>
+    </div>
+
+    <!-- Instagram -->
+    <div class="shadcn-card" style="padding: 12px 14px; margin-bottom: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 11px; font-weight: 600; color: #71717a; text-transform: uppercase; letter-spacing: 0.02em;">Instagram Traffic</span>
+            <i class="fa-brands fa-instagram" style="color: #a1a1aa; font-size: 12px;"></i>
+        </div>
+        <div>
+            <div class="shadcn-stat-value" id="kpiIgViews" style="font-size: 18px; font-weight: 700; color: #09090b; line-height: 1.2;">0</div>
+            <div class="shadcn-stat-note" id="kpiIgVisitors" style="font-size: 11px; color: #71717a; margin-top: 2px;">0 profile &amp; ad visitors</div>
+        </div>
+    </div>
+
+    <!-- Google Traffic -->
+    <div class="shadcn-card" style="padding: 12px 14px; margin-bottom: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 11px; font-weight: 600; color: #71717a; text-transform: uppercase; letter-spacing: 0.02em;">Google Traffic</span>
+            <i class="fa-brands fa-google" style="color: #a1a1aa; font-size: 12px;"></i>
+        </div>
+        <div>
+            <div class="shadcn-stat-value" id="kpiGoogViews" style="font-size: 18px; font-weight: 700; color: #09090b; line-height: 1.2;">0</div>
+            <div class="shadcn-stat-note" id="kpiGoogVisitors" style="font-size: 11px; color: #71717a; margin-top: 2px;">0 search &amp; ad clicks</div>
+        </div>
+    </div>
+
+    <!-- Top Campaign -->
+    <div class="shadcn-card" style="padding: 12px 14px; margin-bottom: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 11px; font-weight: 600; color: #71717a; text-transform: uppercase; letter-spacing: 0.02em;">Top Campaign</span>
+            <i class="fa-solid fa-trophy" style="color: #a1a1aa; font-size: 12px;"></i>
+        </div>
+        <div>
+            <div class="shadcn-stat-value" id="kpiTopCampaign" style="font-size: 15px; font-weight: 700; color: #09090b; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">None</div>
+            <div class="shadcn-stat-note" style="font-size: 11px; color: #71717a; margin-top: 2px;">Highest volume campaign</div>
+        </div>
+    </div>
+
+    <!-- All Sessions -->
+    <div class="shadcn-card" style="padding: 12px 14px; margin-bottom: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 11px; font-weight: 600; color: #71717a; text-transform: uppercase; letter-spacing: 0.02em;">Total Sessions</span>
+            <i class="fa-solid fa-users" style="color: #a1a1aa; font-size: 12px;"></i>
+        </div>
+        <div>
+            <div class="shadcn-stat-value" id="kpiTotalSessions" style="font-size: 18px; font-weight: 700; color: #09090b; line-height: 1.2;">0</div>
+            <div class="shadcn-stat-note" style="font-size: 11px; color: #71717a; margin-top: 2px;">Across channels in period</div>
+        </div>
+    </div>
+</div>
+
+<!-- Active Marketing Campaigns Table -->
+<div class="shadcn-card" style="margin-bottom: 16px;">
+    <div class="shadcn-card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <h2 class="shadcn-card-title"><i class="fa-solid fa-bullseye" style="color: #71717a; margin-right: 6px;"></i> Campaign Performance</h2>
+            <span id="campaignsCountBadge" class="shadcn-badge shadcn-badge-sky" style="font-size: 10.5px; padding: 1px 6px;">0</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <input type="text" id="campaignSearch" onkeyup="filterCampaignsTable()" placeholder="Search campaigns..." class="form-control" style="height: 30px; font-size: 12px; width: 200px;">
+        </div>
+    </div>
+
+    <div class="shadcn-card-body">
+        <table class="wp-list-table widefat fixed striped" style="margin: 0; font-size: 12px;">
+            <thead>
+                <tr>
+                    <th style="font-weight: 600; font-size: 11.5px; color: #71717a; width: 28%;">Campaign Name</th>
+                    <th style="font-weight: 600; font-size: 11.5px; color: #71717a; width: 14%;">Source / Medium</th>
+                    <th style="font-weight: 600; font-size: 11.5px; color: #71717a; text-align: right; width: 10%;">Visitors</th>
+                    <th style="font-weight: 600; font-size: 11.5px; color: #71717a; text-align: right; width: 10%;">Views</th>
+                    <th style="font-weight: 600; font-size: 11.5px; color: #71717a; text-align: right; width: 10%;">Sessions</th>
+                    <th style="font-weight: 600; font-size: 11.5px; color: #71717a; text-align: right; width: 10%;">Product Views</th>
+                    <th style="font-weight: 600; font-size: 11.5px; color: #71717a; width: 18%;">Top Landing Page</th>
+                </tr>
+            </thead>
+            <tbody id="campaignsTableBody">
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 24px; color: #71717a; font-size: 12.5px;">
+                        <i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i> Loading campaign data...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Two-Column Layout: All Traffic Sources & Facebook Campaign Guide -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+
+    <!-- Left: All Traffic Sources Breakdown -->
+    <div class="shadcn-card" style="margin-bottom: 0;">
+        <div class="shadcn-card-header">
+            <h2 class="shadcn-card-title"><i class="fa-solid fa-chart-pie" style="color: #71717a; margin-right: 6px;"></i> Traffic Channels</h2>
+            <span style="font-size: 11px; color: #71717a;">Acquisition share</span>
+        </div>
+        <div class="shadcn-card-body" style="padding: 14px;" id="sourcesListContainer">
+            <p style="text-align: center; color: #71717a; font-size: 12.5px; margin: 0;">Loading sources...</p>
+        </div>
+    </div>
+
+    <!-- Right: Facebook Ads Setup & URL Generator Advice Card -->
+    <div class="shadcn-card" style="margin-bottom: 0;">
+        <div class="shadcn-card-header">
+            <h2 class="shadcn-card-title"><i class="fa-brands fa-facebook" style="color: #71717a; margin-right: 6px;"></i> Automated Ad Tracking</h2>
+        </div>
+        <div class="shadcn-card-body" style="padding: 14px;">
+            <p style="margin: 0 0 10px; font-size: 12px; color: #71717a; line-height: 1.5;">
+                Every tap on your Facebook or Instagram ad sends an automated click ID (<code>fbclid</code>). Our tracker locks the campaign to the visitor's session across all pages they browse.
+            </p>
+            <div style="background: #f4f4f5; border: 1px solid #e4e4e7; border-radius: 6px; padding: 10px 12px; margin-bottom: 12px;">
+                <div style="font-size: 11px; font-weight: 600; color: #09090b; margin-bottom: 3px;">Meta Ads Manager URL Parameter:</div>
+                <code style="font-size: 10.5px; color: #09090b; word-break: break-all;">utm_source=facebook&amp;utm_medium=paid&amp;utm_campaign={{campaign.name}}</code>
+            </div>
+            <button type="button" onclick="openUrlBuilderModal()" class="shadcn-btn shadcn-btn-outline" style="width: 100%; justify-content: center; height: 32px; font-size: 12px;">
+                <i class="fa-solid fa-plus-circle" style="margin-right: 5px;"></i> Generate Custom Campaign Link
             </button>
-
-            <!-- Export CSV -->
-            <button id="exportCsvBtn" onclick="exportCampaignsCSV()" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; font-size: 13px; font-weight: 500; color: #fff; background: #10b981; border: none; border-radius: 8px; cursor: pointer; transition: background .2s;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
-                <i class="fa-solid fa-file-csv"></i> Export CSV
-            </button>
         </div>
     </div>
 
-    <!-- Quick Navigation to other Analytics pages -->
-    <div style="display: flex; gap: 8px; margin-bottom: 24px; overflow-x: auto; padding-bottom: 4px;">
-        <a href="analytics.php" style="padding: 6px 14px; border-radius: 6px; font-size: 12.5px; font-weight: 600; text-decoration: none; background: #fff; border: 1px solid #e2e8f0; color: #475569;">
-            <i class="fa-solid fa-chart-line" style="margin-right: 4px;"></i> Overview
-        </a>
-        <a href="analytics-campaigns.php" style="padding: 6px 14px; border-radius: 6px; font-size: 12.5px; font-weight: 600; text-decoration: none; background: #1877f2; border: 1px solid #1877f2; color: #fff;">
-            <i class="fa-solid fa-bullhorn" style="margin-right: 4px;"></i> Facebook &amp; Campaigns
-        </a>
-        <a href="analytics-products.php" style="padding: 6px 14px; border-radius: 6px; font-size: 12.5px; font-weight: 600; text-decoration: none; background: #fff; border: 1px solid #e2e8f0; color: #475569;">
-            <i class="fa-solid fa-box" style="margin-right: 4px;"></i> Products
-        </a>
-        <a href="analytics-categories.php" style="padding: 6px 14px; border-radius: 6px; font-size: 12.5px; font-weight: 600; text-decoration: none; background: #fff; border: 1px solid #e2e8f0; color: #475569;">
-            <i class="fa-solid fa-layer-group" style="margin-right: 4px;"></i> Categories
-        </a>
-        <a href="analytics-pages.php" style="padding: 6px 14px; border-radius: 6px; font-size: 12.5px; font-weight: 600; text-decoration: none; background: #fff; border: 1px solid #e2e8f0; color: #475569;">
-            <i class="fa-solid fa-globe" style="margin-right: 4px;"></i> Pages &amp; Search
-        </a>
+</div>
+
+<!-- Live Campaign Visitor Stream -->
+<div class="shadcn-card" style="margin-bottom: 16px;">
+    <div class="shadcn-card-header">
+        <h2 class="shadcn-card-title"><i class="fa-solid fa-wave-square" style="color: #71717a; margin-right: 6px;"></i> Recent Campaign &amp; Social Visits</h2>
+        <span style="font-size: 11px; color: #71717a;">Real-time clicks</span>
     </div>
-
-    <!-- KPI Cards Grid -->
-    <div class="shadcn-stat-grid" style="margin-bottom: 24px;">
-        <!-- Facebook Ads Traffic -->
-        <div class="shadcn-stat-card" style="min-width: 0; overflow: hidden; border-left: 3px solid #1877f2;">
-            <div class="shadcn-stat-top">
-                <span class="shadcn-stat-title">Facebook Ads Traffic</span>
-                <div class="shadcn-stat-icon-wrap" style="background: rgba(24, 119, 242, 0.12); color: #1877f2;">
-                    <i class="fa-brands fa-facebook-f"></i>
-                </div>
-            </div>
-            <div>
-                <div class="shadcn-stat-value" id="kpiFbAdsViews" style="color: #1877f2;">0</div>
-                <div class="shadcn-stat-note" id="kpiFbAdsVisitors">0 unique shoppers from Facebook ads</div>
-            </div>
-        </div>
-
-        <!-- Instagram Traffic -->
-        <div class="shadcn-stat-card" style="min-width: 0; overflow: hidden; border-left: 3px solid #e1306c;">
-            <div class="shadcn-stat-top">
-                <span class="shadcn-stat-title">Instagram Traffic</span>
-                <div class="shadcn-stat-icon-wrap" style="background: rgba(225, 48, 108, 0.12); color: #e1306c;">
-                    <i class="fa-brands fa-instagram"></i>
-                </div>
-            </div>
-            <div>
-                <div class="shadcn-stat-value" id="kpiIgViews" style="color: #e1306c;">0</div>
-                <div class="shadcn-stat-note" id="kpiIgVisitors">0 visitors from Instagram profile &amp; ads</div>
-            </div>
-        </div>
-
-        <!-- Google Traffic -->
-        <div class="shadcn-stat-card" style="min-width: 0; overflow: hidden; border-left: 3px solid #ea4335;">
-            <div class="shadcn-stat-top">
-                <span class="shadcn-stat-title">Google Traffic</span>
-                <div class="shadcn-stat-icon-wrap" style="background: rgba(234, 67, 53, 0.12); color: #ea4335;">
-                    <i class="fa-brands fa-google"></i>
-                </div>
-            </div>
-            <div>
-                <div class="shadcn-stat-value" id="kpiGoogViews" style="color: #ea4335;">0</div>
-                <div class="shadcn-stat-note" id="kpiGoogVisitors">0 search &amp; ad clicks</div>
-            </div>
-        </div>
-
-        <!-- Top Performing Campaign -->
-        <div class="shadcn-stat-card" style="min-width: 0; overflow: hidden; border-left: 3px solid #8b5cf6;">
-            <div class="shadcn-stat-top">
-                <span class="shadcn-stat-title">Top Campaign</span>
-                <div class="shadcn-stat-icon-wrap" style="background: rgba(139, 92, 246, 0.12); color: #8b5cf6;">
-                    <i class="fa-solid fa-trophy"></i>
-                </div>
-            </div>
-            <div>
-                <div class="shadcn-stat-value" id="kpiTopCampaign" style="font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.4; color: #8b5cf6;">None</div>
-                <div class="shadcn-stat-note">Highest traffic campaign</div>
-            </div>
-        </div>
-
-        <!-- Total Sessions from Campaigns -->
-        <div class="shadcn-stat-card" style="min-width: 0; overflow: hidden; border-left: 3px solid #10b981;">
-            <div class="shadcn-stat-top">
-                <span class="shadcn-stat-title">All Marketing Sessions</span>
-                <div class="shadcn-stat-icon-wrap" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">
-                    <i class="fa-solid fa-users"></i>
-                </div>
-            </div>
-            <div>
-                <div class="shadcn-stat-value" id="kpiTotalSessions" style="color: #10b981;">0</div>
-                <div class="shadcn-stat-note">Across all sources in period</div>
-            </div>
-        </div>
+    <div class="shadcn-card-body" style="overflow-x: auto;">
+        <table class="wp-list-table widefat fixed striped" style="margin: 0; font-size: 12px;">
+            <thead>
+                <tr>
+                    <th style="font-weight: 600; font-size: 11.5px; color: #71717a; width: 14%;">Time</th>
+                    <th style="font-weight: 600; font-size: 11.5px; color: #71717a; width: 16%;">Source</th>
+                    <th style="font-weight: 600; font-size: 11.5px; color: #71717a; width: 22%;">Campaign</th>
+                    <th style="font-weight: 600; font-size: 11.5px; color: #71717a; width: 28%;">Page Visited</th>
+                    <th style="font-weight: 600; font-size: 11.5px; color: #71717a; width: 10%;">Device</th>
+                    <th style="font-weight: 600; font-size: 11.5px; color: #71717a; width: 10%;">Visitor IP</th>
+                </tr>
+            </thead>
+            <tbody id="recentClicksTableBody">
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 20px; color: #71717a; font-size: 12.5px;">
+                        <i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i> Loading recent clicks...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
     </div>
-
-    <!-- Active Marketing Campaigns Table -->
-    <div class="shadcn-card" style="background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 24px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
-        <div style="padding: 18px 22px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-            <div>
-                <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #09090b; display: flex; align-items: center; gap: 8px;">
-                    <i class="fa-solid fa-bullseye" style="color: #1877f2;"></i> Campaign Performance
-                    <span id="campaignsCountBadge" style="background: #f1f5f9; color: #475569; font-size: 11px; padding: 2px 8px; border-radius: 9999px;">0</span>
-                </h3>
-                <p style="margin: 3px 0 0; font-size: 12px; color: #64748b;">Direct breakdown of traffic by UTM Campaign, Facebook Ad click, and medium</p>
-            </div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <input type="text" id="campaignSearch" onkeyup="filterCampaignsTable()" placeholder="Search campaigns..." class="shadcn-input" style="height: 36px; font-size: 12.5px; width: 220px;">
-            </div>
-        </div>
-
-        <div style="overflow-x: auto;">
-            <table class="wp-list-table widefat fixed striped" style="margin: 0; border: none;">
-                <thead>
-                    <tr style="background: #fafafa; border-bottom: 1px solid #e2e8f0;">
-                        <th style="font-weight: 700; font-size: 12px; color: #475569; width: 26%;">Campaign Name</th>
-                        <th style="font-weight: 700; font-size: 12px; color: #475569; width: 14%;">Source / Medium</th>
-                        <th style="font-weight: 700; font-size: 12px; color: #475569; text-align: right; width: 10%;">Visitors</th>
-                        <th style="font-weight: 700; font-size: 12px; color: #475569; text-align: right; width: 10%;">Pageviews</th>
-                        <th style="font-weight: 700; font-size: 12px; color: #475569; text-align: right; width: 10%;">Sessions</th>
-                        <th style="font-weight: 700; font-size: 12px; color: #475569; text-align: right; width: 12%;">Product Visits</th>
-                        <th style="font-weight: 700; font-size: 12px; color: #475569; width: 18%;">Top Landing Page</th>
-                    </tr>
-                </thead>
-                <tbody id="campaignsTableBody">
-                    <tr>
-                        <td colspan="7" style="text-align: center; padding: 32px; color: #64748b; font-size: 13px;">
-                            <i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i> Loading campaign data...
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Two-Column Layout: All Traffic Sources & Facebook Campaign Guide -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
-
-        <!-- Left: All Traffic Sources Breakdown -->
-        <div class="shadcn-card" style="background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
-            <div style="padding: 16px 20px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #09090b; display: flex; align-items: center; gap: 8px;">
-                    <i class="fa-solid fa-chart-pie" style="color: #6366f1;"></i> Traffic Sources Distribution
-                </h3>
-                <span style="font-size: 11.5px; color: #64748b;">All acquisition channels</span>
-            </div>
-            <div style="padding: 20px;" id="sourcesListContainer">
-                <p style="text-align: center; color: #64748b; font-size: 13px; margin: 0;">Loading sources...</p>
-            </div>
-        </div>
-
-        <!-- Right: Facebook Ads Setup & URL Generator Advice Card -->
-        <div class="shadcn-card" style="background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
-            <div style="padding: 16px 20px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
-                <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #09090b; display: flex; align-items: center; gap: 8px;">
-                    <i class="fa-brands fa-facebook" style="color: #1877f2;"></i> How Facebook Campaign Tracking Works
-                </h3>
-            </div>
-            <div style="padding: 20px;">
-                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 14px;">
-                    <div style="font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 4px;">
-                        <i class="fa-solid fa-circle-check" style="color: #10b981; margin-right: 6px;"></i> Automated Detection
-                    </div>
-                    <p style="margin: 0; font-size: 12px; color: #475569; line-height: 1.5;">
-                        Whenever anyone taps on your Facebook or Instagram ad, Facebook automatically passes <code>fbclid</code> and referrer headers. Our system automatically captures these and attributes all pages they visit!
-                    </p>
-                </div>
-
-                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px; margin-bottom: 14px;">
-                    <div style="font-size: 13px; font-weight: 700; color: #166534; margin-bottom: 4px;">
-                        <i class="fa-solid fa-wand-magic-sparkles" style="color: #16a34a; margin-right: 6px;"></i> Pro-Tip for Meta Ads Manager
-                    </div>
-                    <p style="margin: 0; font-size: 12px; color: #166534; line-height: 1.5;">
-                        In your Facebook Ads Manager, paste this into the <strong>URL Parameters</strong> box:
-                        <br><code style="background: #fff; border: 1px solid #86efac; padding: 3px 6px; border-radius: 4px; display: inline-block; margin-top: 5px; font-size: 11px;">utm_source=facebook&amp;utm_medium=paid&amp;utm_campaign={{campaign.name}}&amp;utm_content={{ad.name}}</code>
-                        <br>Meta will automatically replace <code>{{campaign.name}}</code> with your actual ad campaign name!
-                    </p>
-                </div>
-
-                <button type="button" onclick="openUrlBuilderModal()" class="shadcn-btn shadcn-btn-primary" style="width: 100%; justify-content: center; background: #1877f2; border-color: #1877f2;">
-                    <i class="fa-solid fa-plus-circle" style="margin-right: 6px;"></i> Generate Custom Facebook Ad Link
-                </button>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- Live Campaign Visitor Stream -->
-    <div class="shadcn-card" style="background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
-        <div style="padding: 16px 20px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
-            <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #09090b; display: flex; align-items: center; gap: 8px;">
-                <i class="fa-solid fa-wave-square" style="color: #10b981;"></i> Recent Campaign &amp; Social Visits
-            </h3>
-            <span style="font-size: 11.5px; color: #64748b;">Latest clicks arriving from Facebook, Google, and Ads</span>
-        </div>
-        <div style="overflow-x: auto;">
-            <table class="wp-list-table widefat fixed striped" style="margin: 0; border: none;">
-                <thead>
-                    <tr style="background: #fafafa; border-bottom: 1px solid #e2e8f0;">
-                        <th style="font-weight: 700; font-size: 12px; color: #475569; width: 14%;">Time</th>
-                        <th style="font-weight: 700; font-size: 12px; color: #475569; width: 16%;">Traffic Source</th>
-                        <th style="font-weight: 700; font-size: 12px; color: #475569; width: 22%;">Campaign</th>
-                        <th style="font-weight: 700; font-size: 12px; color: #475569; width: 28%;">Page Visited</th>
-                        <th style="font-weight: 700; font-size: 12px; color: #475569; width: 10%;">Device</th>
-                        <th style="font-weight: 700; font-size: 12px; color: #475569; width: 10%;">Visitor IP</th>
-                    </tr>
-                </thead>
-                <tbody id="recentClicksTableBody">
-                    <tr>
-                        <td colspan="6" style="text-align: center; padding: 24px; color: #64748b; font-size: 13px;">
-                            <i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i> Loading recent clicks...
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
 </div>
 
 <!-- Campaign URL Builder Modal -->

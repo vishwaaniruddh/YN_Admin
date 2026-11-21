@@ -7,108 +7,119 @@ require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 ?>
 
-<div class="content-area" style="padding: 24px;">
-
-    <!-- Page Header -->
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <div style="width: 42px; height: 42px; background: linear-gradient(135deg, #3b82f6, #2563eb); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
-                <i class="fa-solid fa-chart-bar" style="color: #fff; font-size: 18px;"></i>
-            </div>
-            <div>
-                <h1 style="margin: 0; font-size: 22px; font-weight: 700; color: #1e293b;">Product Analytics</h1>
-                <p style="margin: 2px 0 0; font-size: 13px; color: #64748b;">Track product page views, visitor engagement &amp; conversions</p>
-            </div>
+<div class="dashboard-header-banner" style="margin-bottom: 16px;">
+    <div class="dashboard-header-info">
+        <div class="dashboard-greeting">
+            <h1>Product Analytics</h1>
+            <span class="shadcn-badge shadcn-badge-sky" style="font-size: 11px; padding: 2px 8px;">
+                Views &amp; Conversions
+            </span>
         </div>
-        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-            <!-- Date Range Selector -->
-            <div style="display: flex; background: #f1f5f9; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0;">
-                <button class="date-range-btn active" data-range="today" style="padding: 8px 14px; font-size: 13px; font-weight: 500; border: none; cursor: pointer; transition: all .2s; background: #3b82f6; color: #fff;">Today</button>
-                <button class="date-range-btn" data-range="7days" style="padding: 8px 14px; font-size: 13px; font-weight: 500; border: none; cursor: pointer; transition: all .2s; background: transparent; color: #475569;">7 Days</button>
-                <button class="date-range-btn" data-range="30days" style="padding: 8px 14px; font-size: 13px; font-weight: 500; border: none; cursor: pointer; transition: all .2s; background: transparent; color: #475569;">30 Days</button>
-                <button class="date-range-btn" data-range="90days" style="padding: 8px 14px; font-size: 13px; font-weight: 500; border: none; cursor: pointer; transition: all .2s; background: transparent; color: #475569;">90 Days</button>
-            </div>
-            <!-- Export CSV -->
-            <button id="exportCsvBtn" onclick="exportCSV()" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; font-size: 13px; font-weight: 500; color: #fff; background: #10b981; border: none; border-radius: 8px; cursor: pointer; transition: background .2s;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
-                <i class="fa-solid fa-file-csv"></i> Export CSV
-            </button>
+        <p class="dashboard-subtitle">
+            Track product page views, unique shoppers, conversion rates, and purchase intent.
+        </p>
+    </div>
+
+    <div class="dashboard-actions">
+        <!-- Date Range Selector -->
+        <div style="display: flex; background: #f4f4f5; border-radius: 6px; padding: 2px; border: 1px solid #e4e4e7;">
+            <button class="date-range-btn shadcn-btn shadcn-btn-primary" data-range="today" style="height: 28px; font-size: 12px; padding: 0 10px;">Today</button>
+            <button class="date-range-btn shadcn-btn shadcn-btn-ghost" data-range="7days" style="height: 28px; font-size: 12px; padding: 0 10px;">7 Days</button>
+            <button class="date-range-btn shadcn-btn shadcn-btn-ghost" data-range="30days" style="height: 28px; font-size: 12px; padding: 0 10px;">30 Days</button>
+            <button class="date-range-btn shadcn-btn shadcn-btn-ghost" data-range="90days" style="height: 28px; font-size: 12px; padding: 0 10px;">90 Days</button>
+        </div>
+
+        <!-- Export CSV -->
+        <button id="exportCsvBtn" onclick="exportCSV()" class="shadcn-btn shadcn-btn-outline" style="height: 32px; font-size: 12px;">
+            <i class="fa-solid fa-file-csv" style="margin-right: 4px;"></i> Export CSV
+        </button>
+    </div>
+</div>
+
+<!-- Navigation Tabs (Aligned with products.php tab bar) -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+    <div style="display: flex; align-items: center; gap: 6px; font-size: 13px;">
+        <a href="analytics.php" class="shadcn-btn shadcn-btn-outline" style="height: 30px; font-size: 12px; padding: 0 12px; font-weight: 500; text-decoration: none;">
+            Overview
+        </a>
+        <a href="analytics-campaigns.php" class="shadcn-btn shadcn-btn-outline" style="height: 30px; font-size: 12px; padding: 0 12px; font-weight: 500; text-decoration: none;">
+            Facebook &amp; Campaigns
+        </a>
+        <a href="analytics-products.php" class="shadcn-btn shadcn-btn-primary" style="height: 30px; font-size: 12px; padding: 0 12px; font-weight: 500; text-decoration: none;">
+            Products
+        </a>
+        <a href="analytics-categories.php" class="shadcn-btn shadcn-btn-outline" style="height: 30px; font-size: 12px; padding: 0 12px; font-weight: 500; text-decoration: none;">
+            Categories
+        </a>
+        <a href="analytics-pages.php" class="shadcn-btn shadcn-btn-outline" style="height: 30px; font-size: 12px; padding: 0 12px; font-weight: 500; text-decoration: none;">
+            Pages &amp; Search
+        </a>
+    </div>
+</div>
+
+<!-- Compact Neutral KPI Cards Grid -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 16px;">
+    <!-- Total Page Views -->
+    <div class="shadcn-card" style="padding: 12px 14px; margin-bottom: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 11px; font-weight: 600; color: #71717a; text-transform: uppercase; letter-spacing: 0.02em;">Total Product Views</span>
+            <i class="fa-solid fa-eye" style="color: #a1a1aa; font-size: 12px;"></i>
+        </div>
+        <div>
+            <div class="shadcn-stat-value" id="kpiTotalViews" style="font-size: 18px; font-weight: 700; color: #09090b; line-height: 1.2;">0</div>
+            <div class="shadcn-stat-note" style="font-size: 11px; color: #71717a; margin-top: 2px;">Catalog visits in period</div>
         </div>
     </div>
 
-    <!-- KPI Cards (Standard ShadCN Stat Cards) -->
-    <div class="shadcn-stat-grid" style="margin-bottom: 24px;">
-        <!-- Total Page Views -->
-        <div class="shadcn-stat-card" style="min-width: 0; overflow: hidden;">
-            <div class="shadcn-stat-top">
-                <span class="shadcn-stat-title">Total Page Views</span>
-                <div class="shadcn-stat-icon-wrap" style="background: rgba(59, 130, 246, 0.12); color: #3b82f6;">
-                    <i class="fa-solid fa-eye"></i>
-                </div>
-            </div>
-            <div>
-                <div class="shadcn-stat-value" id="kpiTotalViews">0</div>
-                <div class="shadcn-stat-note" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">All product page visits</div>
-            </div>
+    <!-- Most Viewed Product -->
+    <div class="shadcn-card" style="padding: 12px 14px; margin-bottom: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 11px; font-weight: 600; color: #71717a; text-transform: uppercase; letter-spacing: 0.02em;">Most Viewed Item</span>
+            <i class="fa-solid fa-fire" style="color: #a1a1aa; font-size: 12px;"></i>
         </div>
-
-        <!-- Most Viewed Product -->
-        <div class="shadcn-stat-card" style="min-width: 0; overflow: hidden;">
-            <div class="shadcn-stat-top">
-                <span class="shadcn-stat-title">Most Viewed Product</span>
-                <div class="shadcn-stat-icon-wrap" style="background: rgba(245, 158, 11, 0.12); color: #d97706;">
-                    <i class="fa-solid fa-fire"></i>
-                </div>
-            </div>
-            <div style="min-width: 0; overflow: hidden;">
-                <div class="shadcn-stat-value" id="kpiMostViewedCount" style="font-size: 20px;">0 views</div>
-                <div class="shadcn-stat-note" id="kpiMostViewed" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; max-width: 100%; color: #475569;" title="No product views yet">No views recorded yet</div>
-            </div>
-        </div>
-
-        <!-- Highest Conversion -->
-        <div class="shadcn-stat-card" style="min-width: 0; overflow: hidden;">
-            <div class="shadcn-stat-top">
-                <span class="shadcn-stat-title">Highest Conversion</span>
-                <div class="shadcn-stat-icon-wrap" style="background: rgba(16, 185, 129, 0.12); color: #059669;">
-                    <i class="fa-solid fa-arrow-trend-up"></i>
-                </div>
-            </div>
-            <div style="min-width: 0; overflow: hidden;">
-                <div class="shadcn-stat-value" id="kpiHighestConversionRate" style="font-size: 20px; color: #059669;">0.00%</div>
-                <div class="shadcn-stat-note" id="kpiHighestConversion" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; max-width: 100%; color: #475569;" title="No orders yet">No orders recorded yet</div>
-            </div>
-        </div>
-
-        <!-- Total Orders from Views -->
-        <div class="shadcn-stat-card" style="min-width: 0; overflow: hidden;">
-            <div class="shadcn-stat-top">
-                <span class="shadcn-stat-title">Orders from Views</span>
-                <div class="shadcn-stat-icon-wrap" style="background: rgba(239, 68, 68, 0.12); color: #ef4444;">
-                    <i class="fa-solid fa-bag-shopping"></i>
-                </div>
-            </div>
-            <div>
-                <div class="shadcn-stat-value" id="kpiTotalOrders">0</div>
-                <div class="shadcn-stat-note" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Converted store purchases</div>
-            </div>
+        <div style="min-width: 0; overflow: hidden;">
+            <div class="shadcn-stat-value" id="kpiMostViewedCount" style="font-size: 18px; font-weight: 700; color: #09090b; line-height: 1.2;">0 views</div>
+            <div class="shadcn-stat-note" id="kpiMostViewed" style="font-size: 11px; color: #71717a; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="No product views yet">No views recorded yet</div>
         </div>
     </div>
 
-    <!-- Products Table Card -->
-    <div class="postbox" style="background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden;">
-        <div class="postbox-header" style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; gap: 10px;">
-            <h2 style="margin: 0; font-size: 15px; font-weight: 600; color: #1e293b;">
-                <i class="fa-solid fa-box-open" style="margin-right: 6px; color: #3b82f6;"></i>All Products
-                <span id="productCount" style="font-weight: 400; color: #94a3b8; font-size: 13px; margin-left: 6px;"></span>
-            </h2>
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <div style="position: relative;">
-                    <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 13px;"></i>
-                    <input type="text" id="searchInput" placeholder="Search by name or SKU..." style="padding: 8px 12px 8px 32px; font-size: 13px; border: 1px solid #e2e8f0; border-radius: 8px; width: 240px; outline: none; transition: border-color .2s; color: #334155; background: #f8fafc;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'">
-                </div>
-            </div>
+    <!-- Highest Conversion -->
+    <div class="shadcn-card" style="padding: 12px 14px; margin-bottom: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 11px; font-weight: 600; color: #71717a; text-transform: uppercase; letter-spacing: 0.02em;">Top Conversion</span>
+            <i class="fa-solid fa-arrow-trend-up" style="color: #a1a1aa; font-size: 12px;"></i>
         </div>
-        <div class="postbox-body" style="padding: 0;">
+        <div style="min-width: 0; overflow: hidden;">
+            <div class="shadcn-stat-value" id="kpiHighestConversionRate" style="font-size: 18px; font-weight: 700; color: #09090b; line-height: 1.2;">0.00%</div>
+            <div class="shadcn-stat-note" id="kpiHighestConversion" style="font-size: 11px; color: #71717a; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="No orders yet">No orders recorded yet</div>
+        </div>
+    </div>
+
+    <!-- Total Orders from Views -->
+    <div class="shadcn-card" style="padding: 12px 14px; margin-bottom: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 11px; font-weight: 600; color: #71717a; text-transform: uppercase; letter-spacing: 0.02em;">Orders from Views</span>
+            <i class="fa-solid fa-bag-shopping" style="color: #a1a1aa; font-size: 12px;"></i>
+        </div>
+        <div>
+            <div class="shadcn-stat-value" id="kpiTotalOrders" style="font-size: 18px; font-weight: 700; color: #09090b; line-height: 1.2;">0</div>
+            <div class="shadcn-stat-note" style="font-size: 11px; color: #71717a; margin-top: 2px;">Converted store purchases</div>
+        </div>
+    </div>
+</div>
+
+<!-- Products Table Card -->
+<div class="shadcn-card" style="margin-bottom: 16px;">
+    <div class="shadcn-card-header" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; flex-wrap: wrap; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <h2 class="shadcn-card-title"><i class="fa-solid fa-box-open" style="margin-right: 6px; color: #71717a;"></i> Product Performance</h2>
+            <span id="productCount" class="shadcn-badge shadcn-badge-sky" style="font-size: 10.5px; padding: 1px 6px;"></span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <input type="text" id="searchInput" placeholder="Search by name or SKU..." class="form-control" style="height: 30px; font-size: 12px; width: 220px;">
+        </div>
+    </div>
+    <div class="shadcn-card-body">
             <!-- Loading State -->
             <div id="loadingState" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; gap: 12px;">
                 <div style="width: 36px; height: 36px; border: 3px solid #e2e8f0; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
@@ -155,13 +166,12 @@ require_once __DIR__ . '/includes/sidebar.php';
             </div>
 
             <!-- Pagination -->
-            <div id="paginationWrapper" style="display: none; padding: 16px 20px; border-top: 1px solid #e2e8f0; display: none; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+            <div id="paginationWrapper" style="display: none; padding: 16px 20px; border-top: 1px solid #e2e8f0; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
                 <p id="paginationInfo" style="margin: 0; font-size: 13px; color: #64748b;"></p>
                 <div id="paginationControls" style="display: flex; align-items: center; gap: 4px;"></div>
             </div>
         </div>
     </div>
-</div>
 
 <style>
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -552,13 +562,15 @@ require_once __DIR__ . '/includes/sidebar.php';
     document.querySelectorAll('.date-range-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
             document.querySelectorAll('.date-range-btn').forEach(function(b) {
-                b.style.background = 'transparent';
-                b.style.color = '#475569';
-                b.classList.remove('active');
+                b.className = 'date-range-btn shadcn-btn shadcn-btn-ghost';
+                b.style.height = '28px';
+                b.style.fontSize = '12px';
+                b.style.padding = '0 10px';
             });
-            this.style.background = '#3b82f6';
-            this.style.color = '#fff';
-            this.classList.add('active');
+            this.className = 'date-range-btn shadcn-btn shadcn-btn-primary';
+            this.style.height = '28px';
+            this.style.fontSize = '12px';
+            this.style.padding = '0 10px';
             currentRange = this.getAttribute('data-range');
             currentSearch = '';
             searchInputEl.value = '';
