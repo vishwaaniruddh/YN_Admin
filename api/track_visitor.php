@@ -27,9 +27,17 @@ $user_agent = trim($_SERVER['HTTP_USER_AGENT'] ?? $input['user_agent'] ?? '');
 $ua_lower = strtolower($user_agent);
 $session_id = trim($input['session_id'] ?? '');
 
-// Detect Search Engine Crawlers & Bots (e.g. Googlebot 66.249.xx.xx)
+// Detect Search Engine Crawlers & Bots (e.g. Googlebot, Bingbot, Baiduspider, etc.)
 $is_bot = false;
-if (preg_match('/(googlebot|bingbot|yandexbot|baiduspider|duckduckbot|slurp|facebookexternalhit|twitterbot|ahrefsbot|semrushbot|dotbot|rogerbot|curl|wget|python|php)/i', $user_agent) || str_starts_with($ip, '66.249.')) {
+if (
+    empty($user_agent) ||
+    preg_match('/(googlebot|adsbot-google|mediapartners-google|feedfetcher-google|bingbot|msnbot|bingpreview|yandexbot|baiduspider|duckduckbot|slurp|facebookexternalhit|meta-externalagent|twitterbot|linkedinbot|pinterestbot|ahrefsbot|semrushbot|dotbot|rogerbot|petalbot|applebot|bytespider|curl|wget|python|php|headless|crawler|spider|bot\b)/i', $user_agent) ||
+    str_starts_with($ip, '66.249.') || // Googlebot IP range
+    str_starts_with($ip, '202.8.') ||  // Googlebot crawler subnet
+    str_starts_with($ip, '64.233.') || // Google subnet
+    str_starts_with($ip, '72.14.') ||  // Google subnet
+    str_starts_with($ip, '74.125.')    // Google subnet
+) {
     $is_bot = true;
 }
 
@@ -37,6 +45,12 @@ if (preg_match('/(googlebot|bingbot|yandexbot|baiduspider|duckduckbot|slurp|face
 $queryString = parse_url($page_url, PHP_URL_QUERY) ?? '';
 if (preg_match('/^[a-z]=\d+$/i', $queryString)) {
     $is_bot = true;
+}
+
+// Do not count or log Googlebot or any crawler anywhere
+if ($is_bot) {
+    echo json_encode(['success' => true, 'ignored' => 'bot']);
+    exit;
 }
 
 // Parse query string for campaign parameters if present

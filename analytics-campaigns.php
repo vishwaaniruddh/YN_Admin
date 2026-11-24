@@ -430,13 +430,20 @@ function filterCampaignsTable() {
 
 function renderSourcesDistribution(sources, totalViews) {
     const container = document.getElementById('sourcesListContainer');
-    if (!sources || sources.length === 0) {
+    // Filter out any crawler/bot entries
+    const humanSources = (sources || []).filter(s => 
+        s.traffic_source !== 'Googlebot / Crawler' && 
+        !(s.traffic_source || '').toLowerCase().includes('bot') && 
+        !(s.traffic_source || '').toLowerCase().includes('crawler')
+    );
+
+    if (!humanSources.length) {
         container.innerHTML = '<p style="text-align: center; color: #64748b; font-size: 13px;">No traffic sources recorded yet.</p>';
         return;
     }
 
     let html = '<div style="display: flex; flex-direction: column; gap: 14px;">';
-    sources.forEach(s => {
+    humanSources.forEach(s => {
         const pct = Math.max(0, parseFloat(s.percentage || 0));
         let barColor = '#64748b';
         let icon = 'fa-solid fa-arrow-pointer';
@@ -448,7 +455,6 @@ function renderSourcesDistribution(sources, totalViews) {
         else if (s.traffic_source === 'Google Search') { barColor = '#f59e0b'; icon = 'fa-brands fa-google'; }
         else if (s.traffic_source === 'WhatsApp') { barColor = '#25d366'; icon = 'fa-brands fa-whatsapp'; }
         else if (s.traffic_source === 'Direct') { barColor = '#10b981'; icon = 'fa-solid fa-bolt'; }
-        else if (s.traffic_source === 'Googlebot / Crawler') { barColor = '#6366f1'; icon = 'fa-solid fa-robot'; }
 
         html += `
             <div>
@@ -473,16 +479,26 @@ function renderSourcesDistribution(sources, totalViews) {
 
 function renderRecentClicks(logs) {
     const tbody = document.getElementById('recentClicksTableBody');
-    if (!logs || logs.length === 0) {
+    // Strictly filter out any bots/crawlers
+    const humanLogs = (logs || []).filter(l => 
+        l.traffic_source !== 'Googlebot / Crawler' && 
+        l.device_type !== 'Search Bot' && 
+        !(l.traffic_source || '').toLowerCase().includes('bot') && 
+        !(l.traffic_source || '').toLowerCase().includes('crawler')
+    );
+
+    if (!humanLogs.length) {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 20px; color:#64748b;">No recent campaign visits found.</td></tr>';
         return;
     }
 
     let html = '';
-    logs.forEach(l => {
+    humanLogs.forEach(l => {
         let badgeColor = '#64748b';
         if ((l.traffic_source || '').includes('Facebook')) badgeColor = '#1877f2';
         else if ((l.traffic_source || '').includes('Instagram')) badgeColor = '#e1306c';
+        else if (l.traffic_source === 'Google Ads') badgeColor = '#ea4335';
+        else if (l.traffic_source === 'Google Search') badgeColor = '#f59e0b';
         else if ((l.traffic_source || '').includes('Google')) badgeColor = '#ea4335';
 
         const camp = l.utm_campaign || (l.fbclid ? 'Facebook Ad (fbclid)' : 'General Visitor');

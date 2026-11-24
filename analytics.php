@@ -25,6 +25,9 @@ if ($range === 'today') {
     $interval_sql = "INTERVAL 90 DAY";
 }
 
+// Bot & Crawler exclusion filter (Googlebot, search crawlers, automated bots)
+$bot_filter = "AND (v.traffic_source != 'Googlebot / Crawler' AND v.device_type != 'Search Bot' AND v.traffic_source NOT LIKE '%bot%' AND v.traffic_source NOT LIKE '%crawler%')";
+
 $total_pageviews = 0;
 $unique_visitors = 0;
 $total_sessions = 0;
@@ -53,14 +56,14 @@ try {
     $checkout_abandoned_count = (int)($cRow['ab_cnt'] ?? 0);
 } catch (Exception $e) {}
 
-// 1. Total Pageviews, Unique Visitors & Sessions
+// 1. Total Pageviews, Unique Visitors & Sessions (excluding crawlers)
 try {
     $statsStmt = $pdo->query("SELECT 
         COUNT(*) as total_pageviews, 
-        COUNT(DISTINCT ip_address) as unique_visitors,
-        COUNT(DISTINCT session_id) as total_sessions
-        FROM visitor_logs 
-        WHERE created_at >= DATE_SUB(NOW(), $interval_sql)");
+        COUNT(DISTINCT v.ip_address) as unique_visitors,
+        COUNT(DISTINCT v.session_id) as total_sessions
+        FROM visitor_logs v 
+        WHERE v.created_at >= DATE_SUB(NOW(), $interval_sql) $bot_filter");
     $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
     $total_pageviews = $stats['total_pageviews'] ?? 0;
     $unique_visitors = $stats['unique_visitors'] ?? 0;
@@ -72,20 +75,20 @@ try {
 // 1b. Bounce Rate
 try {
     $bounceStmt = $pdo->query("SELECT COUNT(*) as bounced FROM (
-        SELECT session_id, COUNT(*) as hits FROM visitor_logs 
-        WHERE session_id IS NOT NULL AND session_id != '' AND created_at >= DATE_SUB(NOW(), $interval_sql) 
-        GROUP BY session_id HAVING hits = 1
+        SELECT v.session_id, COUNT(*) as hits FROM visitor_logs v 
+        WHERE v.session_id IS NOT NULL AND v.session_id != '' AND v.created_at >= DATE_SUB(NOW(), $interval_sql) $bot_filter
+        GROUP BY v.session_id HAVING hits = 1
     ) sub");
     $bounceRow = $bounceStmt->fetch(PDO::FETCH_ASSOC);
     $bounce_rate = round(((int)($bounceRow['bounced'] ?? 0) / $total_sessions) * 100, 1);
 } catch (Exception $e) {}
 
-// 2. Traffic Sources Breakdown
+// 2. Traffic Sources Breakdown (human visitors only)
 try {
-    $sourcesStmt = $pdo->query("SELECT traffic_source, COUNT(*) as cnt 
-        FROM visitor_logs 
-        WHERE created_at >= DATE_SUB(NOW(), $interval_sql) 
-        GROUP BY traffic_source 
+    $sourcesStmt = $pdo->query("SELECT v.traffic_source, COUNT(*) as cnt 
+        FROM visitor_logs v 
+        WHERE v.created_at >= DATE_SUB(NOW(), $interval_sql) $bot_filter
+        GROUP BY v.traffic_source 
         ORDER BY cnt DESC");
     $traffic_sources = $sourcesStmt->fetchAll(PDO::FETCH_ASSOC);
     if (!empty($traffic_sources)) {
@@ -94,11 +97,11 @@ try {
 } catch (Exception $e) {
 }
 
-// 3. Top Viewed Products (split pid + slug matching with explicit COLLATE)
+// 3. Top Viewed Products (split pid + slug matching with explicit COLLATE, excluding bots)
 try {
     $topProductsStmt = $pdo->query("SELECT p.id, p.name, p.sku, p.main_image, p.price, p.view_count, 
-        (SELECT COUNT(*) FROM visitor_logs v WHERE v.product_id = p.id AND v.created_at >= DATE_SUB(NOW(), $interval_sql)) as pid_views,
-        (SELECT COUNT(*) FROM visitor_logs v WHERE p.slug IS NOT NULL AND p.slug != '' AND v.page_url COLLATE utf8mb4_unicode_ci LIKE CONCAT('%', p.slug COLLATE utf8mb4_unicode_ci, '%') AND v.created_at >= DATE_SUB(NOW(), $interval_sql)) as slug_views
+        (SELECT COUNT(*) FROM visitor_logs v WHERE v.product_id = p.id AND v.created_at >= DATE_SUB(NOW(), $interval_sql) $bot_filter) as pid_views,
+        (SELECT COUNT(*) FROM visitor_logs v WHERE p.slug IS NOT NULL AND p.slug != '' AND v.page_url COLLATE utf8mb4_unicode_ci LIKE CONCAT('%', p.slug COLLATE utf8mb4_unicode_ci, '%') AND v.created_at >= DATE_SUB(NOW(), $interval_sql) $bot_filter) as slug_views
         FROM products p 
         WHERE p.deleted_at IS NULL AND (p.status = 'published' OR p.status IS NULL)
         ORDER BY pid_views DESC, slug_views DESC, p.view_count DESC, p.id DESC 
@@ -111,11 +114,11 @@ try {
 } catch (Exception $e) {
 }
 
-// 4. Top Viewed Categories
+// 4. Top Viewed Categories (excluding bots)
 try {
     $topCatsStmt = $pdo->query("SELECT c.id, c.name, c.slug, 
-        (SELECT COUNT(*) FROM visitor_logs v WHERE v.category_id = c.id AND v.created_at >= DATE_SUB(NOW(), $interval_sql)) as cid_views,
-        (SELECT COUNT(*) FROM visitor_logs v WHERE c.slug IS NOT NULL AND c.slug != '' AND v.page_url COLLATE utf8mb4_unicode_ci LIKE CONCAT('%', c.slug COLLATE utf8mb4_unicode_ci, '%') AND v.created_at >= DATE_SUB(NOW(), $interval_sql)) as slug_views
+        (SELECT COUNT(*) FROM visitor_logs v WHERE v.category_id = c.id AND v.created_at >= DATE_SUB(NOW(), $interval_sql) $bot_filter) as cid_views,
+        (SELECT COUNT(*) FROM visitor_logs v WHERE c.slug IS NOT NULL AND c.slug != '' AND v.page_url COLLATE utf8mb4_unicode_ci LIKE CONCAT('%', c.slug COLLATE utf8mb4_unicode_ci, '%') AND v.created_at >= DATE_SUB(NOW(), $interval_sql) $bot_filter) as slug_views
         FROM categories c 
         WHERE c.deleted_at IS NULL 
         ORDER BY cid_views DESC, slug_views DESC, c.id ASC 
@@ -128,28 +131,28 @@ try {
 } catch (Exception $e) {
 }
 
-// 5. Live Visitor Log Stream
+// 5. Live Visitor Log Stream (excluding bots)
 try {
-    $logsStmt = $pdo->query("SELECT * FROM visitor_logs ORDER BY id DESC LIMIT 30");
+    $logsStmt = $pdo->query("SELECT * FROM visitor_logs v WHERE 1=1 $bot_filter ORDER BY v.id DESC LIMIT 30");
     $recent_logs = $logsStmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
 }
 
-// 6. Device Breakdown
+// 6. Device Breakdown (excluding Search Bot)
 try {
-    $devStmt = $pdo->query("SELECT device_type, COUNT(*) as cnt FROM visitor_logs WHERE created_at >= DATE_SUB(NOW(), $interval_sql) GROUP BY device_type ORDER BY cnt DESC");
+    $devStmt = $pdo->query("SELECT v.device_type, COUNT(*) as cnt FROM visitor_logs v WHERE v.created_at >= DATE_SUB(NOW(), $interval_sql) $bot_filter GROUP BY v.device_type ORDER BY cnt DESC");
     $device_breakdown = $devStmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {}
 
 // 7. Page Type Breakdown
 try {
-    $ptStmt = $pdo->query("SELECT page_type, COUNT(*) as views, COUNT(DISTINCT ip_address) as unique_ips FROM visitor_logs WHERE created_at >= DATE_SUB(NOW(), $interval_sql) GROUP BY page_type ORDER BY views DESC");
+    $ptStmt = $pdo->query("SELECT v.page_type, COUNT(*) as views, COUNT(DISTINCT v.ip_address) as unique_ips FROM visitor_logs v WHERE v.created_at >= DATE_SUB(NOW(), $interval_sql) $bot_filter GROUP BY v.page_type ORDER BY views DESC");
     $page_type_breakdown = $ptStmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {}
 
 // 8. Daily Trend
 try {
-    $trendStmt = $pdo->query("SELECT DATE(created_at) as day, COUNT(*) as views, COUNT(DISTINCT ip_address) as visitors FROM visitor_logs WHERE created_at >= DATE_SUB(NOW(), $interval_sql) GROUP BY DATE(created_at) ORDER BY day ASC");
+    $trendStmt = $pdo->query("SELECT DATE(v.created_at) as day, COUNT(*) as views, COUNT(DISTINCT v.ip_address) as visitors FROM visitor_logs v WHERE v.created_at >= DATE_SUB(NOW(), $interval_sql) $bot_filter GROUP BY DATE(v.created_at) ORDER BY day ASC");
     $daily_trend = $trendStmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {}
 
