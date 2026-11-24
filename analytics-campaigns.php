@@ -139,17 +139,17 @@ require_once __DIR__ . '/includes/sidebar.php';
         </div>
     </div>
 
-    <div class="shadcn-card-body">
+    <div class="shadcn-card-body" style="overflow-x: auto;">
         <table class="wp-list-table widefat fixed striped" style="margin: 0; font-size: 12px;">
             <thead>
                 <tr>
-                    <th style="font-weight: 600; font-size: 11.5px; color: #71717a; width: 28%;">Campaign Name</th>
-                    <th style="font-weight: 600; font-size: 11.5px; color: #71717a; width: 14%;">Source / Medium</th>
-                    <th style="font-weight: 600; font-size: 11.5px; color: #71717a; text-align: right; width: 10%;">Visitors</th>
-                    <th style="font-weight: 600; font-size: 11.5px; color: #71717a; text-align: right; width: 10%;">Views</th>
-                    <th style="font-weight: 600; font-size: 11.5px; color: #71717a; text-align: right; width: 10%;">Sessions</th>
+                    <th style="font-weight: 600; font-size: 11.5px; color: #71717a; width: 24%;">Campaign Name</th>
+                    <th style="font-weight: 600; font-size: 11.5px; color: #71717a; width: 18%; white-space: nowrap;">Source / Medium</th>
+                    <th style="font-weight: 600; font-size: 11.5px; color: #71717a; text-align: right; width: 9%;">Visitors</th>
+                    <th style="font-weight: 600; font-size: 11.5px; color: #71717a; text-align: right; width: 9%;">Views</th>
+                    <th style="font-weight: 600; font-size: 11.5px; color: #71717a; text-align: right; width: 9%;">Sessions</th>
                     <th style="font-weight: 600; font-size: 11.5px; color: #71717a; text-align: right; width: 10%;">Product Views</th>
-                    <th style="font-weight: 600; font-size: 11.5px; color: #71717a; width: 18%;">Top Landing Page</th>
+                    <th style="font-weight: 600; font-size: 11.5px; color: #71717a; width: 21%;">Top Landing Page</th>
                 </tr>
             </thead>
             <tbody id="campaignsTableBody">
@@ -436,13 +436,13 @@ function renderCampaignsTable(list) {
                         <span>${escapeHtml(c.campaign_name)}</span>
                     </div>
                 </td>
-                <td>
-                    <div style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; background: ${fmt.bg}; color: ${fmt.color};">
+                <td style="white-space: nowrap;">
+                    <div style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; background: ${fmt.bg}; color: ${fmt.color}; white-space: nowrap;">
                         <i class="${fmt.icon}"></i>
-                        <span>${escapeHtml(fmt.sourceLabel)}</span>
-                        ${fmt.mediumLabel ? `<span style="opacity: 0.7; font-size: 10px;">• ${escapeHtml(fmt.mediumLabel)}</span>` : ''}
+                        <span style="white-space: nowrap;">${escapeHtml(fmt.sourceLabel)}</span>
+                        ${fmt.mediumLabel ? `<span style="opacity: 0.7; font-size: 10px; white-space: nowrap;">• ${escapeHtml(fmt.mediumLabel)}</span>` : ''}
                     </div>
-                    <div style="font-size: 10px; color: #94a3b8; font-family: monospace; margin-top: 2px;">
+                    <div style="font-size: 10px; color: #94a3b8; font-family: monospace; margin-top: 2px; white-space: nowrap;">
                         ${escapeHtml(c.source)} / ${escapeHtml(c.medium)}
                     </div>
                 </td>
@@ -555,8 +555,8 @@ function renderRecentClicks(logs) {
         html += `
             <tr style="border-bottom: 1px solid #f1f5f9; font-size: 12.5px;">
                 <td style="color: #64748b;">${escapeHtml(l.created_at)}</td>
-                <td>
-                    <span style="display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; background: ${fmt.bg}; color: ${fmt.color};">
+                <td style="white-space: nowrap;">
+                    <span style="display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; background: ${fmt.bg}; color: ${fmt.color}; white-space: nowrap;">
                         <i class="${fmt.icon}"></i> ${escapeHtml(fmt.sourceLabel)}
                     </span>
                 </td>
