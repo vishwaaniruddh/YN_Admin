@@ -8,12 +8,6 @@ require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 
-// Fix collation on visitor_logs table if needed
-try {
-    $pdo->exec("ALTER TABLE visitor_logs CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-} catch (Exception $e) {
-}
-
 // Time filter range (today, 7days, 30days)
 $range = $_GET['range'] ?? '7days';
 $interval_sql = "INTERVAL 7 DAY";
@@ -97,37 +91,105 @@ try {
 } catch (Exception $e) {
 }
 
-// 3. Top Viewed Products (split pid + slug matching with explicit COLLATE, excluding bots)
+// 3. Top Viewed Products (Fast index aggregation on visitor_logs)
 try {
-    $topProductsStmt = $pdo->query("SELECT p.id, p.name, p.sku, p.main_image, p.price, p.view_count, 
-        (SELECT COUNT(*) FROM visitor_logs v WHERE v.product_id = p.id AND v.created_at >= DATE_SUB(NOW(), $interval_sql) $bot_filter) as pid_views,
-        (SELECT COUNT(*) FROM visitor_logs v WHERE p.slug IS NOT NULL AND p.slug != '' AND v.page_url COLLATE utf8mb4_unicode_ci LIKE CONCAT('%', p.slug COLLATE utf8mb4_unicode_ci, '%') AND v.created_at >= DATE_SUB(NOW(), $interval_sql) $bot_filter) as slug_views
-        FROM products p 
-        WHERE p.deleted_at IS NULL AND (p.status = 'published' OR p.status IS NULL)
-        ORDER BY pid_views DESC, slug_views DESC, p.view_count DESC, p.id DESC 
+    $topProductsStmt = $pdo->query("SELECT v.product_id, COUNT(*) as log_views
+        FROM visitor_logs v
+        WHERE v.product_id IS NOT NULL 
+          AND v.product_id > 0 
+          AND v.created_at >= DATE_SUB(NOW(), $interval_sql)
+          $bot_filter
+        GROUP BY v.product_id
+        ORDER BY log_views DESC
         LIMIT 6");
-    $top_products = $topProductsStmt->fetchAll(PDO::FETCH_ASSOC);
-    foreach ($top_products as &$tp) {
-        $tp['log_views'] = max(($tp['pid_views'] ?? 0), ($tp['slug_views'] ?? 0));
+    $topRows = $topProductsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (!empty($topRows)) {
+        $pids = array_column($topRows, 'product_id');
+        $placeholders = implode(',', array_fill(0, count($pids), '?'));
+        $pStmt = $pdo->prepare("SELECT id, name, sku, main_image, price, view_count FROM products WHERE id IN ($placeholders)");
+        $pStmt->execute($pids);
+        $pMap = [];
+        foreach ($pStmt->fetchAll(PDO::FETCH_ASSOC) as $pr) {
+            $pMap[$pr['id']] = $pr;
+        }
+        foreach ($topRows as $tr) {
+            $pid = $tr['product_id'];
+            if (isset($pMap[$pid])) {
+                $item = $pMap[$pid];
+                $item['log_views'] = (int)$tr['log_views'];
+                $top_products[] = $item;
+            }
+        }
     }
-    unset($tp);
+
+    // Fallback if not enough log views: fill from catalog view_count
+    if (count($top_products) < 6) {
+        $needed = 6 - count($top_products);
+        $excludeIds = !empty($top_products) ? array_column($top_products, 'id') : [0];
+        $exPlaceholders = implode(',', array_fill(0, count($excludeIds), '?'));
+        $fbStmt = $pdo->prepare("SELECT id, name, sku, main_image, price, view_count 
+            FROM products 
+            WHERE deleted_at IS NULL AND (status = 'published' OR status IS NULL) AND id NOT IN ($exPlaceholders)
+            ORDER BY view_count DESC, id DESC 
+            LIMIT $needed");
+        $fbStmt->execute($excludeIds);
+        foreach ($fbStmt->fetchAll(PDO::FETCH_ASSOC) as $pr) {
+            $pr['log_views'] = (int)($pr['view_count'] ?? 0);
+            $top_products[] = $pr;
+        }
+    }
 } catch (Exception $e) {
 }
 
-// 4. Top Viewed Categories (excluding bots)
+// 4. Top Viewed Categories (Fast index aggregation on visitor_logs)
 try {
-    $topCatsStmt = $pdo->query("SELECT c.id, c.name, c.slug, 
-        (SELECT COUNT(*) FROM visitor_logs v WHERE v.category_id = c.id AND v.created_at >= DATE_SUB(NOW(), $interval_sql) $bot_filter) as cid_views,
-        (SELECT COUNT(*) FROM visitor_logs v WHERE c.slug IS NOT NULL AND c.slug != '' AND v.page_url COLLATE utf8mb4_unicode_ci LIKE CONCAT('%', c.slug COLLATE utf8mb4_unicode_ci, '%') AND v.created_at >= DATE_SUB(NOW(), $interval_sql) $bot_filter) as slug_views
-        FROM categories c 
-        WHERE c.deleted_at IS NULL 
-        ORDER BY cid_views DESC, slug_views DESC, c.id ASC 
+    $topCatsStmt = $pdo->query("SELECT v.category_id, COUNT(*) as cat_views
+        FROM visitor_logs v
+        WHERE v.category_id IS NOT NULL 
+          AND v.category_id > 0 
+          AND v.created_at >= DATE_SUB(NOW(), $interval_sql)
+          $bot_filter
+        GROUP BY v.category_id
+        ORDER BY cat_views DESC
         LIMIT 5");
-    $top_categories = $topCatsStmt->fetchAll(PDO::FETCH_ASSOC);
-    foreach ($top_categories as &$tc) {
-        $tc['cat_views'] = max(($tc['cid_views'] ?? 0), ($tc['slug_views'] ?? 0));
+    $topCatRows = $topCatsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (!empty($topCatRows)) {
+        $cids = array_column($topCatRows, 'category_id');
+        $cPlaceholders = implode(',', array_fill(0, count($cids), '?'));
+        $cStmt = $pdo->prepare("SELECT id, name, slug FROM categories WHERE id IN ($cPlaceholders)");
+        $cStmt->execute($cids);
+        $cMap = [];
+        foreach ($cStmt->fetchAll(PDO::FETCH_ASSOC) as $cr) {
+            $cMap[$cr['id']] = $cr;
+        }
+        foreach ($topCatRows as $tr) {
+            $cid = $tr['category_id'];
+            if (isset($cMap[$cid])) {
+                $item = $cMap[$cid];
+                $item['cat_views'] = (int)$tr['cat_views'];
+                $top_categories[] = $item;
+            }
+        }
     }
-    unset($tc);
+
+    // Fallback if needed: fill from catalog view_count
+    if (count($top_categories) < 5) {
+        $needed = 5 - count($top_categories);
+        $excludeCids = !empty($top_categories) ? array_column($top_categories, 'id') : [0];
+        $exCPlaceholders = implode(',', array_fill(0, count($excludeCids), '?'));
+        $fbCStmt = $pdo->prepare("SELECT id, name, slug, view_count 
+            FROM categories 
+            WHERE deleted_at IS NULL AND id NOT IN ($exCPlaceholders)
+            ORDER BY view_count DESC, id ASC 
+            LIMIT $needed");
+        $fbCStmt->execute($excludeCids);
+        foreach ($fbCStmt->fetchAll(PDO::FETCH_ASSOC) as $cr) {
+            $cr['cat_views'] = (int)($cr['view_count'] ?? 0);
+            $top_categories[] = $cr;
+        }
+    }
 } catch (Exception $e) {
 }
 
