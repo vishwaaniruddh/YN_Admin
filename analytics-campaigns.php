@@ -342,6 +342,70 @@ function loadCampaignsData() {
         });
 }
 
+function formatSourceMedium(source, medium) {
+    const s = (source || '').toLowerCase().trim();
+    const m = (medium || '').toLowerCase().trim();
+
+    let friendlySource = source || 'Direct';
+    let icon = 'fa-solid fa-globe';
+    let color = '#475569';
+    let bg = '#f1f5f9';
+
+    if (s === 'an' || s === 'audience_network' || s.includes('audience')) {
+        friendlySource = 'Audience Network';
+        icon = 'fa-solid fa-network-wired';
+        color = '#7c3aed';
+        bg = '#ede9fe';
+    } else if (s === 'ig' || s.includes('instagram')) {
+        friendlySource = 'Instagram Ads';
+        icon = 'fa-brands fa-instagram';
+        color = '#db2777';
+        bg = '#fce7f3';
+    } else if (s === 'fb' || s.includes('facebook')) {
+        friendlySource = 'Facebook Ads';
+        icon = 'fa-brands fa-facebook';
+        color = '#1877f2';
+        bg = '#dbeafe';
+    } else if (s === 'wa' || s.includes('whatsapp')) {
+        friendlySource = 'WhatsApp';
+        icon = 'fa-brands fa-whatsapp';
+        color = '#16a34a';
+        bg = '#dcfce7';
+    } else if (s.includes('google')) {
+        friendlySource = (m.includes('cpc') || m.includes('paid') || m.includes('ads')) ? 'Google Ads' : 'Google Search';
+        icon = 'fa-brands fa-google';
+        color = '#ea4335';
+        bg = '#fee2e2';
+    } else if (s.includes('youtube')) {
+        friendlySource = 'YouTube';
+        icon = 'fa-brands fa-youtube';
+        color = '#dc2626';
+        bg = '#fee2e2';
+    }
+
+    let friendlyMedium = medium || '';
+    if (m === 'paid' || m === 'cpc' || m === 'ads' || m === 'ad') {
+        friendlyMedium = 'Paid';
+    } else if (m === 'social' || m === 'organic' || m === 'feed') {
+        friendlyMedium = 'Organic';
+    } else if (m === 'story' || m === 'stories') {
+        friendlyMedium = 'Story';
+    } else if (m === 'reels' || m === 'reel') {
+        friendlyMedium = 'Reels';
+    } else if (m) {
+        friendlyMedium = m.charAt(0).toUpperCase() + m.slice(1);
+    }
+
+    return {
+        sourceLabel: friendlySource,
+        mediumLabel: friendlyMedium,
+        icon: icon,
+        color: color,
+        bg: bg,
+        raw: `${source || ''} / ${medium || ''}`
+    };
+}
+
 function renderCampaignsTable(list) {
     const tbody = document.getElementById('campaignsTableBody');
     if (!list || list.length === 0) {
@@ -361,38 +425,26 @@ function renderCampaignsTable(list) {
 
     let html = '';
     list.forEach(c => {
-        let badgeColor = '#64748b';
-        let badgeIcon = 'fa-solid fa-globe';
-        const srcLower = (c.source || '').toLowerCase();
-
-        if (srcLower.includes('facebook') || srcLower.includes('fb')) {
-            badgeColor = '#1877f2';
-            badgeIcon = 'fa-brands fa-facebook';
-        } else if (srcLower.includes('instagram')) {
-            badgeColor = '#e1306c';
-            badgeIcon = 'fa-brands fa-instagram';
-        } else if (srcLower.includes('google')) {
-            badgeColor = '#ea4335';
-            badgeIcon = 'fa-brands fa-google';
-        } else if (srcLower.includes('whatsapp')) {
-            badgeColor = '#25d366';
-            badgeIcon = 'fa-brands fa-whatsapp';
-        }
-
+        const fmt = formatSourceMedium(c.source, c.medium);
         const landingUrl = c.landing_page || '/';
 
         html += `
             <tr style="border-bottom: 1px solid #f1f5f9;">
                 <td style="font-weight: 700; color: #0f172a; font-size: 13px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="color: ${badgeColor}; font-size: 14px;"><i class="${badgeIcon}"></i></span>
+                        <span style="color: ${fmt.color}; font-size: 14px;"><i class="${fmt.icon}"></i></span>
                         <span>${escapeHtml(c.campaign_name)}</span>
                     </div>
                 </td>
                 <td>
-                    <span style="display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; background: #f1f5f9; color: #334155; text-transform: uppercase;">
+                    <div style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; background: ${fmt.bg}; color: ${fmt.color};">
+                        <i class="${fmt.icon}"></i>
+                        <span>${escapeHtml(fmt.sourceLabel)}</span>
+                        ${fmt.mediumLabel ? `<span style="opacity: 0.7; font-size: 10px;">• ${escapeHtml(fmt.mediumLabel)}</span>` : ''}
+                    </div>
+                    <div style="font-size: 10px; color: #94a3b8; font-family: monospace; margin-top: 2px;">
                         ${escapeHtml(c.source)} / ${escapeHtml(c.medium)}
-                    </span>
+                    </div>
                 </td>
                 <td style="text-align: right; font-weight: 700; color: #0284c7; font-size: 13px;">
                     ${Number(c.visitors || 0).toLocaleString()}
@@ -419,12 +471,15 @@ function renderCampaignsTable(list) {
 
 function filterCampaignsTable() {
     const q = document.getElementById('campaignSearch').value.toLowerCase();
-    const filtered = campaignsData.filter(c => 
-        (c.campaign_name && c.campaign_name.toLowerCase().includes(q)) ||
-        (c.source && c.source.toLowerCase().includes(q)) ||
-        (c.medium && c.medium.toLowerCase().includes(q)) ||
-        (c.landing_page && c.landing_page.toLowerCase().includes(q))
-    );
+    const filtered = campaignsData.filter(c => {
+        const fmt = formatSourceMedium(c.source, c.medium);
+        return (c.campaign_name && c.campaign_name.toLowerCase().includes(q)) ||
+            (c.source && c.source.toLowerCase().includes(q)) ||
+            (c.medium && c.medium.toLowerCase().includes(q)) ||
+            (fmt.sourceLabel && fmt.sourceLabel.toLowerCase().includes(q)) ||
+            (fmt.mediumLabel && fmt.mediumLabel.toLowerCase().includes(q)) ||
+            (c.landing_page && c.landing_page.toLowerCase().includes(q));
+    });
     renderCampaignsTable(filtered);
 }
 
@@ -494,21 +549,15 @@ function renderRecentClicks(logs) {
 
     let html = '';
     humanLogs.forEach(l => {
-        let badgeColor = '#64748b';
-        if ((l.traffic_source || '').includes('Facebook')) badgeColor = '#1877f2';
-        else if ((l.traffic_source || '').includes('Instagram')) badgeColor = '#e1306c';
-        else if (l.traffic_source === 'Google Ads') badgeColor = '#ea4335';
-        else if (l.traffic_source === 'Google Search') badgeColor = '#f59e0b';
-        else if ((l.traffic_source || '').includes('Google')) badgeColor = '#ea4335';
-
+        const fmt = formatSourceMedium(l.utm_source || l.traffic_source, l.utm_medium);
         const camp = l.utm_campaign || (l.fbclid ? 'Facebook Ad (fbclid)' : 'General Visitor');
 
         html += `
             <tr style="border-bottom: 1px solid #f1f5f9; font-size: 12.5px;">
                 <td style="color: #64748b;">${escapeHtml(l.created_at)}</td>
                 <td>
-                    <span style="display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; color: #fff; background: ${badgeColor};">
-                        ${escapeHtml(l.traffic_source || 'Unknown')}
+                    <span style="display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; background: ${fmt.bg}; color: ${fmt.color};">
+                        <i class="${fmt.icon}"></i> ${escapeHtml(fmt.sourceLabel)}
                     </span>
                 </td>
                 <td style="font-weight: 600; color: #0f172a;">${escapeHtml(camp)}</td>

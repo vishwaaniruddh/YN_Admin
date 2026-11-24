@@ -78,13 +78,17 @@ $traffic_source = 'Direct';
 
 if ($is_bot) {
     $traffic_source = 'Googlebot / Crawler';
-} elseif (!empty($fbclid) || ($source_lower === 'facebook' && (!empty($utm_campaign) || in_array($medium_lower, ['cpc', 'paid', 'ads', 'ad', 'feed', 'story', 'reels', 'boost'])))) {
+} elseif (!empty($fbclid) || (in_array($source_lower, ['facebook', 'fb']) && (!empty($utm_campaign) || in_array($medium_lower, ['cpc', 'paid', 'ads', 'ad', 'feed', 'story', 'reels', 'boost'])))) {
     $traffic_source = 'Facebook Ads';
-} elseif ($source_lower === 'instagram' && (!empty($utm_campaign) || in_array($medium_lower, ['cpc', 'paid', 'ads', 'ad', 'feed', 'story', 'reels']))) {
+} elseif (in_array($source_lower, ['instagram', 'ig']) && (!empty($utm_campaign) || in_array($medium_lower, ['cpc', 'paid', 'ads', 'ad', 'feed', 'story', 'reels', 'boost']))) {
     $traffic_source = 'Instagram Ads';
-} elseif (str_contains($ref_lower, 'facebook.com') || str_contains($ref_lower, 'fb.me') || $source_lower === 'facebook' || $source_lower === 'fb') {
+} elseif (in_array($source_lower, ['an', 'audience_network', 'audiencenetwork'])) {
+    $traffic_source = 'Audience Network (Meta)';
+} elseif (in_array($source_lower, ['wa', 'whatsapp'])) {
+    $traffic_source = in_array($medium_lower, ['cpc', 'paid', 'ads']) ? 'WhatsApp Ads' : 'WhatsApp';
+} elseif (str_contains($ref_lower, 'facebook.com') || str_contains($ref_lower, 'fb.me') || in_array($source_lower, ['facebook', 'fb'])) {
     $traffic_source = 'Facebook (Organic)';
-} elseif (str_contains($ref_lower, 'instagram.com') || str_contains($ref_lower, 'l.instagram.com') || $source_lower === 'instagram') {
+} elseif (str_contains($ref_lower, 'instagram.com') || str_contains($ref_lower, 'l.instagram.com') || in_array($source_lower, ['instagram', 'ig'])) {
     $traffic_source = 'Instagram (Organic)';
 } elseif (!empty($gclid) || ($source_lower === 'google' && in_array($medium_lower, ['cpc', 'paid', 'ads', 'adwords']))) {
     $traffic_source = 'Google Ads';

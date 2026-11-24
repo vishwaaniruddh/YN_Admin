@@ -204,24 +204,25 @@ try {
             $totalVisitors = (int)$totStats['total_visitors'];
             $totalSessions = max(1, (int)$totStats['total_sessions']);
 
-            // 2. Facebook Traffic (Ads + Organic)
+            // 2. Facebook Traffic (Ads + Organic + Meta Audience Network)
             $fbStats = $pdo->query("SELECT 
                 COUNT(*) as total_fb_views,
                 COUNT(DISTINCT ip_address) as total_fb_visitors,
                 COUNT(DISTINCT session_id) as total_fb_sessions,
-                SUM(CASE WHEN traffic_source = 'Facebook Ads' OR (utm_source LIKE '%facebook%' AND (utm_campaign IS NOT NULL AND utm_campaign != '' OR fbclid IS NOT NULL)) THEN 1 ELSE 0 END) as fb_ads_views,
-                COUNT(DISTINCT CASE WHEN traffic_source = 'Facebook Ads' OR (utm_source LIKE '%facebook%' AND (utm_campaign IS NOT NULL AND utm_campaign != '' OR fbclid IS NOT NULL)) THEN ip_address END) as fb_ads_visitors
+                SUM(CASE WHEN traffic_source = 'Facebook Ads' OR utm_source IN ('fb', 'facebook', 'an') OR (utm_source LIKE '%facebook%' AND (utm_campaign IS NOT NULL AND utm_campaign != '' OR fbclid IS NOT NULL)) OR fbclid IS NOT NULL THEN 1 ELSE 0 END) as fb_ads_views,
+                COUNT(DISTINCT CASE WHEN traffic_source = 'Facebook Ads' OR utm_source IN ('fb', 'facebook', 'an') OR (utm_source LIKE '%facebook%' AND (utm_campaign IS NOT NULL AND utm_campaign != '' OR fbclid IS NOT NULL)) OR fbclid IS NOT NULL THEN ip_address END) as fb_ads_visitors
                 FROM visitor_logs v
-                WHERE (traffic_source LIKE '%Facebook%' OR utm_source LIKE '%facebook%' OR fbclid IS NOT NULL) $date_filter $bot_filter")->fetch(PDO::FETCH_ASSOC);
+                WHERE (traffic_source LIKE '%Facebook%' OR utm_source IN ('facebook', 'fb', 'an') OR utm_source LIKE '%facebook%' OR fbclid IS NOT NULL) $date_filter $bot_filter")->fetch(PDO::FETCH_ASSOC);
 
-            // 3. Instagram Traffic
+            // 3. Instagram Traffic (recognizing 'ig' and 'instagram')
             $igStats = $pdo->query("SELECT 
                 COUNT(*) as total_ig_views,
                 COUNT(DISTINCT ip_address) as total_ig_visitors,
                 COUNT(DISTINCT session_id) as total_ig_sessions,
-                SUM(CASE WHEN traffic_source = 'Instagram Ads' THEN 1 ELSE 0 END) as ig_ads_views
+                SUM(CASE WHEN traffic_source = 'Instagram Ads' OR utm_source IN ('ig', 'instagram') THEN 1 ELSE 0 END) as ig_ads_views,
+                COUNT(DISTINCT CASE WHEN traffic_source = 'Instagram Ads' OR utm_source IN ('ig', 'instagram') THEN ip_address END) as ig_ads_visitors
                 FROM visitor_logs v
-                WHERE (traffic_source LIKE '%Instagram%' OR utm_source LIKE '%instagram%') $date_filter $bot_filter")->fetch(PDO::FETCH_ASSOC);
+                WHERE (traffic_source LIKE '%Instagram%' OR utm_source IN ('instagram', 'ig')) $date_filter $bot_filter")->fetch(PDO::FETCH_ASSOC);
 
             // 4. Google Traffic (Ads + Search — crawlers strictly excluded)
             $googStats = $pdo->query("SELECT 
@@ -248,7 +249,8 @@ try {
                 WHERE ((v.utm_campaign IS NOT NULL AND v.utm_campaign != '') 
                     OR (v.fbclid IS NOT NULL AND v.fbclid != '') 
                     OR (v.gclid IS NOT NULL AND v.gclid != '')
-                    OR v.traffic_source IN ('Facebook Ads', 'Instagram Ads', 'Google Ads'))
+                    OR v.traffic_source IN ('Facebook Ads', 'Instagram Ads', 'Google Ads')
+                    OR v.utm_source IN ('fb', 'ig', 'an', 'wa', 'facebook', 'instagram', 'google'))
                     $date_filter $bot_filter
                 GROUP BY campaign_name, source, medium
                 ORDER BY visitors DESC, views DESC
