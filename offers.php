@@ -1433,12 +1433,21 @@ function buildOfferPreviewHTML(cfg, options = {}) {
     const effText = isHero && hasImg ? '#FFFFFF' : text;
     const effSubText = isHero && hasImg ? '#FDE68A' : accent;
 
+    const copyPad = (() => {
+        if (compact) return '18px 16px';
+        if (isHero) return '54px 30px 30px';
+        if (layout === 'split_left' && isSplit && hasImg) return '46px 30px 28px';
+        if (layout === 'split_right' && !isSplit) return '46px 24px 26px';
+        if (layout === 'text_card' || !hasImg) return '46px 30px 28px';
+        return '28px 30px';
+    })();
+
     const textBlockHtml = `
-        <div style="position: relative; z-index: 2; padding: ${compact ? '18px 16px' : '28px 30px'}; text-align: ${isLeftAlign ? 'left' : 'center'}; display: flex; flex-direction: column; justify-content: center; align-items: ${isLeftAlign ? 'flex-start' : 'center'}; gap: ${compact ? '7px' : '11px'};">
+        <div style="position: relative; z-index: 2; padding: ${copyPad}; text-align: ${isLeftAlign ? 'left' : 'center'}; display: flex; flex-direction: column; justify-content: center; align-items: ${isLeftAlign ? 'flex-start' : 'center'}; gap: ${compact ? '7px' : '11px'};">
             ${badge ? `<div style="display: inline-block; font-size: ${compact ? '9px' : '10.5px'}; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; padding: 4px 11px; border-radius: ${btnRadius}; background: ${isHero ? 'rgba(255,255,255,0.16)' : `${accent}20`}; color: ${isHero ? '#FFFBEB' : accent}; border: 1px solid ${isHero ? 'rgba(255,255,255,0.35)' : `${accent}50`};">${escapeOfferHtml(badge)}</div>` : ''}
             ${heading ? `<h3 style="margin: 0; font-family: Georgia, 'Playfair Display', serif; font-size: ${compact ? '16px' : '26px'}; font-weight: 600; line-height: 1.22; color: ${effText};">${escapeOfferHtml(heading)}</h3>` : ''}
             ${subheading ? `<div style="font-size: ${compact ? '11.5px' : '14.5px'}; font-weight: 600; color: ${effSubText};">${escapeOfferHtml(subheading)}</div>` : ''}
-            ${body ? `<div style="font-size: ${compact ? '11px' : '13px'}; line-height: 1.55; opacity: 0.88; color: ${effText}; white-space: pre-line; max-width: 44ch;">${escapeOfferHtml(body)}</div>` : ''}
+            ${body ? `<div style="font-size: ${compact ? '11px' : '13px'}; line-height: 1.55; opacity: 0.9; color: ${effText}; white-space: pre-line; max-width: 44ch;">${escapeOfferHtml(body)}</div>` : ''}
             ${coupon ? `
                 <div style="width: 100%; margin-top: 2px; padding: ${compact ? '7px 9px' : '11px 14px'}; border-radius: ${cardStyle === 'editorial_sharp' ? '0px' : '10px'}; border: 1.5px dashed ${isHero ? '#FDE68A' : accent}; background: ${isHero ? 'rgba(0,0,0,0.45)' : `${accent}14`}; display: flex; flex-direction: column; align-items: ${isLeftAlign ? 'flex-start' : 'center'}; gap: 4px; box-sizing: border-box;">
                     <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -1454,11 +1463,6 @@ function buildOfferPreviewHTML(cfg, options = {}) {
                         ${escapeOfferHtml(cta)} &rarr;
                     </button>
                 </div>
-            ` : ''}
-            ${showOptOut ? `
-                <button type="button" ${interactive ? `onclick="simOptOut()"` : ''} style="background: none; border: none; padding: 4px 8px; min-height: 24px; font-size: ${compact ? '10px' : '11.5px'}; color: ${effText}; opacity: 0.78; text-decoration: underline; text-underline-offset: 3px; cursor: ${interactive ? 'pointer' : 'default'};">
-                    ${escapeOfferHtml(optOutLabel)}
-                </button>
             ` : ''}
         </div>
     `;
@@ -1477,13 +1481,10 @@ function buildOfferPreviewHTML(cfg, options = {}) {
                 ${hasImg
                     ? `<img src="${escapeOfferHtml(imgSrc)}" alt="" style="width: 100%; max-height: ${compact ? '160px' : '420px'}; object-fit: cover; display: block;">`
                     : `<div style="height: 220px; display: flex; align-items: center; justify-content: center; color: ${text}; opacity: 0.55; font-size: 13px;">Upload a poster banner image to preview</div>`}
-                ${(coupon || cta || showOptOut) ? `
+                ${(coupon || cta) ? `
                     <div style="padding: 12px 18px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; border-top: 1px solid ${accent}30;">
                         ${coupon ? `<span style="font-family: monospace; font-weight: 700; font-size: 13px; border: 1px dashed ${accent}; padding: 4px 10px; border-radius: 6px; color: ${text};">${escapeOfferHtml(coupon)}</span>` : '<span></span>'}
-                        <div style="display: inline-flex; align-items: center; gap: 10px; margin-left: auto;">
-                            ${showOptOut ? `<span style="font-size: 11px; color: ${text}; opacity: 0.78; text-decoration: underline;">${escapeOfferHtml(optOutLabel)}</span>` : ''}
-                            ${cta ? `<span style="padding: 8px 18px; border-radius: ${btnRadius}; background: ${accent}; color: #fff; font-size: 11px; font-weight: 700; text-transform: uppercase;">${escapeOfferHtml(cta)}</span>` : ''}
-                        </div>
+                        ${cta ? `<span style="margin-left: auto; padding: 8px 18px; border-radius: ${btnRadius}; background: ${accent}; color: #fff; font-size: 11px; font-weight: 700; text-transform: uppercase;">${escapeOfferHtml(cta)}</span>` : ''}
                     </div>
                 ` : ''}
             </div>
@@ -1513,7 +1514,7 @@ function buildOfferPreviewHTML(cfg, options = {}) {
     } else {
         innerHtml = `
             <div>
-                ${hasImg ? `<div style="max-height: ${compact ? '120px' : '250px'}; overflow: hidden; ${imgWrapStyle}"><img src="${escapeOfferHtml(imgSrc)}" alt="" style="${imgStyle} max-height: ${compact ? '120px' : '250px'};"></div>` : ''}
+                ${hasImg ? `<div style="max-height: ${compact ? '120px' : '220px'}; overflow: hidden; ${imgWrapStyle}"><img src="${escapeOfferHtml(imgSrc)}" alt="" style="${imgStyle} max-height: ${compact ? '120px' : '220px'};"></div>` : ''}
                 ${textBlockHtml}
             </div>
         `;
@@ -1522,7 +1523,14 @@ function buildOfferPreviewHTML(cfg, options = {}) {
     return `
         <div style="position: relative; background: ${frame.baseBg}; color: ${text}; border-radius: ${frame.borderRadius}; border: ${frame.border}; box-shadow: ${frame.boxShadow}; ${frame.backdropFilter} overflow: clip;">
             ${frame.innerOverlayHtml}
-            <button type="button" class="offer-preview-close-btn" aria-label="Close offer preview" style="position: absolute; top: 10px; right: 10px; z-index: 10; width: 30px; height: 30px; border: none; border-radius: 50%; background: rgba(24,24,27,0.74); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer;">&times;</button>
+            <div style="position: absolute; top: 10px; right: 10px; z-index: 15; display: flex; align-items: center; gap: 6px;">
+                ${showOptOut ? `
+                    <button type="button" ${interactive ? `onclick="simOptOut()"` : ''} style="border: 1px solid rgba(255,255,255,0.22); border-radius: ${btnRadius}; background: rgba(24,24,27,0.78); color: #ffffff; backdrop-filter: blur(8px); padding: 0 11px; min-height: 30px; font-size: 11px; font-weight: 500; white-space: nowrap; cursor: ${interactive ? 'pointer' : 'default'};">
+                        ${escapeOfferHtml(optOutLabel)}
+                    </button>
+                ` : ''}
+                <button type="button" class="offer-preview-close-btn" aria-label="Close offer preview" style="width: 30px; height: 30px; border: 1px solid rgba(255,255,255,0.22); border-radius: 50%; background: rgba(24,24,27,0.78); color: #fff; backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer;">&times;</button>
+            </div>
             ${innerHtml}
         </div>
     `;
