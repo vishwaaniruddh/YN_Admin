@@ -95,6 +95,13 @@ $admin_initials = strtoupper(substr($admin_name, 0, 2));
                 </a>
             </li>
 
+            <li class="menu-item <?php echo ($current_script == 'offers.php') ? 'active' : ''; ?>">
+                <a href="offers.php">
+                    <i class="fa-solid fa-window-restore"></i>
+                    <span>Offer Popups</span>
+                </a>
+            </li>
+
             <li class="menu-item <?php echo ($current_script == 'orders.php') ? 'active' : ''; ?>">
                 <a href="orders.php">
                     <i class="fa-solid fa-receipt"></i>

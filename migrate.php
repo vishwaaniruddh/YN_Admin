@@ -37,5 +37,10 @@ try {
 
 // Activity Logs and Search Logs are handled by config/db.php since they didn't exist
 
+require_once __DIR__ . '/includes/offers_helper.php';
+if (ensure_offer_popups_table($pdo)) {
+    echo "Ensured offer_popups table.\n";
+}
+
 echo "Migrations completed.\n";
 ?>

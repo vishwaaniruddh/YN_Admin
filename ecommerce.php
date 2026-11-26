@@ -341,6 +341,9 @@ require_once __DIR__ . '/includes/sidebar.php';
     <a href="ecommerce.php?tab=coupons" class="shadcn-tab-item <?php echo $tab === 'coupons' ? 'active' : ''; ?>">
         <i class="fa-solid fa-ticket"></i> Coupons
     </a>
+    <a href="offers.php" class="shadcn-tab-item">
+        <i class="fa-solid fa-window-restore"></i> Offer Popups
+    </a>
 </div>
 
 <?php if ($tab === 'shipping'): ?>

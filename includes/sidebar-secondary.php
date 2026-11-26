@@ -180,7 +180,7 @@ $admin_initials = strtoupper(substr($admin_name, 0, 2));
 
             <!-- Store Rules & Discounts Submenu -->
             <?php 
-            $ecommerce_active = ($current_script == 'ecommerce.php');
+            $ecommerce_active = in_array($current_script, ['ecommerce.php', 'offers.php']);
             ?>
             <li class="menu-item has-submenu <?php echo $ecommerce_active ? 'open active-parent' : ''; ?>">
                 <a href="javascript:void(0);" class="submenu-toggle">
@@ -202,6 +202,11 @@ $admin_initials = strtoupper(substr($admin_name, 0, 2));
                     <li class="<?php echo ($current_script == 'ecommerce.php' && in_array($current_tab, ['discounts', 'coupons'])) ? 'active' : ''; ?>">
                         <a href="ecommerce.php?tab=discounts">
                             <i class="fa-solid fa-percent"></i> Coupons &amp; Discounts
+                        </a>
+                    </li>
+                    <li class="<?php echo ($current_script == 'offers.php') ? 'active' : ''; ?>">
+                        <a href="offers.php">
+                            <i class="fa-solid fa-window-restore"></i> Offer Popups &amp; Banners
                         </a>
                     </li>
                 </ul>

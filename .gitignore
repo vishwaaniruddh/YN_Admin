@@ -4,6 +4,7 @@ uploads/*
 !uploads/.gitkeep
 cache/*.json
 cache/last_purge.txt
+cache/.offer_popups_schema_v*
 !cache/.htaccess
 !cache/index.php
 *.log

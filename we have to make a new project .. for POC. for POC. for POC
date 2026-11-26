@@ -1,0 +1,53 @@
+we have to make a new project .. for POC AND MVP
+
+1) create leads in system. 
+2) the leads may approve or reject 
+3) if lead is approve then we will make a quotation  (view/edit/update/delete) against that lead. it is possible that we can make multipe quotations against a lead
+4) if quotaton is approved then client will send us the purchas order
+we have create / import that purchase order in system. 
+5) we also have to track the payment of client against the qutation. how much we received ? fully or partial with dates . it should track everything. 
+6) it should track everything . 
+7) this purchase order will be seen by manfacturing team. 
+they will lookup the materials.. 
+it is possible that the mention products are
+a) fully found in inventory (so they will start manufacturing immediately .. eligible for manufacturing )
+b) partially found  in inventory 
+c) not found in inventory 
+
+so based on this they will request the required materials. and will ask accounts team to purchaase required materials.
+when all products available themanufacturing will start. 
+
+
+8) the manufacturing part is having 5 steps
+level 1 ,level2 ... level 5 
+
+9) on each level we require Quality control and verification . it is possible that some products or units are not properly done and get rejected. 
+so we have to give proper remarks , date and other stuffs. 
+
+10) after level 5 all products will be dispatch to customer. 
+
+11) the customer can also do a quality check on each items. they can mark perfect , or faulty. 
+so based on their observation he may generate a compaint ticket also return the materials .  
+
+12) if everything is okay then customer may realse all they payments.
+
+
+
+
+-----------------------------
+
+so this is project 
+
+we have to make it using react + vite + php backend + mysql 
+
+
+the terms in frontend should be user friendly. 
+while creating it make project documentation a well .. 
+
+make users module.. 
+roles , permissions and matrix 
+masters like (city , state , country ,courier,customer)
+api should be rest and fully crud. 
+
+
+ 
