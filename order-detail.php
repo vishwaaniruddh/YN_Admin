@@ -69,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'sync_pos_approval_bill') {
         $result = sync_order_to_pos_approval_bill($pdo, $orderId);
         if ($result['success']) {
-            $_SESSION['flash_message'] = "POS Approval Bill <strong>" . htmlspecialchars($result['bill_number']) . "</strong> generated and central stock updated!";
+            $_SESSION['flash_message'] = "POS Quotation Bill <strong>" . htmlspecialchars($result['bill_number']) . "</strong> generated and central stock updated!";
             $_SESSION['flash_type'] = "success";
         } else {
             $_SESSION['flash_message'] = "POS Sync Failed: " . htmlspecialchars($result['message']);
@@ -507,7 +507,7 @@ switch($order['status']) {
     <!-- Right Side Column -->
     <div class="side-column" style="flex: 0 0 340px; min-width: 280px;">
         
-        <!-- POS Inventory & Approval Bill Card -->
+        <!-- POS Inventory & Quotation Bill Card -->
         <div class="shadcn-card" style="margin-bottom: 24px;">
             <div class="shadcn-card-header">
                 <h2 class="shadcn-card-title">
@@ -520,7 +520,7 @@ switch($order['status']) {
                     <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 12px 14px; margin-bottom: 12px;">
                         <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #065f46; font-size: 13.5px;">
                             <i class="fa-solid fa-circle-check"></i>
-                            <span>POS Approval Bill Created</span>
+                            <span>POS Quotation Bill Created</span>
                         </div>
                         <div style="font-family: monospace; font-size: 14px; font-weight: 700; color: #09090b; margin-top: 6px;">
                             <?php echo htmlspecialchars($order['pos_bill_number']); ?>
@@ -533,7 +533,7 @@ switch($order['status']) {
                         </div>
                     </div>
                     <a href="http://localhost/ss/pos/reports/approval.php" target="_blank" class="shadcn-btn shadcn-btn-outline" style="width: 100%; box-sizing: border-box; justify-content: center; font-size: 12.5px;">
-                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Open POS Approval System
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Open POS Billing System
                     </a>
                 <?php else: ?>
                     <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 14px; margin-bottom: 14px;">
@@ -542,14 +542,14 @@ switch($order['status']) {
                             <span>Not Synced to POS</span>
                         </div>
                         <p style="font-size: 12px; color: #78350f; margin: 4px 0 0 0; line-height: 1.4;">
-                            Generate an approval bill in the POS system to create this customer and deduct quantities from the central inventory.
+                            Generate a Quotation bill (Sri Shringarr) in the POS system to check/create this customer by phone and deduct central inventory.
                         </p>
                     </div>
                     <form method="POST" action="order-detail.php?id=<?php echo $order['id']; ?>">
                         <input type="hidden" name="action" value="sync_pos_approval_bill">
                         <input type="hidden" name="order_id" value="<?php echo $order['id']; ?>">
                         <button type="submit" class="shadcn-btn shadcn-btn-primary" style="width: 100%; justify-content: center; background: #09090b;">
-                            <i class="fa-solid fa-file-invoice"></i> Generate POS Approval Bill
+                            <i class="fa-solid fa-file-invoice"></i> Generate POS Quotation Bill
                         </button>
                     </form>
                 <?php endif; ?>

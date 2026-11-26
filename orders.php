@@ -291,7 +291,7 @@ try {
                                     <?php echo $orderDate; ?>
                                 </div>
                                 <?php if (!empty($ord['pos_bill_number'])): ?>
-                                    <div style="font-size: 10px; font-weight: 600; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 1px 5px; border-radius: 4px; display: inline-flex; align-items: center; gap: 3px; margin-top: 3px;" title="Central POS Approval Bill">
+                                    <div style="font-size: 10px; font-weight: 600; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 1px 5px; border-radius: 4px; display: inline-flex; align-items: center; gap: 3px; margin-top: 3px;" title="Central POS Quotation Bill">
                                         <i class="fa-solid fa-file-invoice"></i> <?php echo htmlspecialchars($ord['pos_bill_number']); ?>
                                     </div>
                                 <?php endif; ?>
